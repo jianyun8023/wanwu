@@ -5779,6 +5779,726 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/assistant/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体智能体选择",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体智能体选择",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "智能体名称",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.GetGeneralAgentAssistantSelectResp"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "创建通用智能体对话",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "创建通用智能体对话",
+                "parameters": [
+                    {
+                        "description": "创建通用智能体对话请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CreateGeneralAgentConversationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.CreateGeneralAgentConversationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "删除通用智能体对话",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "删除通用智能体对话",
+                "parameters": [
+                    {
+                        "description": "删除通用智能体对话请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.DeleteGeneralAgentConversationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/config": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取指定会话的配置信息，包括模型、工具",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体配置选择",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话ID",
+                        "name": "conversationId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.GetGeneralAgentConfigResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "修改通用智能体配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "修改通用智能体配置",
+                "parameters": [
+                    {
+                        "description": "修改通用智能体配置请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateGeneralAgentConfigReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/config/check": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体配置检查接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体配置检查接口",
+                "parameters": [
+                    {
+                        "description": "通用智能体配置检查请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentConfigCheckRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.GeneralAgentConfigCheckResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取指定会话的对话详情，包括对话标题、创建时间等信息",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体对话详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话ID",
+                        "name": "conversationId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.GeneralAgentConversationDetailInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体对话历史列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体对话列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.GeneralAgentConversationItem"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/stream": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体对话流",
+                "parameters": [
+                    {
+                        "description": "通用智能体对话流请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentConversionStreamReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE流式返回",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/workspace": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体workspace目录树接口，查看所给path的层级目录，返回目录结构与文件名等信息，类似于linux的tree命令",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体workspace目录树",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "对话ID",
+                        "name": "conversationId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "运行id",
+                        "name": "runId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.GeneralAgentWorkspaceResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/workspace/download": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体workspace下载接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体workspace下载",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "对话ID",
+                        "name": "conversationId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "workspace路径",
+                        "name": "path",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "运行id",
+                        "name": "runId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/conversation/workspace/preview": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体workspace预览",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话ID",
+                        "name": "conversationId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "运行ID",
+                        "name": "runId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件路径",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/tool/info": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体工具详情，用于工具调用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体工具详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "工具ID",
+                        "name": "toolId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "工具类型",
+                        "name": "toolType",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.GeneralAgentToolInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/tool/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体工具选择，用于用户选择工具进行对话",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体工具选择",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.GetGeneralAgentToolSelectResp"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/knowledge": {
             "put": {
                 "security": [
@@ -17921,6 +18641,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.AssistantSelected": {
+            "type": "object",
+            "required": [
+                "assistantCategory",
+                "assistantId"
+            ],
+            "properties": {
+                "assistantCategory": {
+                    "description": "智能体类型",
+                    "type": "string"
+                },
+                "assistantId": {
+                    "description": "智能体id",
+                    "type": "string"
+                }
+            }
+        },
         "request.AssistantSkillAddRequest": {
             "type": "object",
             "required": [
@@ -18595,6 +19332,18 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CreateGeneralAgentConversationReq": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "description": "标题",
+                    "type": "string"
+                }
+            }
+        },
         "request.CreateKeywordsReq": {
             "type": "object",
             "required": [
@@ -19210,6 +19959,18 @@ const docTemplate = `{
                 }
             }
         },
+        "request.DeleteGeneralAgentConversationReq": {
+            "type": "object",
+            "required": [
+                "conversationId"
+            ],
+            "properties": {
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                }
+            }
+        },
         "request.DeleteKeywordsReq": {
             "type": "object",
             "properties": {
@@ -19791,6 +20552,42 @@ const docTemplate = `{
                 },
                 "appType": {
                     "description": "应用类型",
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentConfigCheckRequest": {
+            "type": "object",
+            "required": [
+                "conversationId"
+            ],
+            "properties": {
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentConversionStreamReq": {
+            "type": "object",
+            "required": [
+                "conversationId",
+                "query"
+            ],
+            "properties": {
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
+                "fileInfo": {
+                    "description": "文件信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.ConversionStreamFile"
+                    }
+                },
+                "query": {
+                    "description": "用户问题",
                     "type": "string"
                 }
             }
@@ -21416,6 +22213,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.ToolSelected": {
+            "type": "object",
+            "required": [
+                "toolId",
+                "toolType"
+            ],
+            "properties": {
+                "toolId": {
+                    "description": "工具id",
+                    "type": "string"
+                },
+                "toolType": {
+                    "description": "工具类型",
+                    "type": "string"
+                }
+            }
+        },
         "request.ToolSquareAPIKeyReq": {
             "type": "object",
             "required": [
@@ -21603,6 +22417,41 @@ const docTemplate = `{
                 },
                 "docId": {
                     "type": "string"
+                }
+            }
+        },
+        "request.UpdateGeneralAgentConfigReq": {
+            "type": "object",
+            "required": [
+                "conversationId",
+                "modelConfig"
+            ],
+            "properties": {
+                "assistantList": {
+                    "description": "智能体id",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.AssistantSelected"
+                    }
+                },
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
+                "modelConfig": {
+                    "description": "模型",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.AppModelConfig"
+                        }
+                    ]
+                },
+                "toolList": {
+                    "description": "工具id",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.ToolSelected"
+                    }
                 }
             }
         },
@@ -22992,6 +23841,19 @@ const docTemplate = `{
                 }
             }
         },
+        "response.CheckTool": {
+            "type": "object",
+            "properties": {
+                "meet": {
+                    "description": "是否符合要求",
+                    "type": "boolean"
+                },
+                "toolId": {
+                    "description": "工具ID",
+                    "type": "string"
+                }
+            }
+        },
         "response.ChildContent": {
             "type": "object",
             "properties": {
@@ -23591,6 +24453,15 @@ const docTemplate = `{
                 },
                 "video_understanding": {
                     "type": "boolean"
+                }
+            }
+        },
+        "response.CreateGeneralAgentConversationResp": {
+            "type": "object",
+            "properties": {
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
                 }
             }
         },
@@ -24462,6 +25333,256 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.User"
                         }
                     ]
+                }
+            }
+        },
+        "response.FileInfo": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.FileInfo"
+                    }
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "\"file\" or \"directory\"",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentConfigCheckResponse": {
+            "type": "object",
+            "properties": {
+                "modelMeet": {
+                    "description": "是否符合模型要求",
+                    "type": "boolean"
+                },
+                "toolsMeet": {
+                    "description": "工具是否符合要求",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ToolCategories"
+                    }
+                },
+                "valid": {
+                    "description": "是否有效",
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.GeneralAgentConversationDetailInfo": {
+            "type": "object",
+            "properties": {
+                "conversationId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {}
+                },
+                "requestFiles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AssistantRequestFile"
+                    }
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "workspace": {
+                    "$ref": "#/definitions/response.GeneralAgentConversationWorkspaceInfo"
+                }
+            }
+        },
+        "response.GeneralAgentConversationItem": {
+            "type": "object",
+            "properties": {
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
+                "createdAt": {
+                    "description": "创建时间",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "对话标题",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentConversationWorkspaceInfo": {
+            "type": "object",
+            "properties": {
+                "conversationId": {
+                    "type": "string"
+                },
+                "fileCount": {
+                    "type": "integer"
+                },
+                "isDisplay": {
+                    "type": "boolean"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "totalSize": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.GeneralAgentToolInfoResp": {
+            "type": "object",
+            "properties": {
+                "toolDesc": {
+                    "description": "工具描述",
+                    "type": "string"
+                },
+                "toolName": {
+                    "description": "工具名称",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentWorkspaceResp": {
+            "type": "object",
+            "properties": {
+                "conversationId": {
+                    "type": "string"
+                },
+                "fileCount": {
+                    "type": "integer"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.FileInfo"
+                    }
+                },
+                "isDisplay": {
+                    "type": "boolean"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "totalSize": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.GetGeneralAgentAssistantSelectResp": {
+            "type": "object",
+            "properties": {
+                "appId": {
+                    "description": "应用id",
+                    "type": "string"
+                },
+                "appType": {
+                    "description": "应用类型",
+                    "type": "string"
+                },
+                "avatar": {
+                    "description": "应用图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "category": {
+                    "description": "智能体分类(1:单智能体,2:多智能体)",
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "description": "应用创建时间",
+                    "type": "string"
+                },
+                "desc": {
+                    "description": "应用描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "应用名称",
+                    "type": "string"
+                },
+                "publishType": {
+                    "description": "发布类型(public:公开发布,private:私密发布)",
+                    "type": "string"
+                },
+                "uniqueId": {
+                    "description": "随机unique id(每次动态生成)",
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "description": "应用更新时间(用于历史记录排序)",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GetGeneralAgentConfigResp": {
+            "type": "object",
+            "properties": {
+                "assistantList": {
+                    "description": "能体列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AssistantAgentInfo"
+                    }
+                },
+                "conversationId": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
+                "modelConfig": {
+                    "description": "模型",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.AppModelConfig"
+                        }
+                    ]
+                },
+                "toolList": {
+                    "description": "工具列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AssistantToolInfo"
+                    }
+                }
+            }
+        },
+        "response.GetGeneralAgentToolSelectResp": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "类型",
+                    "type": "string"
+                },
+                "condition": {
+                    "description": "条件",
+                    "type": "string"
+                },
+                "toolList": {
+                    "description": "工具列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ToolInfo"
+                    }
                 }
             }
         },
@@ -27052,6 +28173,30 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ToolCategories": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "工具类别类型",
+                    "type": "string"
+                },
+                "condition": {
+                    "description": "工具类别条件",
+                    "type": "string"
+                },
+                "meet": {
+                    "description": "是否满足条件",
+                    "type": "boolean"
+                },
+                "tools": {
+                    "description": "工具检查结果",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.CheckTool"
+                    }
+                }
+            }
+        },
         "response.ToolDetail4Workflow": {
             "type": "object",
             "properties": {
@@ -27071,6 +28216,50 @@ const docTemplate = `{
                 "outputs": {
                     "type": "array",
                     "items": {}
+                }
+            }
+        },
+        "response.ToolInfo": {
+            "type": "object",
+            "required": [
+                "toolType"
+            ],
+            "properties": {
+                "apiKey": {
+                    "description": "apiKey",
+                    "type": "string"
+                },
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "工具描述",
+                    "type": "string"
+                },
+                "needApiKeyInput": {
+                    "description": "是否需要apiKey输入",
+                    "type": "boolean"
+                },
+                "toolId": {
+                    "description": "工具id",
+                    "type": "string"
+                },
+                "toolName": {
+                    "description": "工具名称",
+                    "type": "string"
+                },
+                "toolType": {
+                    "description": "工具类型",
+                    "type": "string",
+                    "enum": [
+                        "custom",
+                        "builtin"
+                    ]
                 }
             }
         },

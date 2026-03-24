@@ -1,0 +1,294 @@
+package v1
+
+import (
+	"net/http"
+	"net/url"
+
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+	"github.com/UnicomAI/wanwu/internal/bff-service/service"
+	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
+	"github.com/gin-gonic/gin"
+)
+
+// CreateGeneralAgentConversation
+//
+//	@Tags			wga
+//	@Summary		创建通用智能体对话
+//	@Description	创建通用智能体对话
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.CreateGeneralAgentConversationReq	true	"创建通用智能体对话请求参数"
+//	@Success		200		{object}	response.Response{data=response.CreateGeneralAgentConversationResp}
+//	@Router			/general/agent/conversation [post]
+func CreateGeneralAgentConversation(ctx *gin.Context) {
+	var req request.CreateGeneralAgentConversationReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	resp, err := service.CreateGeneralAgentConversation(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// DeleteGeneralAgentConversation
+//
+//	@Tags			wga
+//	@Summary		删除通用智能体对话
+//	@Description	删除通用智能体对话
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.DeleteGeneralAgentConversationReq	true	"删除通用智能体对话请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/general/agent/conversation [delete]
+func DeleteGeneralAgentConversation(ctx *gin.Context) {
+	var req request.DeleteGeneralAgentConversationReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.DeleteGeneralAgentConversation(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GetGeneralAgentConversationList
+//
+//	@Tags			wga
+//	@Summary		通用智能体对话列表
+//	@Description	获取通用智能体对话历史列表
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			page		query		int	false	"页码，默认1"
+//	@Param			pageSize	query		int	false	"每页数量，默认20"
+//	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationItem}}
+//	@Router			/general/agent/conversation/list [get]
+func GetGeneralAgentConversationList(ctx *gin.Context) {
+	var req request.GetGeneralAgentConversationListReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	resp, err := service.GetGeneralAgentConversationList(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentConversationDetail
+//
+//	@Tags			wga
+//	@Summary		通用智能体对话详情
+//	@Description	获取指定会话的对话详情，包括对话标题、创建时间等信息
+//	@Security		JWT
+//	@Produce		json
+//	@Param			conversationId	query		string	true	"会话ID"
+//	@Success		200				{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
+//	@Router			/general/agent/conversation/detail [get]
+func GetGeneralAgentConversationDetail(ctx *gin.Context) {
+	var req request.GetGeneralAgentConversationDetailReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentAssistantSelect
+//
+//	@Tags			wga
+//	@Summary		通用智能体智能体选择
+//	@Description	获取通用智能体智能体选择
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			name	query		string	false	"智能体名称"
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.GetGeneralAgentAssistantSelectResp}}
+//	@Router			/general/agent/assistant/select [get]
+func GetGeneralAgentAssistantSelect(ctx *gin.Context) {
+	resp, err := service.GetGeneralAgentAssistantSelect(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentToolSelect
+//
+//	@Tags			wga
+//	@Summary		通用智能体工具选择
+//	@Description	获取通用智能体工具选择，用于用户选择工具进行对话
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	response.Response{data=response.ListResult{list=[]response.GetGeneralAgentToolSelectResp}}
+//	@Router			/general/agent/tool/select [get]
+func GetGeneralAgentToolSelect(ctx *gin.Context) {
+	resp, err := service.GetGeneralAgentToolSelect(ctx, getUserID(ctx), getOrgID(ctx))
+	gin_util.Response(ctx, resp, err)
+}
+
+// GeneralAgentToolInfo
+//
+//	@Tags			wga
+//	@Summary		通用智能体工具详情
+//	@Description	获取通用智能体工具详情，用于工具调用
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			toolId		query		string	true	"工具ID"
+//	@Param			toolType	query		string	true	"工具类型"
+//	@Success		200			{object}	response.Response{data=response.GeneralAgentToolInfoResp}
+//	@Router			/general/agent/tool/info [get]
+func GeneralAgentToolInfo(ctx *gin.Context) {
+	resp, err := service.GeneralAgentToolInfo(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("toolId"), ctx.Query("toolType"))
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentConfig
+//
+//	@Tags			wga
+//	@Summary		通用智能体配置选择
+//	@Description	获取指定会话的配置信息，包括模型、工具
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			conversationId	query		string	true	"会话ID"
+//	@Success		200				{object}	response.Response{data=response.GetGeneralAgentConfigResp}
+//	@Router			/general/agent/conversation/config [get]
+func GetGeneralAgentConfig(ctx *gin.Context) {
+	var req request.GetGeneralAgentConfigReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	resp, err := service.GetGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// UpdateGeneralAgentConfig
+//
+//	@Tags			wga
+//	@Summary		修改通用智能体配置
+//	@Description	修改通用智能体配置
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.UpdateGeneralAgentConfigReq	true	"修改通用智能体配置请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/general/agent/conversation/config [put]
+func UpdateGeneralAgentConfig(ctx *gin.Context) {
+	var req request.UpdateGeneralAgentConfigReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.UpdateGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GeneralAgentConfigCheck
+//
+//	@Tags			wga
+//	@Summary		通用智能体配置检查接口
+//	@Description	通用智能体配置检查接口
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GeneralAgentConfigCheckRequest	true	"通用智能体配置检查请求参数"
+//	@Success		200		{object}	response.Response{data=response.GeneralAgentConfigCheckResponse}
+//	@Router			/general/agent/conversation/config/check [post]
+func GeneralAgentConfigCheck(ctx *gin.Context) {
+	var req request.GeneralAgentConfigCheckRequest
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	resp, err := service.GeneralAgentConfigCheck(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// GeneralAgentConversionStream
+//
+//	@Tags			wga
+//	@Summary		通用智能体对话流
+//	@Description	通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		text/event-stream
+//	@Param			data	body		request.GeneralAgentConversionStreamReq	true	"通用智能体对话流请求参数"
+//	@Success		200		{object}	string									"SSE流式返回"
+//	@Router			/general/agent/conversation/stream [post]
+func GeneralAgentConversionStream(ctx *gin.Context) {
+	var req request.GeneralAgentConversionStreamReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.GeneralAgentConversionStream(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GeneralAgentWorkspaceDownload
+//
+//	@Tags			wga
+//	@Summary		通用智能体workspace下载
+//	@Description	通用智能体workspace下载接口
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		application/octet-stream
+//	@Param			data	query	request.GeneralAgentWorkspaceDownloadReq	true	"workspace下载请求参数"
+//	@Success		200		{file}	stream
+//	@Router			/general/agent/conversation/workspace/download [get]
+func GeneralAgentWorkspaceDownload(ctx *gin.Context) {
+	var req request.GeneralAgentWorkspaceDownloadReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	fileName, data, err := service.GeneralAgentWorkspaceDownload(ctx, getUserID(ctx), getOrgID(ctx), req)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	ctx.Header("Content-Disposition", "attachment; filename*=utf-8''"+url.QueryEscape(fileName))
+	ctx.Header("Content-Type", "application/octet-stream")
+	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	ctx.Data(http.StatusOK, "application/octet-stream", data)
+}
+
+// GeneralAgentWorkspacePreview
+//
+//	@Tags			wga
+//	@Summary		通用智能体workspace预览
+//	@Description	通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		application/octet-stream
+//	@Param			conversationId	query	string	true	"会话ID"
+//	@Param			runId			query	string	true	"运行ID"
+//	@Param			path			query	string	true	"文件路径"
+//	@Success		200				{file}	stream
+//	@Router			/general/agent/conversation/workspace/preview [get]
+func GeneralAgentWorkspacePreview(ctx *gin.Context) {
+	var req request.GeneralAgentWorkspacePreviewReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	fileName, data, contentType, err := service.GeneralAgentWorkspacePreview(ctx, getUserID(ctx), getOrgID(ctx), req)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	ctx.Header("Content-Disposition", "inline; filename*=utf-8''"+url.QueryEscape(fileName))
+	ctx.Header("Content-Type", contentType)
+	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	ctx.Data(http.StatusOK, contentType, data)
+}
+
+// GeneralAgentWorkspace
+//
+//	@Tags			wga
+//	@Summary		通用智能体workspace目录树
+//	@Description	通用智能体workspace目录树接口，查看所给path的层级目录，返回目录结构与文件名等信息，类似于linux的tree命令
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	query		request.GeneralAgentWorkspaceReq	true	"workspace目录树请求参数"
+//	@Success		200		{object}	response.Response{data=response.GeneralAgentWorkspaceResp}
+//	@Router			/general/agent/conversation/workspace [get]
+func GeneralAgentWorkspace(ctx *gin.Context) {
+	var req request.GeneralAgentWorkspaceReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	resp, err := service.GeneralAgentWorkspace(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, resp, err)
+}

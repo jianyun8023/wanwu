@@ -1375,6 +1375,18 @@ definitions:
     - mcpId
     - mcpType
     type: object
+  request.AssistantSelected:
+    properties:
+      assistantCategory:
+        description: 智能体类型
+        type: string
+      assistantId:
+        description: 智能体id
+        type: string
+    required:
+    - assistantCategory
+    - assistantId
+    type: object
   request.AssistantSkillAddRequest:
     properties:
       assistantId:
@@ -1835,6 +1847,14 @@ definitions:
     - docId
     - labels
     type: object
+  request.CreateGeneralAgentConversationReq:
+    properties:
+      title:
+        description: 标题
+        type: string
+    required:
+    - title
+    type: object
   request.CreateKeywordsReq:
     properties:
       alias:
@@ -2245,6 +2265,14 @@ definitions:
         description: minio存储文件是否过期 0:过期，1:不过期
         type: boolean
     type: object
+  request.DeleteGeneralAgentConversationReq:
+    properties:
+      conversationId:
+        description: 对话ID
+        type: string
+    required:
+    - conversationId
+    type: object
   request.DeleteKeywordsReq:
     properties:
       id:
@@ -2649,6 +2677,31 @@ definitions:
     required:
     - appId
     - appType
+    type: object
+  request.GeneralAgentConfigCheckRequest:
+    properties:
+      conversationId:
+        description: 对话ID
+        type: string
+    required:
+    - conversationId
+    type: object
+  request.GeneralAgentConversionStreamReq:
+    properties:
+      conversationId:
+        description: 对话ID
+        type: string
+      fileInfo:
+        description: 文件信息
+        items:
+          $ref: '#/definitions/request.ConversionStreamFile'
+        type: array
+      query:
+        description: 用户问题
+        type: string
+    required:
+    - conversationId
+    - query
     type: object
   request.GetModelRequest:
     properties:
@@ -3761,6 +3814,18 @@ definitions:
     - conversationId
     - skillSaveId
     type: object
+  request.ToolSelected:
+    properties:
+      toolId:
+        description: 工具id
+        type: string
+      toolType:
+        description: 工具类型
+        type: string
+    required:
+    - toolId
+    - toolType
+    type: object
   request.ToolSquareAPIKeyReq:
     properties:
       apiKey:
@@ -3890,6 +3955,29 @@ definitions:
     required:
     - contentStatus
     - docId
+    type: object
+  request.UpdateGeneralAgentConfigReq:
+    properties:
+      assistantList:
+        description: 智能体id
+        items:
+          $ref: '#/definitions/request.AssistantSelected'
+        type: array
+      conversationId:
+        description: 对话ID
+        type: string
+      modelConfig:
+        allOf:
+        - $ref: '#/definitions/request.AppModelConfig'
+        description: 模型
+      toolList:
+        description: 工具id
+        items:
+          $ref: '#/definitions/request.ToolSelected'
+        type: array
+    required:
+    - conversationId
+    - modelConfig
     type: object
   request.UpdateKeywordsReq:
     properties:
@@ -4835,6 +4923,15 @@ definitions:
         description: 0:不存在，1：已完成
         type: integer
     type: object
+  response.CheckTool:
+    properties:
+      meet:
+        description: 是否符合要求
+        type: boolean
+      toolId:
+        description: 工具ID
+        type: string
+    type: object
   response.ChildContent:
     properties:
       childSnippet:
@@ -5223,6 +5320,12 @@ definitions:
         type: boolean
       video_understanding:
         type: boolean
+    type: object
+  response.CreateGeneralAgentConversationResp:
+    properties:
+      conversationId:
+        description: 对话ID
+        type: string
     type: object
   response.CreateKnowledgeExternalAPIResp:
     properties:
@@ -5799,6 +5902,175 @@ definitions:
         allOf:
         - $ref: '#/definitions/response.User'
         description: 作者信息
+    type: object
+  response.FileInfo:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/response.FileInfo'
+        type: array
+      mimeType:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+      type:
+        description: '"file" or "directory"'
+        type: string
+    type: object
+  response.GeneralAgentConfigCheckResponse:
+    properties:
+      modelMeet:
+        description: 是否符合模型要求
+        type: boolean
+      toolsMeet:
+        description: 工具是否符合要求
+        items:
+          $ref: '#/definitions/response.ToolCategories'
+        type: array
+      valid:
+        description: 是否有效
+        type: boolean
+    type: object
+  response.GeneralAgentConversationDetailInfo:
+    properties:
+      conversationId:
+        type: string
+      createdAt:
+        type: integer
+      messages:
+        items: {}
+        type: array
+      requestFiles:
+        items:
+          $ref: '#/definitions/response.AssistantRequestFile'
+        type: array
+      runId:
+        type: string
+      workspace:
+        $ref: '#/definitions/response.GeneralAgentConversationWorkspaceInfo'
+    type: object
+  response.GeneralAgentConversationItem:
+    properties:
+      conversationId:
+        description: 对话ID
+        type: string
+      createdAt:
+        description: 创建时间
+        type: string
+      title:
+        description: 对话标题
+        type: string
+    type: object
+  response.GeneralAgentConversationWorkspaceInfo:
+    properties:
+      conversationId:
+        type: string
+      fileCount:
+        type: integer
+      isDisplay:
+        type: boolean
+      runId:
+        type: string
+      totalSize:
+        type: integer
+    type: object
+  response.GeneralAgentToolInfoResp:
+    properties:
+      toolDesc:
+        description: 工具描述
+        type: string
+      toolName:
+        description: 工具名称
+        type: string
+    type: object
+  response.GeneralAgentWorkspaceResp:
+    properties:
+      conversationId:
+        type: string
+      fileCount:
+        type: integer
+      files:
+        items:
+          $ref: '#/definitions/response.FileInfo'
+        type: array
+      isDisplay:
+        type: boolean
+      path:
+        type: string
+      runId:
+        type: string
+      totalSize:
+        type: integer
+    type: object
+  response.GetGeneralAgentAssistantSelectResp:
+    properties:
+      appId:
+        description: 应用id
+        type: string
+      appType:
+        description: 应用类型
+        type: string
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 应用图标
+      category:
+        description: 智能体分类(1:单智能体,2:多智能体)
+        type: integer
+      createdAt:
+        description: 应用创建时间
+        type: string
+      desc:
+        description: 应用描述
+        type: string
+      name:
+        description: 应用名称
+        type: string
+      publishType:
+        description: 发布类型(public:公开发布,private:私密发布)
+        type: string
+      uniqueId:
+        description: 随机unique id(每次动态生成)
+        type: string
+      updatedAt:
+        description: 应用更新时间(用于历史记录排序)
+        type: string
+    type: object
+  response.GetGeneralAgentConfigResp:
+    properties:
+      assistantList:
+        description: 能体列表
+        items:
+          $ref: '#/definitions/response.AssistantAgentInfo'
+        type: array
+      conversationId:
+        description: 对话ID
+        type: string
+      modelConfig:
+        allOf:
+        - $ref: '#/definitions/request.AppModelConfig'
+        description: 模型
+      toolList:
+        description: 工具列表
+        items:
+          $ref: '#/definitions/response.AssistantToolInfo'
+        type: array
+    type: object
+  response.GetGeneralAgentToolSelectResp:
+    properties:
+      category:
+        description: 类型
+        type: string
+      condition:
+        description: 条件
+        type: string
+      toolList:
+        description: 工具列表
+        items:
+          $ref: '#/definitions/response.ToolInfo'
+        type: array
     type: object
   response.GetKnowledgeKeywordListResp:
     properties:
@@ -7528,6 +7800,23 @@ definitions:
           $ref: '#/definitions/protocol.Tool'
         type: array
     type: object
+  response.ToolCategories:
+    properties:
+      category:
+        description: 工具类别类型
+        type: string
+      condition:
+        description: 工具类别条件
+        type: string
+      meet:
+        description: 是否满足条件
+        type: boolean
+      tools:
+        description: 工具检查结果
+        items:
+          $ref: '#/definitions/response.CheckTool'
+        type: array
+    type: object
   response.ToolDetail4Workflow:
     properties:
       actionId:
@@ -7542,6 +7831,36 @@ definitions:
       outputs:
         items: {}
         type: array
+    type: object
+  response.ToolInfo:
+    properties:
+      apiKey:
+        description: apiKey
+        type: string
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 图标
+      desc:
+        description: 工具描述
+        type: string
+      needApiKeyInput:
+        description: 是否需要apiKey输入
+        type: boolean
+      toolId:
+        description: 工具id
+        type: string
+      toolName:
+        description: 工具名称
+        type: string
+      toolType:
+        description: 工具类型
+        enum:
+        - custom
+        - builtin
+        type: string
+    required:
+    - toolType
     type: object
   response.ToolSelect:
     properties:
@@ -11300,6 +11619,425 @@ paths:
       summary: 文件上传
       tags:
       - common
+  /general/agent/assistant/select:
+    get:
+      consumes:
+      - application/json
+      description: 获取通用智能体智能体选择
+      parameters:
+      - description: 智能体名称
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.ListResult'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/response.GetGeneralAgentAssistantSelectResp'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体智能体选择
+      tags:
+      - wga
+  /general/agent/conversation:
+    delete:
+      consumes:
+      - application/json
+      description: 删除通用智能体对话
+      parameters:
+      - description: 删除通用智能体对话请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.DeleteGeneralAgentConversationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 删除通用智能体对话
+      tags:
+      - wga
+    post:
+      consumes:
+      - application/json
+      description: 创建通用智能体对话
+      parameters:
+      - description: 创建通用智能体对话请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateGeneralAgentConversationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.CreateGeneralAgentConversationResp'
+              type: object
+      security:
+      - JWT: []
+      summary: 创建通用智能体对话
+      tags:
+      - wga
+  /general/agent/conversation/config:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定会话的配置信息，包括模型、工具
+      parameters:
+      - description: 会话ID
+        in: query
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.GetGeneralAgentConfigResp'
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体配置选择
+      tags:
+      - wga
+    put:
+      consumes:
+      - application/json
+      description: 修改通用智能体配置
+      parameters:
+      - description: 修改通用智能体配置请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateGeneralAgentConfigReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 修改通用智能体配置
+      tags:
+      - wga
+  /general/agent/conversation/config/check:
+    post:
+      consumes:
+      - application/json
+      description: 通用智能体配置检查接口
+      parameters:
+      - description: 通用智能体配置检查请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentConfigCheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.GeneralAgentConfigCheckResponse'
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体配置检查接口
+      tags:
+      - wga
+  /general/agent/conversation/detail:
+    get:
+      description: 获取指定会话的对话详情，包括对话标题、创建时间等信息
+      parameters:
+      - description: 会话ID
+        in: query
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.ListResult'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/response.GeneralAgentConversationDetailInfo'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体对话详情
+      tags:
+      - wga
+  /general/agent/conversation/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取通用智能体对话历史列表
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.ListResult'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/response.GeneralAgentConversationItem'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体对话列表
+      tags:
+      - wga
+  /general/agent/conversation/stream:
+    post:
+      consumes:
+      - application/json
+      description: 通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
+      parameters:
+      - description: 通用智能体对话流请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentConversionStreamReq'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE流式返回
+          schema:
+            type: string
+      security:
+      - JWT: []
+      summary: 通用智能体对话流
+      tags:
+      - wga
+  /general/agent/conversation/workspace:
+    get:
+      consumes:
+      - application/json
+      description: 通用智能体workspace目录树接口，查看所给path的层级目录，返回目录结构与文件名等信息，类似于linux的tree命令
+      parameters:
+      - description: 对话ID
+        in: query
+        name: conversationId
+        required: true
+        type: string
+      - description: 运行id
+        in: query
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.GeneralAgentWorkspaceResp'
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体workspace目录树
+      tags:
+      - wga
+  /general/agent/conversation/workspace/download:
+    get:
+      consumes:
+      - application/json
+      description: 通用智能体workspace下载接口
+      parameters:
+      - description: 对话ID
+        in: query
+        name: conversationId
+        required: true
+        type: string
+      - description: workspace路径
+        in: query
+        name: path
+        type: string
+      - description: 运行id
+        in: query
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - JWT: []
+      summary: 通用智能体workspace下载
+      tags:
+      - wga
+  /general/agent/conversation/workspace/preview:
+    get:
+      consumes:
+      - application/json
+      description: 通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览
+      parameters:
+      - description: 会话ID
+        in: query
+        name: conversationId
+        required: true
+        type: string
+      - description: 运行ID
+        in: query
+        name: runId
+        required: true
+        type: string
+      - description: 文件路径
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - JWT: []
+      summary: 通用智能体workspace预览
+      tags:
+      - wga
+  /general/agent/tool/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取通用智能体工具详情，用于工具调用
+      parameters:
+      - description: 工具ID
+        in: query
+        name: toolId
+        required: true
+        type: string
+      - description: 工具类型
+        in: query
+        name: toolType
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.GeneralAgentToolInfoResp'
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体工具详情
+      tags:
+      - wga
+  /general/agent/tool/select:
+    get:
+      consumes:
+      - application/json
+      description: 获取通用智能体工具选择，用于用户选择工具进行对话
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.ListResult'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/response.GetGeneralAgentToolSelectResp'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - JWT: []
+      summary: 通用智能体工具选择
+      tags:
+      - wga
   /knowledge:
     delete:
       consumes:

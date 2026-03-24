@@ -41,6 +41,9 @@ func Register(apiV1 *gin.RouterGroup) {
 	// assistant
 	registerAssistant(apiV1)
 
+	// wga
+	registerWGA(apiV1)
+
 	// exploration
 	registerExploration(apiV1)
 
