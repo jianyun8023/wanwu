@@ -5979,6 +5979,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
                 "description": "修改通用智能体配置",
                 "consumes": [
                     "application/json"
@@ -6177,7 +6182,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.GeneralAgentConversationItem"
+                                                                "$ref": "#/definitions/response.GeneralAgentConversationInfo"
                                                             }
                                                         }
                                                     }
@@ -6217,7 +6222,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.GeneralAgentConversionStreamReq"
+                            "$ref": "#/definitions/request.GeneralAgentConversationChatReq"
                         }
                     }
                 ],
@@ -20568,7 +20573,7 @@ const docTemplate = `{
                 }
             }
         },
-        "request.GeneralAgentConversionStreamReq": {
+        "request.GeneralAgentConversationChatReq": {
             "type": "object",
             "required": [
                 "conversationId",
@@ -25407,7 +25412,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.GeneralAgentConversationItem": {
+        "response.GeneralAgentConversationInfo": {
             "type": "object",
             "properties": {
                 "conversationId": {
@@ -25574,7 +25579,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "condition": {
-                    "description": "条件",
+                    "description": "条件 none | optional | required",
                     "type": "string"
                 },
                 "toolList": {

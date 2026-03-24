@@ -24,6 +24,9 @@ func Init() {
 	// --- common ---
 	mid.NewSub("common", "", route.PermNeedEnable, false, false, JWTUser, CheckUserEnable)
 
+	// --- wga ---
+	mid.NewSub("wga", "", route.PermNeedEnable, false, false, JWTUser, CheckUserEnable)
+
 	// --- model ---
 	mid.NewSub("model", "模型服务", route.PermNeedCheck, true, true, JWTUser, CheckUserPerm)
 

@@ -4,19 +4,8 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
-
-func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
-	return nil, nil
-}
-
-func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationListReq) ([]response.GeneralAgentConversationItem, error) {
-	return nil, nil
-}
-
-func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationDetailReq) (*response.GeneralAgentConversationDetailInfo, error) {
-	return nil, nil
-}
 
 func GetGeneralAgentAssistantSelect(ctx *gin.Context, userId, orgId string, name string) ([]response.GetGeneralAgentAssistantSelectResp, error) {
 	return nil, nil
@@ -26,9 +15,22 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 	return nil, nil
 }
 
-func GeneralAgentToolInfo(ctx *gin.Context, userId, orgId string, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
+func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId string, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
 	return nil, nil
 }
+
+func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
+	return &response.CreateGeneralAgentConversationResp{ConversationID: uuid.NewString()}, nil
+}
+
+func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationListReq) ([]response.GeneralAgentConversationInfo, error) {
+	return nil, nil
+}
+
+func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationDetailReq) (*response.GeneralAgentConversationDetailInfo, error) {
+	return nil, nil
+}
+
 func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.DeleteGeneralAgentConversationReq) error {
 	return nil
 }
@@ -37,15 +39,11 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.G
 	return nil, nil
 }
 
-func GeneralAgentConfigCheck(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConfigCheckRequest) (*response.GeneralAgentConfigCheckResponse, error) {
+func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConfigCheckRequest) (*response.GeneralAgentConfigCheckResponse, error) {
 	return nil, nil
 }
 
 func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
-	return nil
-}
-
-func GeneralAgentConversionStream(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversionStreamReq) error {
 	return nil
 }
 
@@ -57,6 +55,6 @@ func GeneralAgentWorkspacePreview(ctx *gin.Context, userId, orgId string, req re
 	return "", nil, "application/octet-stream", nil
 }
 
-func GeneralAgentWorkspace(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspaceReq) (*response.GeneralAgentWorkspaceResp, error) {
+func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspaceReq) (*response.GeneralAgentWorkspaceResp, error) {
 	return nil, nil
 }

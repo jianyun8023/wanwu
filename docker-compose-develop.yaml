@@ -23,10 +23,12 @@ services:
       - 6668:6668
     volumes:
       - /etc/localtime:/etc/localtime
+      - wanwu_shared_data_wga_bff:/shared/data/wga/bff
       - wanwu_shared_data_wga_sandbox_rag:/shared/data/wga/sandbox/rag
       - ./bin/${WANWU_ARCH}/bff-service:/app/bin/bff-service
       - ./configs/microservice/bff-service/configs:/app/configs/microservice/bff-service/configs
       - ./configs/microservice/bff-service/static:/app/configs/microservice/bff-service/static
+      - ./configs/microservice/mcp-service/configs:/app/configs/microservice/mcp-service/configs
       - ${WANWU_PROJECT_DIR}/bff-service/cache:/app/cache
       - ${WANWU_PROJECT_DIR}/bff-service/log:/app/log
       - ${WANWU_PROJECT_DIR}/bff-service/tmp:/app/tmp
@@ -494,4 +496,5 @@ networks:
 volumes:
   # wanwu_kibana_data:
   wanwu_es_certs:
+  wanwu_shared_data_wga_bff:
   wanwu_shared_data_wga_sandbox_rag:

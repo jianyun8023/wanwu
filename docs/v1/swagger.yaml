@@ -2686,7 +2686,7 @@ definitions:
     required:
     - conversationId
     type: object
-  request.GeneralAgentConversionStreamReq:
+  request.GeneralAgentConversationChatReq:
     properties:
       conversationId:
         description: 对话ID
@@ -5951,7 +5951,7 @@ definitions:
       workspace:
         $ref: '#/definitions/response.GeneralAgentConversationWorkspaceInfo'
     type: object
-  response.GeneralAgentConversationItem:
+  response.GeneralAgentConversationInfo:
     properties:
       conversationId:
         description: 对话ID
@@ -6064,7 +6064,7 @@ definitions:
         description: 类型
         type: string
       condition:
-        description: 条件
+        description: 条件 none | optional | required
         type: string
       toolList:
         description: 工具列表
@@ -11751,6 +11751,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
       summary: 修改通用智能体配置
       tags:
       - wga
@@ -11845,7 +11847,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.GeneralAgentConversationItem'
+                          $ref: '#/definitions/response.GeneralAgentConversationInfo'
                         type: array
                     type: object
               type: object
@@ -11865,7 +11867,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/request.GeneralAgentConversionStreamReq'
+          $ref: '#/definitions/request.GeneralAgentConversationChatReq'
       produces:
       - text/event-stream
       responses:

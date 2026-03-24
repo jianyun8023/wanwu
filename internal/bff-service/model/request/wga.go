@@ -56,13 +56,13 @@ type AssistantSelected struct {
 
 func (c *UpdateGeneralAgentConfigReq) Check() error { return nil }
 
-type GeneralAgentConversionStreamReq struct {
+type GeneralAgentConversationChatReq struct {
 	ConversationID string                 `json:"conversationId" validate:"required"` // 对话ID
 	Query          string                 `json:"query" validate:"required"`          // 用户问题
 	FileInfo       []ConversionStreamFile `json:"fileInfo" form:"fileInfo"`           // 文件信息
 }
 
-func (c *GeneralAgentConversionStreamReq) Check() error { return nil }
+func (c *GeneralAgentConversationChatReq) Check() error { return nil }
 
 type GeneralAgentWorkspaceDownloadReq struct {
 	ConversationID string `json:"conversationId" validate:"required"` // 对话ID

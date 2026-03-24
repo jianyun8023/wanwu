@@ -5971,6 +5971,11 @@
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
                 "description": "修改通用智能体配置",
                 "consumes": [
                     "application/json"
@@ -6169,7 +6174,7 @@
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.GeneralAgentConversationItem"
+                                                                "$ref": "#/definitions/response.GeneralAgentConversationInfo"
                                                             }
                                                         }
                                                     }
@@ -6209,7 +6214,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.GeneralAgentConversionStreamReq"
+                            "$ref": "#/definitions/request.GeneralAgentConversationChatReq"
                         }
                     }
                 ],
@@ -20560,7 +20565,7 @@
                 }
             }
         },
-        "request.GeneralAgentConversionStreamReq": {
+        "request.GeneralAgentConversationChatReq": {
             "type": "object",
             "required": [
                 "conversationId",
@@ -25399,7 +25404,7 @@
                 }
             }
         },
-        "response.GeneralAgentConversationItem": {
+        "response.GeneralAgentConversationInfo": {
             "type": "object",
             "properties": {
                 "conversationId": {
@@ -25566,7 +25571,7 @@
                     "type": "string"
                 },
                 "condition": {
-                    "description": "条件",
+                    "description": "条件 none | optional | required",
                     "type": "string"
                 },
                 "toolList": {

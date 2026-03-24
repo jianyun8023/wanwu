@@ -22,11 +22,13 @@ import (
 	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
 	"github.com/UnicomAI/wanwu/pkg/redis"
 	"github.com/UnicomAI/wanwu/pkg/util"
+	"github.com/UnicomAI/wanwu/pkg/wga"
 )
 
 var (
-	configFile string
-	isVersion  bool
+	configFile    string
+	wgaConfigFile string
+	isVersion     bool
 
 	buildTime    string //编译时间
 	buildVersion string //编译版本
@@ -37,6 +39,7 @@ var (
 
 func main() {
 	flag.StringVar(&configFile, "config", "configs/microservice/bff-service/configs/config.yaml", "conf yaml file")
+	flag.StringVar(&wgaConfigFile, "wga", "configs/microservice/bff-service/configs/wga/config.yaml", "wga conf yaml file")
 	flag.BoolVar(&isVersion, "v", false, "build message")
 	flag.Parse()
 
@@ -51,6 +54,9 @@ func main() {
 	flag.Parse()
 	if err := config.LoadConfig(configFile); err != nil {
 		log.Fatalf("init cfg err: %v", err)
+	}
+	if err := config.LoadWgaConfig(wgaConfigFile); err != nil {
+		log.Fatalf("init wga cfg err: %v", err)
 	}
 
 	// init log
@@ -110,6 +116,11 @@ func main() {
 	// init mcp server
 	if err := mcp_util.Init(ctx); err != nil {
 		log.Fatalf("init mcp server err: %v", err)
+	}
+
+	// init wga
+	if err := wga.Init(ctx, wgaConfigFile); err != nil {
+		log.Fatalf("init wga err: %v", err)
 	}
 
 	// start http handler

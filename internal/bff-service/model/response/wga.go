@@ -6,7 +6,7 @@ type CreateGeneralAgentConversationResp struct {
 	ConversationID string `json:"conversationId"` // 对话ID
 }
 
-type GeneralAgentConversationItem struct {
+type GeneralAgentConversationInfo struct {
 	ConversationID string `json:"conversationId"` // 对话ID
 	Title          string `json:"title"`          // 对话标题
 	CreatedAt      string `json:"createdAt"`      // 创建时间
@@ -18,7 +18,7 @@ type GetGeneralAgentAssistantSelectResp struct {
 
 type GetGeneralAgentToolSelectResp struct {
 	Category  string     `json:"category"`  // 类型
-	Condition string     `json:"condition"` // 条件
+	Condition string     `json:"condition"` // 条件 none | optional | required
 	ToolList  []ToolInfo `json:"toolList"`  // 工具列表
 }
 
@@ -79,6 +79,6 @@ type GeneralAgentConversationWorkspaceInfo struct {
 	ConversationID string `json:"conversationId"`
 	RunID          string `json:"runId"`
 	FileCount      int32  `json:"fileCount"`
-	TotalSize      int64  `jsong:"totalSize"`
+	TotalSize      int64  `json:"totalSize"`
 	IsDisplay      bool   `json:"isDisplay"`
 }

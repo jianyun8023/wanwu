@@ -247,6 +247,7 @@ services:
     # ports:
     #   - 6668:6668
     volumes:
+      - wanwu_shared_data_wga_bff:/shared/data/wga/bff
       - wanwu_shared_data_wga_sandbox_rag:/shared/data/wga/sandbox/rag
       - ${WANWU_PROJECT_DIR}/bff-service/log:/app/log
       - ${WANWU_PROJECT_DIR}/bff-service/tmp:/app/tmp
@@ -798,4 +799,5 @@ volumes:
   wanwu_es_certs:
   wanwu_es_logs:
   wanwu_es_tmp:
+  wanwu_shared_data_wga_bff:
   wanwu_shared_data_wga_sandbox_rag:
