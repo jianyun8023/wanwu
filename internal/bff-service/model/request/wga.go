@@ -57,9 +57,13 @@ type AssistantSelected struct {
 func (c *UpdateGeneralAgentConfigReq) Check() error { return nil }
 
 type GeneralAgentConversationChatReq struct {
-	ThreadID string                 `json:"threadId" validate:"required"` // 对话ID
-	Query    string                 `json:"query" validate:"required"`    // 用户问题
-	FileInfo []ConversionStreamFile `json:"fileInfo" form:"fileInfo"`     // 文件信息
+	ThreadID string                            `json:"threadId" validate:"required"` // 对话ID
+	Messages []GeneralAgentConversationMessage `json:"messages" validate:"required"` // 消息
+}
+
+type GeneralAgentConversationMessage struct {
+	Role    string      `json:"role" validate:"required"`    // 角色 user
+	Content interface{} `json:"content" validate:"required"` // 内容 string 或者 [{"type":"text","text":"这张图片是什么？"},{"type":"binary","mimeType":"image/png","url":"https://..."}]
 }
 
 func (c *GeneralAgentConversationChatReq) Check() error { return nil }

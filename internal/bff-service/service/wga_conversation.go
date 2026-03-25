@@ -29,7 +29,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	agentID := config.WgaCfg().AgentID
 	runID := uuid.NewString()
 
-	opts := buildWgaOptions(config.WgaCfg(), req.ThreadID, runID, req.Query)
+	opts := buildWgaOptions(ctx, config.WgaCfg(), req.ThreadID, runID, req.Messages)
 
 	_, iter, err := wga.Run(ctx.Request.Context(), agentID, opts...)
 	if err != nil {
@@ -67,7 +67,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	return nil
 }
 
-func buildWgaOptions(cfg *config.WgaConfig, threadID, runID, query string) []wga_option.Option {
+func buildWgaOptions(ctx *gin.Context, cfg *config.WgaConfig, threadID, runID string, messages []request.GeneralAgentConversationMessage) []wga_option.Option {
 	opts := []wga_option.Option{
 		wga_option.WithModelConfig(wga_option.ModelConfig{
 			Provider:     cfg.Model.Provider,
@@ -103,17 +103,13 @@ func buildWgaOptions(cfg *config.WgaConfig, threadID, runID, query string) []wga
 	}
 
 	// 传递历史消息
-	// if len(messages) > 0 {
-	// 	msgs := make([]adk.Message, len(messages))
-	// 	for i, msg := range messages {
-	// 		msgs[i] = &schema.Message{
-	// 			Role:    schema.RoleType(msg.Role),
-	// 			Content: msg.Content,
-	// 		}
-	// 	}
-	// 	opts = append(opts, wga_option.WithMessages(msgs))
-	// }
-	opts = append(opts, wga_option.WithMessages([]adk.Message{schema.UserMessage(query)}))
+	if len(messages) > 0 {
+		msgs := make([]adk.Message, len(messages))
+		for i, msg := range messages {
+			msgs[i] = convertWgaMessage(ctx, msg.Role, msg.Content)
+		}
+		opts = append(opts, wga_option.WithMessages(msgs))
+	}
 
 	for _, tool := range cfg.Tools {
 		opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
@@ -227,14 +223,14 @@ func getWgaWorkspaceInfo(rootDir, currentDir string) (int64, int, error) {
 		fullPath := filepath.Join(currentDir, entry.Name())
 		info, err := entry.Info()
 		if err != nil {
-			log.Warnf("failed to get file info: %s: %v", fullPath, err)
+			log.Warnf("[wga] failed to get file info: %s: %v", fullPath, err)
 			continue
 		}
 
 		if entry.IsDir() {
 			dirSize, dirFileCount, err := getWgaWorkspaceInfo(rootDir, fullPath)
 			if err != nil {
-				log.Warnf("failed to build file tree for dir: %s: %v", fullPath, err)
+				log.Warnf("[wga] failed to build file tree for dir: %s: %v", fullPath, err)
 				continue
 			}
 			totalSize += dirSize
@@ -246,4 +242,89 @@ func getWgaWorkspaceInfo(rootDir, currentDir string) (int64, int, error) {
 	}
 
 	return totalSize, fileCount, nil
+}
+
+func convertWgaMessage(ctx *gin.Context, role string, content interface{}) *schema.Message {
+	switch v := content.(type) {
+	case string:
+		return &schema.Message{
+			Role:    schema.RoleType(role),
+			Content: v,
+		}
+	case []interface{}:
+		parts := make([]schema.MessageInputPart, 0, len(v))
+		for _, item := range v {
+			if m, ok := item.(map[string]interface{}); ok {
+				parts = append(parts, convertWgaMessageInputPart(ctx, m))
+			}
+		}
+		if len(parts) == 0 {
+			return &schema.Message{Role: schema.RoleType(role)}
+		}
+		return &schema.Message{
+			Role:                  schema.RoleType(role),
+			UserInputMultiContent: parts,
+		}
+	default:
+		return &schema.Message{Role: schema.RoleType(role)}
+	}
+}
+
+func convertWgaMessageInputPart(ctx *gin.Context, m map[string]interface{}) schema.MessageInputPart {
+	part := schema.MessageInputPart{}
+
+	typ, _ := m["type"].(string)
+	switch typ {
+	case "text":
+		part.Type = schema.ChatMessagePartTypeText
+		if text, ok := m["text"].(string); ok {
+			part.Text = text
+		}
+	case "binary":
+		mimeType, _ := m["mimeType"].(string)
+		url, _ := m["url"].(string)
+		base64Data, _ := FileUrlConvertBase64(ctx, &request.FileUrlConvertBase64Req{
+			FileUrl: url,
+		})
+		switch {
+		case strings.HasPrefix(mimeType, "image/"):
+			part.Type = schema.ChatMessagePartTypeImageURL
+			part.Image = &schema.MessageInputImage{
+				MessagePartCommon: schema.MessagePartCommon{
+					Base64Data: &base64Data,
+					MIMEType:   mimeType,
+				},
+			}
+		case strings.HasPrefix(mimeType, "audio/"):
+			part.Type = schema.ChatMessagePartTypeAudioURL
+			part.Audio = &schema.MessageInputAudio{
+				MessagePartCommon: schema.MessagePartCommon{
+					Base64Data: &base64Data,
+					MIMEType:   mimeType,
+				},
+			}
+		case strings.HasPrefix(mimeType, "video/"):
+			part.Type = schema.ChatMessagePartTypeVideoURL
+			part.Video = &schema.MessageInputVideo{
+				MessagePartCommon: schema.MessagePartCommon{
+					Base64Data: &base64Data,
+					MIMEType:   mimeType,
+				},
+			}
+		default:
+			part.Type = schema.ChatMessagePartTypeFileURL
+			part.File = &schema.MessageInputFile{
+				MessagePartCommon: schema.MessagePartCommon{
+					Base64Data: &base64Data,
+					MIMEType:   mimeType,
+				},
+			}
+		}
+	default:
+		part.Type = schema.ChatMessagePartType(typ)
+		if text, ok := m["text"].(string); ok {
+			part.Text = text
+		}
+	}
+	return part
 }

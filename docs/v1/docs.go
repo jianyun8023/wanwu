@@ -20576,23 +20576,35 @@ const docTemplate = `{
         "request.GeneralAgentConversationChatReq": {
             "type": "object",
             "required": [
-                "query",
+                "messages",
                 "threadId"
             ],
             "properties": {
-                "fileInfo": {
-                    "description": "文件信息",
+                "messages": {
+                    "description": "消息",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ConversionStreamFile"
+                        "$ref": "#/definitions/request.GeneralAgentConversationMessage"
                     }
-                },
-                "query": {
-                    "description": "用户问题",
-                    "type": "string"
                 },
                 "threadId": {
                     "description": "对话ID",
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentConversationMessage": {
+            "type": "object",
+            "required": [
+                "content",
+                "role"
+            ],
+            "properties": {
+                "content": {
+                    "description": "内容 string 或者 [{\"type\":\"text\",\"text\":\"这张图片是什么？\"},{\"type\":\"binary\",\"mimeType\":\"image/png\",\"url\":\"https://...\"}]"
+                },
+                "role": {
+                    "description": "角色 user",
                     "type": "string"
                 }
             }
