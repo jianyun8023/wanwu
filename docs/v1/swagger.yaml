@@ -1381,7 +1381,7 @@ definitions:
         description: 智能体类型
         type: string
       assistantId:
-        description: 智能体id
+        description: 智能体ID
         type: string
     required:
     - assistantCategory
@@ -2267,11 +2267,11 @@ definitions:
     type: object
   request.DeleteGeneralAgentConversationReq:
     properties:
-      conversationId:
+      threadId:
         description: 对话ID
         type: string
     required:
-    - conversationId
+    - threadId
     type: object
   request.DeleteKeywordsReq:
     properties:
@@ -2680,17 +2680,14 @@ definitions:
     type: object
   request.GeneralAgentConfigCheckRequest:
     properties:
-      conversationId:
+      threadId:
         description: 对话ID
         type: string
     required:
-    - conversationId
+    - threadId
     type: object
   request.GeneralAgentConversationChatReq:
     properties:
-      conversationId:
-        description: 对话ID
-        type: string
       fileInfo:
         description: 文件信息
         items:
@@ -2699,9 +2696,12 @@ definitions:
       query:
         description: 用户问题
         type: string
+      threadId:
+        description: 对话ID
+        type: string
     required:
-    - conversationId
     - query
+    - threadId
     type: object
   request.GetModelRequest:
     properties:
@@ -3817,7 +3817,7 @@ definitions:
   request.ToolSelected:
     properties:
       toolId:
-        description: 工具id
+        description: 工具ID
         type: string
       toolType:
         description: 工具类型
@@ -3959,25 +3959,25 @@ definitions:
   request.UpdateGeneralAgentConfigReq:
     properties:
       assistantList:
-        description: 智能体id
+        description: 智能体ID
         items:
           $ref: '#/definitions/request.AssistantSelected'
         type: array
-      conversationId:
-        description: 对话ID
-        type: string
       modelConfig:
         allOf:
         - $ref: '#/definitions/request.AppModelConfig'
         description: 模型
+      threadId:
+        description: 对话ID
+        type: string
       toolList:
-        description: 工具id
+        description: 工具ID
         items:
           $ref: '#/definitions/request.ToolSelected'
         type: array
     required:
-    - conversationId
     - modelConfig
+    - threadId
     type: object
   request.UpdateKeywordsReq:
     properties:
@@ -5323,7 +5323,7 @@ definitions:
     type: object
   response.CreateGeneralAgentConversationResp:
     properties:
-      conversationId:
+      threadId:
         description: 对话ID
         type: string
     type: object
@@ -5935,8 +5935,6 @@ definitions:
     type: object
   response.GeneralAgentConversationDetailInfo:
     properties:
-      conversationId:
-        type: string
       createdAt:
         type: integer
       messages:
@@ -5948,16 +5946,18 @@ definitions:
         type: array
       runId:
         type: string
+      threadId:
+        type: string
       workspace:
         $ref: '#/definitions/response.GeneralAgentConversationWorkspaceInfo'
     type: object
   response.GeneralAgentConversationInfo:
     properties:
-      conversationId:
-        description: 对话ID
-        type: string
       createdAt:
         description: 创建时间
+        type: string
+      threadId:
+        description: 对话ID
         type: string
       title:
         description: 对话标题
@@ -5965,13 +5965,13 @@ definitions:
     type: object
   response.GeneralAgentConversationWorkspaceInfo:
     properties:
-      conversationId:
-        type: string
       fileCount:
         type: integer
       isDisplay:
         type: boolean
       runId:
+        type: string
+      threadId:
         type: string
       totalSize:
         type: integer
@@ -5987,8 +5987,6 @@ definitions:
     type: object
   response.GeneralAgentWorkspaceResp:
     properties:
-      conversationId:
-        type: string
       fileCount:
         type: integer
       files:
@@ -6000,6 +5998,8 @@ definitions:
       path:
         type: string
       runId:
+        type: string
+      threadId:
         type: string
       totalSize:
         type: integer
@@ -6045,13 +6045,13 @@ definitions:
         items:
           $ref: '#/definitions/response.AssistantAgentInfo'
         type: array
-      conversationId:
-        description: 对话ID
-        type: string
       modelConfig:
         allOf:
         - $ref: '#/definitions/request.AppModelConfig'
         description: 模型
+      threadId:
+        description: 对话ID
+        type: string
       toolList:
         description: 工具列表
         items:
@@ -11705,6 +11705,30 @@ paths:
       summary: 创建通用智能体对话
       tags:
       - wga
+  /general/agent/conversation/chat:
+    post:
+      consumes:
+      - application/json
+      description: 通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
+      parameters:
+      - description: 通用智能体对话流请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentConversationChatReq'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE流式返回
+          schema:
+            type: string
+      security:
+      - JWT: []
+      summary: 通用智能体对话流
+      tags:
+      - wga
   /general/agent/conversation/config:
     get:
       consumes:
@@ -11713,7 +11737,7 @@ paths:
       parameters:
       - description: 会话ID
         in: query
-        name: conversationId
+        name: threadId
         required: true
         type: string
       produces:
@@ -11791,7 +11815,7 @@ paths:
       parameters:
       - description: 会话ID
         in: query
-        name: conversationId
+        name: threadId
         required: true
         type: string
       produces:
@@ -11856,44 +11880,20 @@ paths:
       summary: 通用智能体对话列表
       tags:
       - wga
-  /general/agent/conversation/stream:
-    post:
-      consumes:
-      - application/json
-      description: 通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
-      parameters:
-      - description: 通用智能体对话流请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/request.GeneralAgentConversationChatReq'
-      produces:
-      - text/event-stream
-      responses:
-        "200":
-          description: SSE流式返回
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: 通用智能体对话流
-      tags:
-      - wga
   /general/agent/conversation/workspace:
     get:
       consumes:
       - application/json
       description: 通用智能体workspace目录树接口，查看所给path的层级目录，返回目录结构与文件名等信息，类似于linux的tree命令
       parameters:
-      - description: 对话ID
-        in: query
-        name: conversationId
-        required: true
-        type: string
-      - description: 运行id
+      - description: 运行ID
         in: query
         name: runId
+        required: true
+        type: string
+      - description: 对话ID
+        in: query
+        name: threadId
         required: true
         type: string
       produces:
@@ -11919,18 +11919,18 @@ paths:
       - application/json
       description: 通用智能体workspace下载接口
       parameters:
-      - description: 对话ID
-        in: query
-        name: conversationId
-        required: true
-        type: string
-      - description: workspace路径
+      - description: workspace中路径
         in: query
         name: path
         type: string
-      - description: 运行id
+      - description: 运行ID
         in: query
         name: runId
+        required: true
+        type: string
+      - description: 对话ID
+        in: query
+        name: threadId
         required: true
         type: string
       produces:
@@ -11951,9 +11951,9 @@ paths:
       - application/json
       description: 通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览
       parameters:
-      - description: 会话ID
+      - description: 文件路径
         in: query
-        name: conversationId
+        name: path
         required: true
         type: string
       - description: 运行ID
@@ -11961,9 +11961,9 @@ paths:
         name: runId
         required: true
         type: string
-      - description: 文件路径
+      - description: 对话ID
         in: query
-        name: path
+        name: threadId
         required: true
         type: string
       produces:

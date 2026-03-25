@@ -20,7 +20,7 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId string, toolId, too
 }
 
 func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
-	return &response.CreateGeneralAgentConversationResp{ConversationID: uuid.NewString()}, nil
+	return &response.CreateGeneralAgentConversationResp{ThreadID: uuid.NewString()}, nil
 }
 
 func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationListReq) ([]response.GeneralAgentConversationInfo, error) {

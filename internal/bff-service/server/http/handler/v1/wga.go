@@ -126,8 +126,8 @@ func GetGeneralAgentConversationList(ctx *gin.Context) {
 //	@Description	获取指定会话的对话详情，包括对话标题、创建时间等信息
 //	@Security		JWT
 //	@Produce		json
-//	@Param			conversationId	query		string	true	"会话ID"
-//	@Success		200				{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
+//	@Param			threadId	query		string	true	"会话ID"
+//	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
 //	@Router			/general/agent/conversation/detail [get]
 func GetGeneralAgentConversationDetail(ctx *gin.Context) {
 	var req request.GetGeneralAgentConversationDetailReq
@@ -146,8 +146,8 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context) {
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
-//	@Param			conversationId	query		string	true	"会话ID"
-//	@Success		200				{object}	response.Response{data=response.GetGeneralAgentConfigResp}
+//	@Param			threadId	query		string	true	"会话ID"
+//	@Success		200			{object}	response.Response{data=response.GetGeneralAgentConfigResp}
 //	@Router			/general/agent/conversation/config [get]
 func GetGeneralAgentConfig(ctx *gin.Context) {
 	var req request.GetGeneralAgentConfigReq
@@ -208,7 +208,7 @@ func CheckGeneralAgentConfig(ctx *gin.Context) {
 //	@Produce		text/event-stream
 //	@Param			data	body		request.GeneralAgentConversationChatReq	true	"通用智能体对话流请求参数"
 //	@Success		200		{object}	string									"SSE流式返回"
-//	@Router			/general/agent/conversation/stream [post]
+//	@Router			/general/agent/conversation/chat [post]
 func GeneralAgentConversationChat(ctx *gin.Context) {
 	var req request.GeneralAgentConversationChatReq
 	if !gin_util.Bind(ctx, &req) {
@@ -255,10 +255,8 @@ func GeneralAgentWorkspaceDownload(ctx *gin.Context) {
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		application/octet-stream
-//	@Param			conversationId	query	string	true	"会话ID"
-//	@Param			runId			query	string	true	"运行ID"
-//	@Param			path			query	string	true	"文件路径"
-//	@Success		200				{file}	stream
+//	@Param			data	query	request.GeneralAgentWorkspacePreviewReq	true	"workspace预览请求参数"
+//	@Success		200		{file}	stream
 //	@Router			/general/agent/conversation/workspace/preview [get]
 func GeneralAgentWorkspacePreview(ctx *gin.Context) {
 	var req request.GeneralAgentWorkspacePreviewReq

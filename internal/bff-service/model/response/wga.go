@@ -3,13 +3,13 @@ package response
 import "github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 
 type CreateGeneralAgentConversationResp struct {
-	ConversationID string `json:"conversationId"` // 对话ID
+	ThreadID string `json:"threadId"` // 对话ID
 }
 
 type GeneralAgentConversationInfo struct {
-	ConversationID string `json:"conversationId"` // 对话ID
-	Title          string `json:"title"`          // 对话标题
-	CreatedAt      string `json:"createdAt"`      // 创建时间
+	ThreadID  string `json:"threadId"`  // 对话ID
+	Title     string `json:"title"`     // 对话标题
+	CreatedAt string `json:"createdAt"` // 创建时间
 }
 
 type GetGeneralAgentAssistantSelectResp struct {
@@ -28,10 +28,10 @@ type GeneralAgentToolInfoResp struct {
 }
 
 type GetGeneralAgentConfigResp struct {
-	ConversationID string                 `json:"conversationId"` // 对话ID
-	ModelConfig    request.AppModelConfig `json:"modelConfig"`    // 模型
-	AssistantList  []*AssistantAgentInfo  `json:"assistantList"`  // 能体列表
-	ToolList       []*AssistantToolInfo   `json:"toolList"`       // 工具列表
+	ThreadID      string                 `json:"threadId"`      // 对话ID
+	ModelConfig   request.AppModelConfig `json:"modelConfig"`   // 模型
+	AssistantList []*AssistantAgentInfo  `json:"assistantList"` // 能体列表
+	ToolList      []*AssistantToolInfo   `json:"toolList"`      // 工具列表
 }
 
 type GeneralAgentConfigCheckResponse struct {
@@ -66,19 +66,19 @@ type GeneralAgentWorkspaceResp struct {
 }
 
 type GeneralAgentConversationDetailInfo struct {
-	ConversationID string                 `json:"conversationId"`
-	RunID          string                 `json:"runId"`
-	CreatedAt      int64                  `json:"createdAt"`
-	Messages       []interface{}          `json:"messages"`
-	RequestFiles   []AssistantRequestFile `json:"requestFiles"`
+	ThreadID     string                 `json:"threadId"`
+	RunID        string                 `json:"runId"`
+	CreatedAt    int64                  `json:"createdAt"`
+	Messages     []interface{}          `json:"messages"`
+	RequestFiles []AssistantRequestFile `json:"requestFiles"`
 
 	Workspace GeneralAgentConversationWorkspaceInfo `json:"workspace"`
 }
 
 type GeneralAgentConversationWorkspaceInfo struct {
-	ConversationID string `json:"conversationId"`
-	RunID          string `json:"runId"`
-	FileCount      int32  `json:"fileCount"`
-	TotalSize      int64  `json:"totalSize"`
-	IsDisplay      bool   `json:"isDisplay"`
+	ThreadID  string `json:"threadId"`
+	RunID     string `json:"runId"`
+	FileCount int32  `json:"fileCount"`
+	TotalSize int64  `json:"totalSize"`
+	IsDisplay bool   `json:"isDisplay"`
 }

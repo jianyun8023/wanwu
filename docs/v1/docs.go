@@ -5930,6 +5930,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/conversation/chat": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体对话流",
+                "parameters": [
+                    {
+                        "description": "通用智能体对话流请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentConversationChatReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE流式返回",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/conversation/config": {
             "get": {
                 "security": [
@@ -5952,7 +5991,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "会话ID",
-                        "name": "conversationId",
+                        "name": "threadId",
                         "in": "query",
                         "required": true
                     }
@@ -6086,7 +6125,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "会话ID",
-                        "name": "conversationId",
+                        "name": "threadId",
                         "in": "query",
                         "required": true
                     }
@@ -6197,45 +6236,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/general/agent/conversation/stream": {
-            "post": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "text/event-stream"
-                ],
-                "tags": [
-                    "wga"
-                ],
-                "summary": "通用智能体对话流",
-                "parameters": [
-                    {
-                        "description": "通用智能体对话流请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.GeneralAgentConversationChatReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SSE流式返回",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/general/agent/conversation/workspace": {
             "get": {
                 "security": [
@@ -6257,15 +6257,15 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "对话ID",
-                        "name": "conversationId",
+                        "description": "运行ID",
+                        "name": "runId",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "运行id",
-                        "name": "runId",
+                        "description": "对话ID",
+                        "name": "threadId",
                         "in": "query",
                         "required": true
                     }
@@ -6313,21 +6313,21 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "对话ID",
-                        "name": "conversationId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "workspace路径",
+                        "description": "workspace中路径",
                         "name": "path",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "运行id",
+                        "description": "运行ID",
                         "name": "runId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "对话ID",
+                        "name": "threadId",
                         "in": "query",
                         "required": true
                     }
@@ -6363,8 +6363,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "会话ID",
-                        "name": "conversationId",
+                        "description": "文件路径",
+                        "name": "path",
                         "in": "query",
                         "required": true
                     },
@@ -6377,8 +6377,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "文件路径",
-                        "name": "path",
+                        "description": "对话ID",
+                        "name": "threadId",
                         "in": "query",
                         "required": true
                     }
@@ -18658,7 +18658,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "assistantId": {
-                    "description": "智能体id",
+                    "description": "智能体ID",
                     "type": "string"
                 }
             }
@@ -19967,10 +19967,10 @@ const docTemplate = `{
         "request.DeleteGeneralAgentConversationReq": {
             "type": "object",
             "required": [
-                "conversationId"
+                "threadId"
             ],
             "properties": {
-                "conversationId": {
+                "threadId": {
                     "description": "对话ID",
                     "type": "string"
                 }
@@ -20564,10 +20564,10 @@ const docTemplate = `{
         "request.GeneralAgentConfigCheckRequest": {
             "type": "object",
             "required": [
-                "conversationId"
+                "threadId"
             ],
             "properties": {
-                "conversationId": {
+                "threadId": {
                     "description": "对话ID",
                     "type": "string"
                 }
@@ -20576,14 +20576,10 @@ const docTemplate = `{
         "request.GeneralAgentConversationChatReq": {
             "type": "object",
             "required": [
-                "conversationId",
-                "query"
+                "query",
+                "threadId"
             ],
             "properties": {
-                "conversationId": {
-                    "description": "对话ID",
-                    "type": "string"
-                },
                 "fileInfo": {
                     "description": "文件信息",
                     "type": "array",
@@ -20593,6 +20589,10 @@ const docTemplate = `{
                 },
                 "query": {
                     "description": "用户问题",
+                    "type": "string"
+                },
+                "threadId": {
+                    "description": "对话ID",
                     "type": "string"
                 }
             }
@@ -22226,7 +22226,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "toolId": {
-                    "description": "工具id",
+                    "description": "工具ID",
                     "type": "string"
                 },
                 "toolType": {
@@ -22428,20 +22428,16 @@ const docTemplate = `{
         "request.UpdateGeneralAgentConfigReq": {
             "type": "object",
             "required": [
-                "conversationId",
-                "modelConfig"
+                "modelConfig",
+                "threadId"
             ],
             "properties": {
                 "assistantList": {
-                    "description": "智能体id",
+                    "description": "智能体ID",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/request.AssistantSelected"
                     }
-                },
-                "conversationId": {
-                    "description": "对话ID",
-                    "type": "string"
                 },
                 "modelConfig": {
                     "description": "模型",
@@ -22451,8 +22447,12 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "threadId": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
                 "toolList": {
-                    "description": "工具id",
+                    "description": "工具ID",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/request.ToolSelected"
@@ -24464,7 +24464,7 @@ const docTemplate = `{
         "response.CreateGeneralAgentConversationResp": {
             "type": "object",
             "properties": {
-                "conversationId": {
+                "threadId": {
                     "description": "对话ID",
                     "type": "string"
                 }
@@ -25388,9 +25388,6 @@ const docTemplate = `{
         "response.GeneralAgentConversationDetailInfo": {
             "type": "object",
             "properties": {
-                "conversationId": {
-                    "type": "string"
-                },
                 "createdAt": {
                     "type": "integer"
                 },
@@ -25407,6 +25404,9 @@ const docTemplate = `{
                 "runId": {
                     "type": "string"
                 },
+                "threadId": {
+                    "type": "string"
+                },
                 "workspace": {
                     "$ref": "#/definitions/response.GeneralAgentConversationWorkspaceInfo"
                 }
@@ -25415,12 +25415,12 @@ const docTemplate = `{
         "response.GeneralAgentConversationInfo": {
             "type": "object",
             "properties": {
-                "conversationId": {
-                    "description": "对话ID",
-                    "type": "string"
-                },
                 "createdAt": {
                     "description": "创建时间",
+                    "type": "string"
+                },
+                "threadId": {
+                    "description": "对话ID",
                     "type": "string"
                 },
                 "title": {
@@ -25432,9 +25432,6 @@ const docTemplate = `{
         "response.GeneralAgentConversationWorkspaceInfo": {
             "type": "object",
             "properties": {
-                "conversationId": {
-                    "type": "string"
-                },
                 "fileCount": {
                     "type": "integer"
                 },
@@ -25442,6 +25439,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "runId": {
+                    "type": "string"
+                },
+                "threadId": {
                     "type": "string"
                 },
                 "totalSize": {
@@ -25465,9 +25465,6 @@ const docTemplate = `{
         "response.GeneralAgentWorkspaceResp": {
             "type": "object",
             "properties": {
-                "conversationId": {
-                    "type": "string"
-                },
                 "fileCount": {
                     "type": "integer"
                 },
@@ -25484,6 +25481,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "runId": {
+                    "type": "string"
+                },
+                "threadId": {
                     "type": "string"
                 },
                 "totalSize": {
@@ -25550,10 +25550,6 @@ const docTemplate = `{
                         "$ref": "#/definitions/response.AssistantAgentInfo"
                     }
                 },
-                "conversationId": {
-                    "description": "对话ID",
-                    "type": "string"
-                },
                 "modelConfig": {
                     "description": "模型",
                     "allOf": [
@@ -25561,6 +25557,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/request.AppModelConfig"
                         }
                     ]
+                },
+                "threadId": {
+                    "description": "对话ID",
+                    "type": "string"
                 },
                 "toolList": {
                     "description": "工具列表",

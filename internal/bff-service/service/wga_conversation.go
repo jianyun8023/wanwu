@@ -29,20 +29,20 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	agentID := config.WgaCfg().AgentID
 	runID := uuid.NewString()
 
-	opts := buildWgaOptions(config.WgaCfg(), req.ConversationID, runID, req.Query)
+	opts := buildWgaOptions(config.WgaCfg(), req.ThreadID, runID, req.Query)
 
 	_, iter, err := wga.Run(ctx.Request.Context(), agentID, opts...)
 	if err != nil {
 		return err
 	}
 
-	tr := ag_ui_util.NewEinoMultiAgentTranslator(req.ConversationID, runID)
+	tr := ag_ui_util.NewEinoMultiAgentTranslator(req.ThreadID, runID)
 	eventCh := tr.TranslateStream(ctx.Request.Context(), iter)
 
 	outputCh := injectWgaWorkspaceActivity(
 		ctx.Request.Context(),
 		eventCh,
-		req.ConversationID,
+		req.ThreadID,
 		runID,
 		config.WgaCfg().Persistent.BaseDir,
 		config.WgaCfg().Persistent.Enabled,
