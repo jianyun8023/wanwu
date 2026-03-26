@@ -84,13 +84,6 @@ func (options *Options) Apply(opts ...Option) error {
 	if options.RunSession.RunID == "" {
 		options.RunSession.RunID = uuid.New().String()
 	}
-	if len(options.Messages) == 0 {
-		return fmt.Errorf("messages is empty")
-	}
-	lastMsg := options.Messages[len(options.Messages)-1]
-	if lastMsg.Role != schema.User {
-		return fmt.Errorf("last message must be user message, got %s", lastMsg.Role)
-	}
 	return nil
 }
 
@@ -123,20 +116,26 @@ type CheckTool struct {
 	Meet  bool   // 是否满足条件
 }
 
-// CheckCondition 检查智能体运行条件是否满足。
-func (options *Options) CheckCondition(cfg *config.Agent) (*CheckResult, error) {
-	model := CheckModel{Meet: true}
-	if err := options.checkModel(); err != nil {
-		model.Meet = false
+// CheckModelConfig 检查模型配置是否有效。
+func (options *Options) CheckModelConfig() error {
+	return options.checkModel()
+}
+
+// CheckMessages 检查消息配置是否有效。
+func (options *Options) CheckMessages() error {
+	if len(options.Messages) == 0 {
+		return fmt.Errorf("messages is empty")
 	}
-	conditions, err := options.checkToolsCondition(cfg.ToolCategories)
-	if err != nil {
-		return nil, err
+	lastMsg := options.Messages[len(options.Messages)-1]
+	if lastMsg.Role != schema.User {
+		return fmt.Errorf("last message must be user message, got %s", lastMsg.Role)
 	}
-	return &CheckResult{
-		Model:          model,
-		ToolCategories: conditions,
-	}, nil
+	return nil
+}
+
+// CheckToolCategories 检查智能体的工具类别条件是否满足。
+func (options *Options) CheckToolCategories(cfg *config.Agent) ([]CheckToolCategory, error) {
+	return options.checkToolsCondition(cfg.ToolCategories)
 }
 
 // ============================================================================

@@ -11,6 +11,7 @@ type ToolConfig = option.ToolConfig
 type RunSession = option.RunSession
 
 type CheckResult = option.CheckResult
+type CheckModel = option.CheckModel
 
 // WithModelConfig 设置模型配置。
 func WithModelConfig(model ModelConfig) Option {

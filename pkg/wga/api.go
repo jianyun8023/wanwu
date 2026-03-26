@@ -49,7 +49,7 @@ func GetAgentToolCategories(id string) ([]wga_option.ToolCategoryInfo, error) {
 	return categories, nil
 }
 
-// CheckOptions 检查智能体运行条件是否满足。
+// CheckOptions 检查智能体运行条件是否满足（不检查 messages）。
 func CheckOptions(_ context.Context, id string, opts ...option.Option) (*wga_option.CheckResult, error) {
 	agentCfg, err := getAgent(id)
 	if err != nil {
@@ -59,7 +59,20 @@ func CheckOptions(_ context.Context, id string, opts ...option.Option) (*wga_opt
 	if err := options.Apply(opts...); err != nil {
 		return nil, err
 	}
-	return options.CheckCondition(agentCfg)
+	// 检查模型配置
+	model := wga_option.CheckModel{Meet: true}
+	if err := options.CheckModelConfig(); err != nil {
+		model.Meet = false
+	}
+	// 检查工具类别条件
+	toolCategories, err := options.CheckToolCategories(agentCfg)
+	if err != nil {
+		return nil, err
+	}
+	return &wga_option.CheckResult{
+		Model:          model,
+		ToolCategories: toolCategories,
+	}, nil
 }
 
 // Run 执行智能体任务，返回会话标识和事件迭代器。
@@ -72,12 +85,25 @@ func Run(ctx context.Context, id string, opts ...option.Option) (wga_option.RunS
 	if err := options.Apply(opts...); err != nil {
 		return wga_option.RunSession{}, nil, err
 	}
+	if err := options.CheckModelConfig(); err != nil {
+		return wga_option.RunSession{}, nil, err
+	}
+	if err := options.CheckMessages(); err != nil {
+		return wga_option.RunSession{}, nil, err
+	}
 	agent, err := factory.NewAgent(ctx, agentCfg, options)
 	if err != nil {
 		return wga_option.RunSession{}, nil, err
 	}
 	return options.RunSession, agent.Run(ctx, &adk.AgentInput{Messages: options.Messages, EnableStreaming: true}), nil
 }
+
+// Cleanup 清理指定 runID 的沙箱工作目录。
+func Cleanup(ctx context.Context, runID string) error {
+	return wga_sandbox.Cleanup(ctx, runID)
+}
+
+// --- internal ---
 
 func getAgent(id string) (*config.Agent, error) {
 	for _, agent := range _agents {
@@ -86,9 +112,4 @@ func getAgent(id string) (*config.Agent, error) {
 		}
 	}
 	return nil, fmt.Errorf("agent (%s) not found", id)
-}
-
-// Cleanup 清理指定 runID 的沙箱工作目录。
-func Cleanup(ctx context.Context, runID string) error {
-	return wga_sandbox.Cleanup(ctx, runID)
 }
