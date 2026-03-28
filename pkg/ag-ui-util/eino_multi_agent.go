@@ -13,21 +13,26 @@ import (
 // AgentActivitySimple 表示单个智能体的活动状态。
 type AgentActivitySimple struct {
 	*MessageState
-	activityType    string
-	activityID      string
-	agentName       string
-	toolCallStarted map[string]bool
+	activityType               string
+	activityID                 string
+	agentName                  string
+	toolCallStarted            map[string]bool
+	currentStreamingToolCallID string
+	streamingToolCallArgs      map[string]string
+	streamingToolCalls         map[string]bool
 }
 
 const subAgentActivityType = "sub_agent"
 
 func NewAgentActivitySimple(agentName string) *AgentActivitySimple {
 	return &AgentActivitySimple{
-		MessageState:    NewMessageState(),
-		activityType:    subAgentActivityType,
-		activityID:      aguievents.GenerateStepID(),
-		agentName:       agentName,
-		toolCallStarted: make(map[string]bool),
+		MessageState:          NewMessageState(),
+		activityType:          subAgentActivityType,
+		activityID:            aguievents.GenerateStepID(),
+		agentName:             agentName,
+		toolCallStarted:       make(map[string]bool),
+		streamingToolCallArgs: make(map[string]string),
+		streamingToolCalls:    make(map[string]bool),
 	}
 }
 
@@ -203,17 +208,16 @@ func (t *EinoMultiAgentTranslator) translateMessageForCurrentAgent(msg *schema.M
 		return nil
 	}
 
-	return t.translateMessageWithActivity(msg, t.currentActivity)
+	return t.translateMessageWithActivity(msg, t.currentActivity, false)
 }
 
-func (t *EinoMultiAgentTranslator) translateMessageWithActivity(msg *schema.Message, activity *AgentActivitySimple) []aguievents.Event {
+func (t *EinoMultiAgentTranslator) translateMessageWithActivity(msg *schema.Message, activity *AgentActivitySimple, isStreaming bool) []aguievents.Event {
 	if msg == nil {
 		return nil
 	}
 
 	var events []aguievents.Event
 
-	// 处理工具调用结果
 	if msg.Role == schema.Tool && msg.ToolCallID != "" {
 		events = append(events, activity.EndAll()...)
 		toolResultMessageID := aguievents.GenerateMessageID()
@@ -231,20 +235,36 @@ func (t *EinoMultiAgentTranslator) translateMessageWithActivity(msg *schema.Mess
 		events = append(events, activity.EndAll()...)
 
 		for _, tc := range msg.ToolCalls {
-			if tc.ID == "" || tc.Function.Name == "" {
+
+			toolCallID := tc.ID
+			if toolCallID == "" && activity.currentStreamingToolCallID != "" {
+				toolCallID = activity.currentStreamingToolCallID
+			}
+
+			if toolCallID == "" {
 				continue
 			}
-			if !t.toolCallIDs[tc.ID] {
-				toolCallID := tc.ID
+
+			if tc.ID != "" && tc.Function.Name != "" {
+				activity.currentStreamingToolCallID = tc.ID
 				if !activity.toolCallStarted[tc.ID] {
-					events = append(events, aguievents.NewToolCallStartEvent(toolCallID, tc.Function.Name, aguievents.WithParentMessageID(parentMsgID)))
+					events = append(events, aguievents.NewToolCallStartEvent(tc.ID, tc.Function.Name, aguievents.WithParentMessageID(parentMsgID)))
 					activity.toolCallStarted[tc.ID] = true
 				}
-				if tc.Function.Arguments != "" {
-					events = append(events, aguievents.NewToolCallArgsEvent(toolCallID, tc.Function.Arguments))
+			}
+
+			if tc.Function.Arguments != "" {
+				activity.streamingToolCallArgs[toolCallID] += tc.Function.Arguments
+				if !isStreaming {
+					if activity.toolCallStarted[toolCallID] {
+						events = append(events, aguievents.NewToolCallArgsEvent(toolCallID, activity.streamingToolCallArgs[toolCallID]))
+						events = append(events, aguievents.NewToolCallEndEvent(toolCallID))
+						delete(activity.toolCallStarted, toolCallID)
+						delete(activity.streamingToolCallArgs, toolCallID)
+					}
+				} else {
+					activity.streamingToolCalls[toolCallID] = true
 				}
-				events = append(events, aguievents.NewToolCallEndEvent(toolCallID))
-				t.toolCallIDs[tc.ID] = true
 			}
 		}
 	}
@@ -285,13 +305,34 @@ func (t *EinoMultiAgentTranslator) translateStreamForAgent(ctx context.Context, 
 
 		frame, err := msgOutput.MessageStream.Recv()
 		if err == io.EOF {
+			for toolCallID := range t.currentActivity.streamingToolCalls {
+				args := t.currentActivity.streamingToolCallArgs[toolCallID]
+				if !t.currentActivity.toolCallStarted[toolCallID] {
+					continue
+				}
+				if args != "" {
+					select {
+					case out <- aguievents.NewToolCallArgsEvent(toolCallID, args):
+					case <-ctx.Done():
+						return
+					}
+				}
+				select {
+				case out <- aguievents.NewToolCallEndEvent(toolCallID):
+				case <-ctx.Done():
+					return
+				}
+				delete(t.currentActivity.toolCallStarted, toolCallID)
+				delete(t.currentActivity.streamingToolCallArgs, toolCallID)
+				delete(t.currentActivity.streamingToolCalls, toolCallID)
+			}
 			return
 		}
 		if err != nil {
 			return
 		}
 
-		for _, evt := range t.translateMessageWithActivity(frame, t.currentActivity) {
+		for _, evt := range t.translateMessageWithActivity(frame, t.currentActivity, true) {
 			select {
 			case out <- evt:
 			case <-ctx.Done():

@@ -39,9 +39,31 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	tr := ag_ui_util.NewEinoMultiAgentTranslator(req.ThreadID, runID)
 	eventCh := tr.TranslateStream(ctx.Request.Context(), iter)
 
+	processorConfig := &ag_ui_util.ProcessorConfig{
+		ToolNameMapper: map[string]string{
+			"transfer_to_agent": "正在交给专业智能体",
+		},
+		ExcludedAgentNames: []string{
+			"default",
+			"Supervisor Agent",
+		},
+		ResultFormatters: map[string]func(string) string{
+			"bochaWebSearch":      FormatBochaWebSearchResult,
+			"tavily_basic_search": FormatTavilySearchResult,
+			"tavily_deep_search":  FormatTavilySearchResult,
+			"tavily_day_search":   FormatTavilySearchResult,
+			"tavily_week_search":  FormatTavilySearchResult,
+			"tavily_image_search": FormatTavilySearchResult,
+			"tavily_date_search":  FormatTavilySearchResult,
+		},
+	}
+
+	processor := ag_ui_util.NewStreamProcessor(processorConfig)
+	cleanedEventCh, _ := processor.Process(ctx.Request.Context(), eventCh)
+
 	outputCh := injectWgaWorkspaceActivity(
 		ctx.Request.Context(),
-		eventCh,
+		cleanedEventCh,
 		req.ThreadID,
 		runID,
 		config.WgaCfg().Persistent.BaseDir,
