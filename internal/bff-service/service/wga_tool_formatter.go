@@ -2,23 +2,11 @@ package service
 
 import (
 	"encoding/json"
+
+	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
 )
 
-type WebSearchResult struct {
-	Query    string    `json:"query"`
-	WebCount int       `json:"webCount"`
-	WebPages []WebPage `json:"webPages"`
-}
-
-type WebPage struct {
-	Title    string `json:"title"`
-	SiteName string `json:"siteName"`
-	Icon     string `json:"icon"`
-	Summary  string `json:"summary"`
-	URL      string `json:"url"`
-}
-
-func FormatBochaWebSearchResult(result string) string {
+func WgaFormatBochaWebSearchResult(result string) string {
 	var rawResponse struct {
 		Code int    `json:"code"`
 		Msg  string `json:"msg"`
@@ -43,10 +31,10 @@ func FormatBochaWebSearchResult(result string) string {
 		return result
 	}
 
-	formattedResult := WebSearchResult{
+	formattedResult := ag_ui_util.WebSearchResult{
 		Query:    rawResponse.Data.QueryContext.OriginalQuery,
 		WebCount: len(rawResponse.Data.WebPages.Value),
-		WebPages: make([]WebPage, 0, len(rawResponse.Data.WebPages.Value)),
+		WebPages: make([]ag_ui_util.WebPage, 0, len(rawResponse.Data.WebPages.Value)),
 	}
 
 	for _, page := range rawResponse.Data.WebPages.Value {
@@ -55,7 +43,7 @@ func FormatBochaWebSearchResult(result string) string {
 			summary = page.Snippet
 		}
 
-		formattedResult.WebPages = append(formattedResult.WebPages, WebPage{
+		formattedResult.WebPages = append(formattedResult.WebPages, ag_ui_util.WebPage{
 			Title:    page.Name,
 			SiteName: page.SiteName,
 			Icon:     page.SiteIcon,
@@ -72,7 +60,7 @@ func FormatBochaWebSearchResult(result string) string {
 	return string(formattedJSON)
 }
 
-func FormatTavilySearchResult(result string) string {
+func WgaFormatTavilySearchResult(result string) string {
 	var rawResponse struct {
 		Query        string  `json:"query"`
 		Answer       string  `json:"answer"`
@@ -91,10 +79,10 @@ func FormatTavilySearchResult(result string) string {
 		return result
 	}
 
-	formattedResult := WebSearchResult{
+	formattedResult := ag_ui_util.WebSearchResult{
 		Query:    rawResponse.Query,
 		WebCount: len(rawResponse.Results),
-		WebPages: make([]WebPage, 0, len(rawResponse.Results)),
+		WebPages: make([]ag_ui_util.WebPage, 0, len(rawResponse.Results)),
 	}
 
 	for _, page := range rawResponse.Results {
@@ -103,7 +91,7 @@ func FormatTavilySearchResult(result string) string {
 			summary = page.RawContent
 		}
 
-		formattedResult.WebPages = append(formattedResult.WebPages, WebPage{
+		formattedResult.WebPages = append(formattedResult.WebPages, ag_ui_util.WebPage{
 			Title:    page.Title,
 			SiteName: "Tavily",
 			Icon:     "https://imgbed-1303886329.cos.ap-nanjing.myqcloud.com/20260327144847.png",

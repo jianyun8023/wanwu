@@ -8,6 +8,10 @@ import (
 	aguievents "github.com/ag-ui-protocol/ag-ui/sdks/community/go/pkg/core/events"
 )
 
+// ============================================================================
+// 类型定义
+// ============================================================================
+
 type ProcessorConfig struct {
 	ToolNameMapper     map[string]string
 	ExcludedAgentNames []string
@@ -24,6 +28,10 @@ type StreamProcessor struct {
 	toolCallMap         map[string]*ToolCall
 }
 
+// ============================================================================
+// 构造函数
+// ============================================================================
+
 func NewStreamProcessor(config *ProcessorConfig) *StreamProcessor {
 	if config == nil {
 		config = &ProcessorConfig{}
@@ -33,6 +41,10 @@ func NewStreamProcessor(config *ProcessorConfig) *StreamProcessor {
 		toolCallMap: make(map[string]*ToolCall),
 	}
 }
+
+// ============================================================================
+// 公开方法
+// ============================================================================
 
 func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Event) (<-chan aguievents.Event, <-chan interface{}) {
 	cleanedOut := make(chan aguievents.Event, 1024)
@@ -76,6 +88,10 @@ func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Even
 
 	return cleanedOut, historyOut
 }
+
+// ============================================================================
+// 私有方法 - 事件清洗
+// ============================================================================
 
 func (p *StreamProcessor) cleanEvent(event aguievents.Event) aguievents.Event {
 	switch e := event.(type) {
@@ -142,8 +158,8 @@ func (p *StreamProcessor) shouldExcludeActivity(event *aguievents.ActivitySnapsh
 		return false
 	}
 
-	content, ok := event.Content.(map[string]interface{})
-	if !ok {
+	content := parseActivityContent(event.Content)
+	if content == nil {
 		return false
 	}
 
@@ -170,6 +186,10 @@ func (p *StreamProcessor) findToolNameByID(toolCallID string) string {
 	}
 	return ""
 }
+
+// ============================================================================
+// 私有方法 - 事件聚合
+// ============================================================================
 
 func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 	p.mu.Lock()
@@ -235,7 +255,7 @@ func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 
 	case *aguievents.ToolCallArgsEvent:
 		if tc, ok := p.toolCallMap[e.ToolCallID]; ok {
-			tc.Function.Arguments = e.Delta
+			tc.Function.Arguments += e.Delta
 		}
 		return nil
 
@@ -259,7 +279,8 @@ func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 			ActivityID:   e.MessageID,
 			ActivityType: e.ActivityType,
 		}
-		if content, ok := e.Content.(map[string]interface{}); ok {
+		content := parseActivityContent(e.Content)
+		if content != nil {
 			activity.Content = content
 			if agentName, ok := content["agentName"].(string); ok {
 				activity.AgentName = agentName
@@ -275,6 +296,31 @@ func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 
 	default:
 		return nil
+	}
+}
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+func parseActivityContent(content any) map[string]interface{} {
+	if content == nil {
+		return nil
+	}
+
+	switch v := content.(type) {
+	case map[string]interface{}:
+		return v
+	default:
+		data, err := json.Marshal(content)
+		if err != nil {
+			return nil
+		}
+		var result map[string]interface{}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil
+		}
+		return result
 	}
 }
 

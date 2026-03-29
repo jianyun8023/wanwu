@@ -36,7 +36,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		return err
 	}
 
-	tr := ag_ui_util.NewEinoMultiAgentTranslator(req.ThreadID, runID)
+	tr := ag_ui_util.NewEinoTranslator(req.ThreadID, runID)
 	eventCh := tr.TranslateStream(ctx.Request.Context(), iter)
 
 	processorConfig := &ag_ui_util.ProcessorConfig{
@@ -48,22 +48,22 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 			"Supervisor Agent",
 		},
 		ResultFormatters: map[string]func(string) string{
-			"bochaWebSearch":      FormatBochaWebSearchResult,
-			"tavily_basic_search": FormatTavilySearchResult,
-			"tavily_deep_search":  FormatTavilySearchResult,
-			"tavily_day_search":   FormatTavilySearchResult,
-			"tavily_week_search":  FormatTavilySearchResult,
-			"tavily_image_search": FormatTavilySearchResult,
-			"tavily_date_search":  FormatTavilySearchResult,
+			"bochaWebSearch":      WgaFormatBochaWebSearchResult,
+			"tavily_basic_search": WgaFormatTavilySearchResult,
+			"tavily_deep_search":  WgaFormatTavilySearchResult,
+			"tavily_day_search":   WgaFormatTavilySearchResult,
+			"tavily_week_search":  WgaFormatTavilySearchResult,
+			"tavily_image_search": WgaFormatTavilySearchResult,
+			"tavily_date_search":  WgaFormatTavilySearchResult,
 		},
 	}
 
 	processor := ag_ui_util.NewStreamProcessor(processorConfig)
-	cleanedEventCh, _ := processor.Process(ctx.Request.Context(), eventCh)
+	processedEventCh, _ := processor.Process(ctx.Request.Context(), eventCh)
 
 	outputCh := injectWgaWorkspaceActivity(
 		ctx.Request.Context(),
-		cleanedEventCh,
+		processedEventCh,
 		req.ThreadID,
 		runID,
 		config.WgaCfg().Persistent.BaseDir,
@@ -212,18 +212,16 @@ func buildWgaWorkspaceEvent(threadID, runID, baseDir string, persistentEnabled b
 		return nil
 	}
 
-	content := map[string]interface{}{
-		"runId":     runID,
-		"threadId":  threadID,
-		"fileCount": fileCount,
-		"totalSize": totalSize,
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-
 	return aguievents.NewActivitySnapshotEvent(
 		aguievents.GenerateStepID(),
-		"workspace",
-		content,
+		ag_ui_util.ActivityTypeWorkspace,
+		&ag_ui_util.WorkspaceActivityContent{
+			RunID:     runID,
+			ThreadID:  threadID,
+			FileCount: fileCount,
+			TotalSize: totalSize,
+			Timestamp: time.Now().UnixMilli(),
+		},
 	)
 }
 

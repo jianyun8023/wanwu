@@ -33,10 +33,10 @@ func (a *sandboxAgent) Description(_ context.Context) string {
 	return a.cfg.Description
 }
 
-func (a *sandboxAgent) Run(ctx context.Context, history *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
-	messages := make([]adk.Message, 0, len(history.Messages)+len(a.options.Messages))
-	messages = append(messages, history.Messages...)
+func (a *sandboxAgent) Run(ctx context.Context, agentInput *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
+	messages := make([]adk.Message, 0, len(agentInput.Messages)+len(a.options.Messages))
 	messages = append(messages, a.options.Messages...)
+	messages = append(messages, agentInput.Messages...)
 	sandboxOpts := a.buildSandboxOpts(messages)
 
 	_, outputCh, err := wga_sandbox.Run(ctx, sandboxOpts...)

@@ -36,36 +36,34 @@ func NewAgentActivitySimple(agentName string) *AgentActivitySimple {
 	}
 }
 
-// EinoMultiAgentTranslator 将 eino AgentEvent 转换为 AG-UI 事件，用于多智能体场景。
+// EinoTranslator 将 eino AgentEvent 转换为 AG-UI 事件，用于多智能体场景。
 // 通过 ACTIVITY_SNAPSHOT 事件标识当前运行的智能体。
 //
 // ActivitySnapshot 结构示例：
 //
 //	{"type":"ACTIVITY_SNAPSHOT","messageId":"step-xxx","activityType":"sub_agent",
 //	 "content":{"agentName":"Plan Agent","instanceNum":1,"status":"started"}}
-type EinoMultiAgentTranslator struct {
+type EinoTranslator struct {
 	threadID           string
 	runID              string
 	runStarted         bool
 	runFinished        bool
-	toolCallIDs        map[string]bool
 	agentActivities    []*AgentActivitySimple
 	currentActivity    *AgentActivitySimple
 	agentInstanceCount map[string]int
 }
 
-// NewEinoMultiAgentTranslator 创建多智能体转换器。
-func NewEinoMultiAgentTranslator(threadID, runID string) *EinoMultiAgentTranslator {
-	return &EinoMultiAgentTranslator{
+// NewEinoTranslator 创建多智能体转换器。
+func NewEinoTranslator(threadID, runID string) *EinoTranslator {
+	return &EinoTranslator{
 		threadID:           threadID,
 		runID:              runID,
-		toolCallIDs:        make(map[string]bool),
 		agentActivities:    make([]*AgentActivitySimple, 0),
 		agentInstanceCount: make(map[string]int),
 	}
 }
 
-func (t *EinoMultiAgentTranslator) TranslateStream(ctx context.Context, iter *adk.AsyncIterator[*adk.AgentEvent]) <-chan aguievents.Event {
+func (t *EinoTranslator) TranslateStream(ctx context.Context, iter *adk.AsyncIterator[*adk.AgentEvent]) <-chan aguievents.Event {
 	out := make(chan aguievents.Event, 1024)
 	go func() {
 		defer util.PrintPanicStack()
@@ -150,7 +148,7 @@ func (t *EinoMultiAgentTranslator) TranslateStream(ctx context.Context, iter *ad
 	return out
 }
 
-func (t *EinoMultiAgentTranslator) switchAgent(newAgent string) []aguievents.Event {
+func (t *EinoTranslator) switchAgent(newAgent string) []aguievents.Event {
 	var events []aguievents.Event
 
 	if t.currentActivity != nil {
@@ -179,7 +177,7 @@ func (t *EinoMultiAgentTranslator) switchAgent(newAgent string) []aguievents.Eve
 	return events
 }
 
-func (t *EinoMultiAgentTranslator) endCurrentAgentActivity() []aguievents.Event {
+func (t *EinoTranslator) endCurrentAgentActivity() []aguievents.Event {
 	if t.currentActivity == nil {
 		return nil
 	}
@@ -203,7 +201,7 @@ func (t *EinoMultiAgentTranslator) endCurrentAgentActivity() []aguievents.Event 
 	return events
 }
 
-func (t *EinoMultiAgentTranslator) translateMessageForCurrentAgent(msg *schema.Message) []aguievents.Event {
+func (t *EinoTranslator) translateMessageForCurrentAgent(msg *schema.Message) []aguievents.Event {
 	if t.currentActivity == nil {
 		return nil
 	}
@@ -211,7 +209,7 @@ func (t *EinoMultiAgentTranslator) translateMessageForCurrentAgent(msg *schema.M
 	return t.translateMessageWithActivity(msg, t.currentActivity, false)
 }
 
-func (t *EinoMultiAgentTranslator) translateMessageWithActivity(msg *schema.Message, activity *AgentActivitySimple, isStreaming bool) []aguievents.Event {
+func (t *EinoTranslator) translateMessageWithActivity(msg *schema.Message, activity *AgentActivitySimple, isStreaming bool) []aguievents.Event {
 	if msg == nil {
 		return nil
 	}
@@ -286,7 +284,7 @@ func (t *EinoMultiAgentTranslator) translateMessageWithActivity(msg *schema.Mess
 	return events
 }
 
-func (t *EinoMultiAgentTranslator) translateStreamForAgent(ctx context.Context, msgOutput *adk.MessageVariant, out chan<- aguievents.Event) {
+func (t *EinoTranslator) translateStreamForAgent(ctx context.Context, msgOutput *adk.MessageVariant, out chan<- aguievents.Event) {
 	if msgOutput.MessageStream == nil {
 		return
 	}
@@ -342,7 +340,7 @@ func (t *EinoMultiAgentTranslator) translateStreamForAgent(ctx context.Context, 
 	}
 }
 
-func (t *EinoMultiAgentTranslator) finishAllAgents() []aguievents.Event {
+func (t *EinoTranslator) finishAllAgents() []aguievents.Event {
 	var events []aguievents.Event
 
 	if t.currentActivity != nil {

@@ -7,8 +7,7 @@
 AG-UI 协议定义了一套标准的事件流格式，用于智能体与前端之间的通信。本包提供了三个核心功能：
 
 1. **消息类型定义** (`message_types.go`) - 定义了历史消息的结构体和常量
-2. **事件流处理** (`stream_processor.go`) - 提供事件流的数据清洗和聚合功能
-3. **工具结果格式化** (`tool_formatter.go`) - 提供工具结果的格式化功能
+2. **事件流处理** (`stream_processor.go`) - 提供事件流的数据清洗、聚合和格式化功能
 
 ## 核心功能
 
@@ -150,13 +149,33 @@ type WebPage struct {
 
 #### 格式化函数
 
+包内提供的通用格式化函数：
+
+```go
+// 格式化 JSON 字符串，美化输出
+func FormatJSONResult(result string) string
+
+// 创建截断函数，限制结果长度
+func TruncateResult(maxLen int) func(string) string
+
+// 创建脱敏函数，隐藏敏感字段
+func MaskSensitiveFields(sensitiveFields []string) func(string) string
+
+// 创建前缀移除函数
+func RemovePrefixes(prefixes []string) func(string) string
+```
+
+业务相关的格式化函数（定义在 `internal/bff-service/service/wga_tool_formatter.go`）：
+
 ```go
 // 格式化 bocha 搜索结果
-func FormatBochaWebSearchResult(result string) string
+func WgaFormatBochaWebSearchResult(result string) string
 
 // 格式化 tavily 搜索结果
-func FormatTavilySearchResult(result string) string
+func WgaFormatTavilySearchResult(result string) string
 ```
+
+> **注意**：业务相关的格式化函数需要在应用层定义，不在此包中。以上示例仅供参考。
 
 ## 使用示例
 
@@ -186,8 +205,8 @@ func main() {
             "Supervisor Agent",
         },
         ResultFormatters: map[string]func(string) string{
-            "bochaWebSearch":      ag_ui_util.FormatBochaWebSearchResult,
-            "tavily_basic_search": ag_ui_util.FormatTavilySearchResult,
+            "bochaWebSearch":      formatBochaWebSearchResult,
+            "tavily_basic_search": formatTavilySearchResult,
         },
     }
     
@@ -222,12 +241,12 @@ func main() {
 }
 ```
 
-### 与 EinoMultiAgentTranslator 集成
+### 与 EinoTranslator 集成
 
 ```go
 func translateWithHistory(ctx context.Context, iter *adk.AsyncIterator[*adk.AgentEvent]) {
     // 创建翻译器
-    translator := ag_ui_util.NewEinoMultiAgentTranslator(threadID, runID)
+    translator := ag_ui_util.NewEinoTranslator(threadID, runID)
     eventCh := translator.TranslateStream(ctx, iter)
     
     // 创建处理器
@@ -237,7 +256,7 @@ func translateWithHistory(ctx context.Context, iter *adk.AsyncIterator[*adk.Agen
         },
         ExcludedAgentNames: []string{"default"},
         ResultFormatters: map[string]func(string) string{
-            "bochaWebSearch": ag_ui_util.FormatBochaWebSearchResult,
+            "bochaWebSearch": formatBochaWebSearchResult,
         },
     }
     processor := ag_ui_util.NewStreamProcessor(config)
@@ -533,4 +552,4 @@ toolCallMap map[string]*ToolCall  // 支持并发工具调用
 
 - [AG-UI Protocol Specification](https://github.com/ag-ui-protocol/ag-ui)
 - [AG-UI Events Definition](https://github.com/ag-ui-protocol/ag-ui/tree/main/sdks/community/go/pkg/core/events)
-- [Eino Multi-Agent Implementation](./eino_multi_agent.go)
+- [Eino Translator Implementation](./translator_eino.go)
