@@ -2,6 +2,20 @@
 
 AG-UI 协议事件转换，将不同来源的事件流转换为 AG-UI 格式。
 
+## 包结构
+
+```
+pkg/ag-ui-util/
+├── message_types.go      # 常量和类型定义
+├── message_state.go      # 消息状态管理（TEXT_MESSAGE/REASONING 状态）
+├── event_state.go        # 基础状态管理（RUN_STARTED/FINISHED）
+├── translator_eino.go    # EinoTranslator（eino AgentEvent 转换）
+├── translator_opencode.go # OpencodeTranslator（opencode JSON 转换）
+├── stream_processor.go   # 事件流处理（清洗 + 聚合）
+├── README.md
+└── EVENT_HISTORY.md
+```
+
 ## AG-UI 协议规范
 
 ### 核心概念
@@ -28,12 +42,6 @@ interface Message {
   id: string;              // 消息唯一标识（messageId）
   role: string;            // 消息角色，决定消息类型
   content?: string;        // 文本内容
-}
-
-// UserMessage - 用户输入
-interface UserMessage extends Message {
-  role: "user";
-  content: string | InputContent[];  // 纯文本或多模态内容（文本+文件）
 }
 
 // AssistantMessage - AI 回复
@@ -67,65 +75,6 @@ interface ToolCall {
 }
 ```
 
-#### 用户上传文件
-
-UserMessage 的 `content` 可以是多模态内容数组，支持文本和文件：
-
-```typescript
-// InputContent 联合类型
-type InputContent = TextInputContent | BinaryInputContent;
-
-// 文本内容
-interface TextInputContent {
-  type: "text";
-  text: string;
-}
-
-// 二进制内容（文件/图片）
-interface BinaryInputContent {
-  type: "binary";
-  mimeType: string;        // 如 "image/png", "application/pdf"
-  id?: string;             // 文件引用 ID
-  url?: string;            // 文件 URL
-  data?: string;           // Base64 编码数据
-  filename?: string;       // 文件名
-}
-```
-
-**必须提供 `id`、`url` 或 `data` 中至少一个。**
-
-示例：
-```json
-// 用户上传图片
-{
-  "id": "msg-123",
-  "role": "user",
-  "content": [
-    { "type": "text", "text": "请分析这张图片" },
-    { 
-      "type": "binary", 
-      "mimeType": "image/png", 
-      "url": "https://example.com/image.png" 
-    }
-  ]
-}
-
-// 用户上传 PDF 文件（Base64）
-{
-  "id": "msg-456",
-  "role": "user",
-  "content": [
-    { "type": "text", "text": "请总结这个文档" },
-    { 
-      "type": "binary", 
-      "mimeType": "application/pdf",
-      "filename": "report.pdf",
-      "data": "JVBERi0xLjQK..."
-    }
-  ]
-}
-```
-
 #### 事件（Event）
 
 事件是流式传输的基本单元，用于增量更新消息状态：
@@ -145,46 +94,7 @@ interface BinaryInputContent {
 | `REASONING_MESSAGE_END` | 结束推理消息 | `messageId` |
 | `REASONING_END` | 结束推理过程 | `messageId` |
 | `RUN_STARTED` / `RUN_FINISHED` | 运行生命周期 | `threadId`, `runId` |
-
-事件结构示例：
-```typescript
-// TEXT_MESSAGE_START - 开始文本消息
-interface TextMessageStartEvent {
-  type: "TEXT_MESSAGE_START";
-  messageId: string;       // 消息唯一标识
-  role: "assistant" | "user" | "system" | "developer";  // 默认 "assistant"
-}
-
-// TEXT_MESSAGE_CONTENT - 追加文本内容
-interface TextMessageContentEvent {
-  type: "TEXT_MESSAGE_CONTENT";
-  messageId: string;       // 关联到 TEXT_MESSAGE_START
-  delta: string;           // 增量文本，追加到消息末尾
-}
-
-// TOOL_CALL_START - 开始工具调用
-interface ToolCallStartEvent {
-  type: "TOOL_CALL_START";
-  toolCallId: string;      // 工具调用唯一标识
-  toolCallName: string;    // 工具名称
-  parentMessageId?: string; // 关联到所属的 AssistantMessage（可选）
-}
-
-// TOOL_CALL_RESULT - 工具执行结果
-interface ToolCallResultEvent {
-  type: "TOOL_CALL_RESULT";
-  messageId: string;       // 结果消息的唯一标识（新消息）
-  toolCallId: string;      // 关联到 TOOL_CALL_START
-  content: string;         // 工具返回内容
-}
-
-// REASONING_MESSAGE_START - 开始推理消息
-interface ReasoningMessageStartEvent {
-  type: "REASONING_MESSAGE_START";
-  messageId: string;       // 推理消息唯一标识
-  role: "reasoning";
-}
-```
+| `ACTIVITY_SNAPSHOT` | 智能体活动快照 | `messageId`, `activityType`, `content` |
 
 #### 关键字段说明
 
@@ -249,11 +159,6 @@ ToolMessage {
 }
 ```
 
-**关键点：**
-- `TOOL_CALL_START` 的 `parentMessageId` 匹配 `TEXT_MESSAGE_START` 的 `messageId` → 工具调用嵌入到该 AssistantMessage
-- `TOOL_CALL_RESULT` 创建独立的 ToolMessage，通过 `toolCallId` 关联到工具调用
-- 不提供 `parentMessageId` 时，`TOOL_CALL_START` 会创建新的 AssistantMessage
-
 ### 事件类型
 
 | 事件类型 | 事件序列 | 说明 |
@@ -265,24 +170,6 @@ ToolMessage {
 | ToolCall (结果) | `TOOL_CALL_RESULT` | 工具执行返回结果（独立事件） |
 
 > **说明**：`TOOL_CALL_START/ARGS/END` 和 `TOOL_CALL_RESULT` 是两个独立的事件序列。前者由 Assistant 发起调用，后者由工具执行返回结果。它们通过 `toolCallId` 关联。
-
-### 事件穿插规则（AG-UI 完整规范）
-
-- TEXT_MESSAGE、TOOL_CALL、REASONING_MESSAGE 是**独立的事件流**，可以任意穿插
-- 通过 `messageId`/`parentMessageId` 关联到同一个消息对象：
-  - `TOOL_CALL_START` 的 `parentMessageId` 匹配 `TEXT_MESSAGE_START` 的 `messageId` → 同一个 AssistantMessage
-  - 不匹配则创建独立的消息
-- 多个 TEXT_MESSAGE 可同时活跃（不同 messageId）
-- 多个 TOOL_CALL 可同时活跃（不同 toolCallId）
-- 唯一约束：REASONING 同一时刻只能有一个活跃
-
-### 消息类型
-
-| 消息类型 | 角色 | 来源事件 |
-|---------|------|---------|
-| AssistantMessage | assistant | TEXT_MESSAGE_* + TOOL_CALL_* (via parentMessageId) |
-| ReasoningMessage | reasoning | REASONING_MESSAGE_* |
-| ToolMessage | tool | TOOL_CALL_RESULT |
 
 ## 本实现规则（AG-UI 规范子集）
 
@@ -313,8 +200,6 @@ TEXT_MESSAGE_END (如果 TEXT_MESSAGE 活跃)
 TOOL_CALL_RESULT
 ```
 
-> **说明**：`TOOL_CALL_RESULT` 是工具执行返回的结果，与 `TOOL_CALL_START/ARGS/END` 是独立的事件序列。前者由 Assistant 发起，后者由工具执行返回。
-
 #### ToolCalls（Assistant 消息中的工具调用）
 
 收到工具调用请求时：
@@ -333,13 +218,9 @@ TOOL_CALL_END
 ...
 ```
 
-> **说明**：
-> - 所有 ToolCalls 处理完毕后，不存在活跃的 TOOL_CALL。后续收到 ReasoningContent 或 Content 时无需发送 TOOL_CALL_END。
-> - **重要**：ToolCall 通过 `parentMessageId` 关联到已关闭的 AssistantMessage。即使 TEXT_MESSAGE 已 END，`parentMessageId` 仍可正确关联。
-
 #### ReasoningContent
 
-收到推理内容时（所有 ToolCalls 已处理完毕，无活跃的 TOOL_CALL）：
+收到推理内容时：
 
 ```
 TEXT_MESSAGE_END (如果 TEXT_MESSAGE 活跃)
@@ -350,7 +231,7 @@ REASONING_MESSAGE_CONTENT
 
 #### Content
 
-收到文本内容时（所有 ToolCalls 已处理完毕，无活跃的 TOOL_CALL）：
+收到文本内容时：
 
 ```
 REASONING_MESSAGE_END (如果 REASONING 活跃)
@@ -359,61 +240,24 @@ TEXT_MESSAGE_START (如果 TEXT_MESSAGE 未活跃)
 TEXT_MESSAGE_CONTENT
 ```
 
-### 与完整规范的差异
-
-| 特性 | AG-UI 完整规范 | 本实现 |
-|-----|---------------|-------|
-| TEXT_MESSAGE 穿插 | 多个可同时活跃 | 单个活跃，串行处理 |
-| TOOL_CALL 穿插 | 多个可同时活跃 | 单个活跃，串行处理 |
-| TOOL_CALL 关联 | 可关联到活跃/关闭的消息 | 关联到已关闭的消息（parentMessageId） |
-| Reasoning 穿插 | 只能一个活跃 | ✅ 符合规范 |
-
-### ID 生成
-
-使用 AG-UI SDK 提供的 ID 生成器：
-- `GenerateMessageID()` → `msg-{uuid}`
-- `GenerateToolCallID()` → `tool-{uuid}`
-- `GenerateStepID()` → `step-{uuid}`
-
 ## 转换器
 
 | 转换器 | 输入 | 使用场景 |
 |--------|------|---------|
-| OpencodeTranslator | opencode JSON 字符串 | wga-sandbox 输出转换 |
-| EinoTranslator | eino AgentEvent | wga.Run() 输出转换（单智能体） |
-| EinoMultiAgentTranslator | eino AgentEvent | wga.Run() 输出转换（多智能体） |
+| `EinoTranslator` | eino AgentEvent | wga.Run() 输出转换，支持多智能体切换 |
+| `OpencodeTranslator` | opencode JSON 字符串 | wga-sandbox 输出转换 |
 
-## 使用
+### EinoTranslator
 
-```go
-import ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
+支持多智能体场景，通过 `ACTIVITY_SNAPSHOT` 事件标识当前运行的智能体。
 
-// OpencodeTranslator - wga-sandbox 输出转换
-runSession, outputCh, _ := wga_sandbox.Run(ctx, opts...)
-tr := ag_ui_util.NewOpencodeTranslator(runSession.ThreadID, runSession.RunID)
-eventCh := tr.TranslateStream(ctx, outputCh)
-jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
+**功能特性：**
+- Agent 切换检测：自动检测 `AgentEvent.AgentName` 变化
+- Activity 事件：发送 `ACTIVITY_SNAPSHOT` 标识智能体启动/结束
+- 独立消息状态：每个 Agent 维护独立的 MessageState
+- 流式工具调用：支持流式传输工具调用参数
 
-// EinoTranslator - wga 单智能体输出转换
-runSession, iter, _ := wga.Run(ctx, agentID, opts...)
-tr := ag_ui_util.NewEinoTranslator(runSession.ThreadID, runSession.RunID)
-eventCh := tr.TranslateStream(ctx, iter)
-jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
-
-// EinoMultiAgentTranslator - wga 多智能体输出转换
-// 使用 ActivitySnapshot 标识当前运行的智能体
-runSession, iter, _ := wga.Run(ctx, agentID, opts...)
-tr := ag_ui_util.NewEinoMultiAgentTranslator(runSession.ThreadID, runSession.RunID)
-eventCh := tr.TranslateStream(ctx, iter)
-jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
-```
-
-## 多智能体模式
-
-多智能体模式通过 AG-UI 协议的 `ACTIVITY_SNAPSHOT` 事件标识当前运行的智能体。
-
-### ActivitySnapshot 结构
-
+**ActivitySnapshot 结构：**
 ```json
 {
   "type": "ACTIVITY_SNAPSHOT",
@@ -427,7 +271,7 @@ jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
 }
 ```
 
-### 字段说明
+**字段说明：**
 
 | 字段 | 说明 |
 |-----|------|
@@ -436,14 +280,79 @@ jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
 | `content.instanceNum` | 智能体实例编号（同一智能体可能多次运行） |
 | `content.status` | 状态：`"started"` 或 `"finished"` |
 
-### 智能体切换流程
+### OpencodeTranslator
 
-1. 检测到 `AgentEvent.AgentName` 变化
-2. 发送前一个智能体的消息结束事件（TextMessageEnd 等）
-3. 发送 `ACTIVITY_SNAPSHOT` 事件，`status: "finished"`
-4. 为新智能体创建独立的消息 ID
-5. 发送新智能体的 `ACTIVITY_SNAPSHOT` 事件，`status: "started"`
-6. 发送新智能体的消息内容
+将 opencode JSON 事件流转换为 AG-UI 事件。
+
+**事件类型映射：**
+
+| opencode 事件 | AG-UI 事件 |
+|--------------|-----------|
+| `text` | `TEXT_MESSAGE_CONTENT` |
+| `reasoning` | `REASONING_MESSAGE_CONTENT` |
+| `tool_use` | `TOOL_CALL_START/ARGS/END/RESULT` |
+| `error` | `TEXT_MESSAGE_CONTENT`（带 `[error]` 前缀） |
+
+## 使用示例
+
+### EinoTranslator - 多智能体场景
+
+```go
+import ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
+
+// 创建转换器
+runSession, iter, _ := wga.Run(ctx, agentID, opts...)
+tr := ag_ui_util.NewEinoTranslator(runSession.ThreadID, runSession.RunID)
+eventCh := tr.TranslateStream(ctx, iter)
+
+// 转换为 JSON 字符串流（用于 SSE）
+jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
+```
+
+### OpencodeTranslator - Sandbox 场景
+
+```go
+// 创建转换器
+runSession, outputCh, _ := wga_sandbox.Run(ctx, opts...)
+tr := ag_ui_util.NewOpencodeTranslator(runSession.ThreadID, runSession.RunID)
+eventCh := tr.TranslateStream(ctx, outputCh)
+
+// 转换为 JSON 字符串流
+jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
+```
+
+### StreamProcessor - 事件清洗和历史聚合
+
+```go
+// 创建处理器配置
+config := &ag_ui_util.ProcessorConfig{
+    ToolNameMapper: map[string]string{
+        "transfer_to_agent": "正在交给专业智能体",
+    },
+    ExcludedAgentNames: []string{"default", "Supervisor Agent"},
+    ResultFormatters: map[string]func(string) string{
+        "bochaWebSearch": formatBochaResult,
+    },
+}
+
+// 创建处理器
+processor := ag_ui_util.NewStreamProcessor(config)
+
+// 处理事件流
+cleanedEventCh, historyCh := processor.Process(ctx, eventCh)
+
+// 实时处理清洗后的事件
+go func() {
+    for event := range cleanedEventCh {
+        sendToClient(event)
+    }
+}()
+
+// 收集历史记录
+for msg := range historyCh {
+    saveHistory(msg)
+}
+```
 
 ## API
 
@@ -451,15 +360,8 @@ jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
 
 | 函数 | 说明 |
 |------|------|
+| `NewEinoTranslator(threadID, runID)` | 创建 eino 转换器（支持多智能体） |
 | `NewOpencodeTranslator(threadID, runID)` | 创建 opencode 转换器 |
-| `NewEinoTranslator(threadID, runID)` | 创建 eino 单智能体转换器 |
-| `NewEinoMultiAgentTranslator(threadID, runID)` | 创建 eino 多智能体转换器 |
-
-### OpencodeTranslator
-
-| 方法 | 说明 |
-|------|------|
-| `TranslateStream(ctx, <-chan string)` | 转换 opencode JSON 字符串流 |
 
 ### EinoTranslator
 
@@ -467,8 +369,61 @@ jsonCh := ag_ui_util.EventsToJSONChannel(ctx, eventCh)
 |------|------|
 | `TranslateStream(ctx, *adk.AsyncIterator[*adk.AgentEvent])` | 转换 eino AgentEvent 迭代器 |
 
+### OpencodeTranslator
+
+| 方法 | 说明 |
+|------|------|
+| `TranslateStream(ctx, <-chan string)` | 转换 opencode JSON 字符串流 |
+
+### StreamProcessor
+
+| 函数/方法 | 说明 |
+|----------|------|
+| `NewStreamProcessor(config)` | 创建事件流处理器 |
+| `Process(ctx, in)` | 处理事件流，返回清洗后的事件流和历史消息流 |
+
 ### 辅助函数
 
 | 函数 | 说明 |
 |------|------|
 | `EventsToJSONChannel(ctx, events)` | 事件流 → JSON 字符串流 |
+| `FormatJSONResult(result)` | 格式化 JSON 字符串 |
+| `TruncateResult(maxLen)` | 创建截断函数 |
+| `MaskSensitiveFields(fields)` | 创建脱敏函数 |
+| `RemovePrefixes(prefixes)` | 创建前缀移除函数 |
+
+### 消息类型
+
+```go
+// 常量
+const (
+    RoleAssistant = "assistant"
+    RoleUser      = "user"
+    RoleTool      = "tool"
+    RoleReasoning = "reasoning"
+    RoleSystem    = "system"
+    
+    ActivityTypeSubAgent  = "sub_agent"
+    ActivityTypeWorkspace = "workspace"
+)
+
+// 消息类型
+type TextMessage struct { ... }
+type ReasoningMessage struct { ... }
+type ToolMessage struct { ... }
+type ToolCall struct { ... }
+type Activity struct { ... }
+
+// 活动内容类型
+type WorkspaceActivityContent struct {
+    RunID     string `json:"runId"`
+    ThreadID  string `json:"threadId"`
+    FileCount int    `json:"fileCount"`
+    TotalSize int64  `json:"totalSize"`
+    Timestamp int64  `json:"timestamp"`
+}
+
+// 工具结果格式化类型
+type WebSearchResult struct { ... }
+type WebPage struct { ... }
+```

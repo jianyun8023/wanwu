@@ -33,8 +33,11 @@ func (a *sandboxAgent) Description(_ context.Context) string {
 	return a.cfg.Description
 }
 
-func (a *sandboxAgent) Run(ctx context.Context, _ *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
-	sandboxOpts := a.buildSandboxOpts()
+func (a *sandboxAgent) Run(ctx context.Context, agentInput *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
+	messages := make([]adk.Message, 0, len(agentInput.Messages)+len(a.options.Messages))
+	messages = append(messages, a.options.Messages...)
+	messages = append(messages, agentInput.Messages...)
+	sandboxOpts := a.buildSandboxOpts(messages)
 
 	_, outputCh, err := wga_sandbox.Run(ctx, sandboxOpts...)
 	if err != nil {
@@ -44,7 +47,7 @@ func (a *sandboxAgent) Run(ctx context.Context, _ *adk.AgentInput, _ ...adk.Agen
 	return wga_sandbox_converter.ConvertToEinoIterator(ctx, wga_sandbox_option.RunnerTypeOpencode, outputCh)
 }
 
-func (a *sandboxAgent) buildSandboxOpts() []wga_sandbox_option.Option {
+func (a *sandboxAgent) buildSandboxOpts(messages []adk.Message) []wga_sandbox_option.Option {
 	opts := []wga_sandbox_option.Option{
 		wga_sandbox_option.WithRunSession(wga_sandbox_option.RunSession{
 			ThreadID: a.options.RunSession.ThreadID,
@@ -60,7 +63,7 @@ func (a *sandboxAgent) buildSandboxOpts() []wga_sandbox_option.Option {
 			Params:       a.options.Model.Params,
 		}),
 		wga_sandbox_option.WithInstruction(a.cfg.Prompt),
-		wga_sandbox_option.WithMessages(a.options.Messages),
+		wga_sandbox_option.WithMessages(messages),
 		wga_sandbox_option.WithEnableThinking(a.cfg.Configure.EnableThinking),
 		wga_sandbox_option.WithSkipCleanup(true),
 		wga_sandbox_option.WithAgentName(a.cfg.ID),
