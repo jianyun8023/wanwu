@@ -145,6 +145,15 @@ export const TYPE_OBJ = {
   },
 };
 
+export const SHOW_VISION_LIST = [
+  YUAN_JING,
+  QWEN,
+  QIANFAN,
+  HUOSHAN,
+  INFINI,
+  OPENAI_API,
+];
+
 export const DEFAULT_MODEL_ITEM = {
   displayName: i18n.t('modelAccess.custom'),
   model: 'custom',
