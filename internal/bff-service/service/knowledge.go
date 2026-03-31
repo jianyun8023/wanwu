@@ -138,7 +138,7 @@ func GetDeployInfo(ctx *gin.Context) (interface{}, error) {
 // CreateKnowledge 创建知识库
 func CreateKnowledge(ctx *gin.Context, userId, orgId string, r *request.CreateKnowledgeReq) (*response.CreateKnowledgeResp, error) {
 	knowledgeGraph := &knowledgebase_service.KnowledgeGraph{}
-	if r.Category == request.CategoryKnowledge {
+	if r.Category == request.CategoryKnowledge || r.Category == request.CategoryMultimodalKnowledge {
 		if r.KnowledgeGraph.Switch {
 			knowledgeGraph = &knowledgebase_service.KnowledgeGraph{
 				Switch:     r.KnowledgeGraph.Switch,
@@ -171,12 +171,14 @@ func CreateKnowledgeOpenapi(ctx *gin.Context, userId, orgId string, r *request.C
 		return nil, err
 	}
 	r.EmbeddingModel.ModelId = embModelId
-	if r.Category == request.CategoryKnowledge && r.KnowledgeGraph.Switch {
-		llmModelId, err := GetModelIdByUuid(ctx, r.KnowledgeGraph.LLMModelId)
-		if err != nil {
-			return nil, err
+	if r.Category == request.CategoryKnowledge || r.Category == request.CategoryMultimodalKnowledge {
+		if r.KnowledgeGraph.Switch {
+			llmModelId, err := GetModelIdByUuid(ctx, r.KnowledgeGraph.LLMModelId)
+			if err != nil {
+				return nil, err
+			}
+			r.KnowledgeGraph.LLMModelId = llmModelId
 		}
-		r.KnowledgeGraph.LLMModelId = llmModelId
 	}
 	return CreateKnowledge(ctx, userId, orgId, r)
 }
