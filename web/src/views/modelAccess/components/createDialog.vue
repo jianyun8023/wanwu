@@ -407,6 +407,7 @@ import {
   MULTIMODAL_EMBEDDING,
   MULTIMODAL_RERANK,
   ASR,
+  OPENAI_API,
   OLLAMA,
   YUAN_JING,
   HUOSHAN,
@@ -679,7 +680,9 @@ export default {
           `${this.createForm.modelType}_${this.provider.key}`
         ] || this.typeObj.inferUrl[this.provider.key];
       if (defaultUrl) {
-        this.createForm.endpointUrl = defaultUrl;
+        // OpenAI-API-compatible 供应商不自动设置推理 URL
+        this.createForm.endpointUrl =
+          this.provider.key === OPENAI_API ? '' : defaultUrl;
       }
     },
     openDialog(title, row) {
