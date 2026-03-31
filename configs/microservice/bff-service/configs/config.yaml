@@ -386,3 +386,7 @@ wga-sandbox:
     type: reuse
     host: wga-sandbox-wanwu
     image-name: ""
+
+agent-service:
+  host: agent-service
+  port: 8990

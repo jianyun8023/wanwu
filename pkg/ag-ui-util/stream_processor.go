@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/UnicomAI/wanwu/pkg/log"
 	aguievents "github.com/ag-ui-protocol/ag-ui/sdks/community/go/pkg/core/events"
 )
 
@@ -314,10 +315,12 @@ func parseActivityContent(content any) map[string]interface{} {
 	default:
 		data, err := json.Marshal(content)
 		if err != nil {
+			log.Warnf("[ag-ui-util] parseActivityContent marshal error: %v", err)
 			return nil
 		}
 		var result map[string]interface{}
 		if err := json.Unmarshal(data, &result); err != nil {
+			log.Warnf("[ag-ui-util] parseActivityContent unmarshal error: %v", err)
 			return nil
 		}
 		return result
@@ -327,11 +330,13 @@ func parseActivityContent(content any) map[string]interface{} {
 func FormatJSONResult(result string) string {
 	var obj interface{}
 	if err := json.Unmarshal([]byte(result), &obj); err != nil {
+		log.Warnf("[ag-ui-util] FormatJSONResult unmarshal error: %v", err)
 		return result
 	}
 
 	formatted, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
+		log.Warnf("[ag-ui-util] FormatJSONResult marshal error: %v", err)
 		return result
 	}
 	return string(formatted)
@@ -350,6 +355,7 @@ func MaskSensitiveFields(sensitiveFields []string) func(string) string {
 	return func(result string) string {
 		var obj map[string]interface{}
 		if err := json.Unmarshal([]byte(result), &obj); err != nil {
+			log.Warnf("[ag-ui-util] MaskSensitiveFields unmarshal error: %v", err)
 			return result
 		}
 
@@ -361,6 +367,7 @@ func MaskSensitiveFields(sensitiveFields []string) func(string) string {
 
 		formatted, err := json.Marshal(obj)
 		if err != nil {
+			log.Warnf("[ag-ui-util] MaskSensitiveFields marshal error: %v", err)
 			return result
 		}
 		return string(formatted)

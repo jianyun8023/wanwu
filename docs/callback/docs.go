@@ -16,6 +16,40 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/agent/proxy/chat": {
+            "post": {
+                "description": "智能体代理问答，固定流式返回，提取eventType=0的数据聚合返回",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "callback"
+                ],
+                "summary": "智能体代理问答",
+                "parameters": [
+                    {
+                        "description": "智能体代理问答请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AgentProxyChatReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/category/info": {
             "get": {
                 "description": "获取Maas平台知识库信息（模型扩展调用）",
@@ -3422,6 +3456,35 @@ const docTemplate = `{
                 },
                 "title": {
                     "description": "Title is a human-readable title for the tool, useful for UI display",
+                    "type": "string"
+                }
+            }
+        },
+        "request.AgentProxyChatReq": {
+            "type": "object",
+            "required": [
+                "assistantId",
+                "input",
+                "orgId",
+                "userId"
+            ],
+            "properties": {
+                "assistantId": {
+                    "type": "integer"
+                },
+                "input": {
+                    "type": "string"
+                },
+                "orgId": {
+                    "type": "string"
+                },
+                "uploadFile": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userId": {
                     "type": "string"
                 }
             }

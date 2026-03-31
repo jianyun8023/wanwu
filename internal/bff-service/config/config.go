@@ -53,6 +53,7 @@ type Config struct {
 	Workflow            WorkflowServiceConfig `json:"workflow" mapstructure:"workflow"`
 	WgaSandbox          WgaSandboxConfig      `json:"wga-sandbox" mapstructure:"wga-sandbox"`
 	RecommendModels     RecommendModelConfig  `json:"recommend_models" mapstructure:"recommend_models"`
+	AgentService        AgentServiceConfig    `json:"agent-service" mapstructure:"agent-service"`
 }
 
 type ServerConfig struct {
@@ -129,6 +130,11 @@ type DecryptPasswd struct {
 
 type ServiceConfig struct {
 	Host string `json:"host" mapstructure:"host"`
+}
+
+type AgentServiceConfig struct {
+	Host string `json:"host" mapstructure:"host"`
+	Port int    `json:"port" mapstructure:"port"`
 }
 
 type RagKnowledgeConfig struct {

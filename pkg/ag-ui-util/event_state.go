@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	aguievents "github.com/ag-ui-protocol/ag-ui/sdks/community/go/pkg/core/events"
 )
@@ -93,9 +94,12 @@ func EventsToJSONChannel(ctx context.Context, in <-chan aguievents.Event) <-chan
 				if !ok {
 					return
 				}
-				if data, err := json.Marshal(evt); err == nil {
-					out <- string(data)
+				data, err := json.Marshal(evt)
+				if err != nil {
+					log.Warnf("[ag-ui-util] EventsToJSONChannel marshal error: %v", err)
+					continue
 				}
+				out <- string(data)
 			}
 		}
 	}()
