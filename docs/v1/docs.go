@@ -6400,7 +6400,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info获取运行时信息",
+                "description": "通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info,agent/connect,agent/run,agent/stop",
                 "consumes": [
                     "application/json"
                 ],
@@ -20641,6 +20641,10 @@ const docTemplate = `{
             "properties": {
                 "content": {
                     "description": "内容 string 或者 [{\"type\":\"text\",\"text\":\"这张图片是什么？\"},{\"type\":\"binary\",\"mimeType\":\"image/png\",\"url\":\"https://...\"}]"
+                },
+                "id": {
+                    "description": "消息id",
+                    "type": "string"
                 },
                 "role": {
                     "description": "角色 user",

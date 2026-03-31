@@ -62,6 +62,7 @@ type GeneralAgentConversationChatReq struct {
 }
 
 type GeneralAgentConversationMessage struct {
+	ID      string      `json:"id"`                          // 消息id
 	Role    string      `json:"role" validate:"required"`    // 角色 user
 	Content interface{} `json:"content" validate:"required"` // 内容 string 或者 [{"type":"text","text":"这张图片是什么？"},{"type":"binary","mimeType":"image/png","url":"https://..."}]
 }
@@ -98,3 +99,47 @@ type GeneralAgentCopilotRuntimeReq struct {
 }
 
 func (c *GeneralAgentCopilotRuntimeReq) Check() error { return nil }
+
+func (c *GeneralAgentCopilotRuntimeReq) GetThreadID() string {
+	threadID, _ := c.Body["threadId"].(string)
+	return threadID
+}
+
+func (c *GeneralAgentCopilotRuntimeReq) GetMessages() []GeneralAgentConversationMessage {
+	if c.Body == nil {
+		return nil
+	}
+
+	bodyMessages, ok := c.Body["messages"]
+	if !ok || bodyMessages == nil {
+		return nil
+	}
+
+	messagesSlice, ok := bodyMessages.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	messages := make([]GeneralAgentConversationMessage, 0, len(messagesSlice))
+	for _, m := range messagesSlice {
+		msgMap, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		role, _ := msgMap["role"].(string)
+		if role == "" {
+			continue
+		}
+
+		id, _ := msgMap["id"].(string)
+		content := msgMap["content"]
+		messages = append(messages, GeneralAgentConversationMessage{
+			ID:      id,
+			Role:    role,
+			Content: content,
+		})
+	}
+
+	return messages
+}

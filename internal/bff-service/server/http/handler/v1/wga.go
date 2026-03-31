@@ -272,35 +272,6 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
-// GeneralAgentCopilotRuntime
-//
-//	@Tags			wga
-//	@Summary		通用智能体CopilotRuntime协议端点
-//	@Description	通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info获取运行时信息
-//	@Security		JWT
-//	@Accept			json
-//	@Produce		json
-//	@Param			data	body		request.GeneralAgentCopilotRuntimeReq		true	"CopilotRuntime请求参数"
-//	@Success		200		{object}	response.GeneralAgentCopilotRuntimeInfoResp	"CopilotRuntime信息"
-//	@Router			/general/agent/copilotkit [post]
-func GeneralAgentCopilotRuntime(ctx *gin.Context) {
-	var req request.GeneralAgentCopilotRuntimeReq
-	if !gin_util.Bind(ctx, &req) {
-		return
-	}
-
-	switch req.Method {
-	case "info":
-		resp := service.GeneralAgentCopilotRuntimeInfo(ctx)
-		ctx.JSON(http.StatusOK, resp)
-	default:
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": "Unknown method: " + req.Method,
-		})
-	}
-}
-
 // GeneralAgentConversationChat
 //
 //	@Tags			wga
@@ -320,5 +291,78 @@ func GeneralAgentConversationChat(ctx *gin.Context) {
 	err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), req)
 	if err != nil {
 		gin_util.Response(ctx, nil, err)
+	}
+}
+
+// GeneralAgentCopilotRuntime
+//
+//	@Tags			wga
+//	@Summary		通用智能体CopilotRuntime协议端点
+//	@Description	通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info,agent/connect,agent/run,agent/stop
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GeneralAgentCopilotRuntimeReq		true	"CopilotRuntime请求参数"
+//	@Success		200		{object}	response.GeneralAgentCopilotRuntimeInfoResp	"CopilotRuntime信息"
+//	@Router			/general/agent/copilotkit [post]
+func GeneralAgentCopilotRuntime(ctx *gin.Context) {
+	var req request.GeneralAgentCopilotRuntimeReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+
+	switch req.Method {
+	case "info":
+		resp := service.GeneralAgentCopilotRuntimeInfo(ctx)
+		ctx.JSON(http.StatusOK, resp)
+
+	case "agent/connect":
+		ctx.Header("Content-Type", "text/event-stream")
+		ctx.Header("Cache-Control", "no-cache")
+		ctx.Header("Connection", "keep-alive")
+
+	case "agent/run":
+		threadID := req.GetThreadID()
+		if threadID == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "invalid_request",
+				"message": "threadId is required",
+			})
+			return
+		}
+
+		messages := req.GetMessages()
+		if len(messages) == 0 {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":   "invalid_request",
+				"message": "messages is required and cannot be empty",
+			})
+			return
+		}
+
+		chatReq := request.GeneralAgentConversationChatReq{
+			ThreadID: threadID,
+			Messages: messages,
+		}
+
+		err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), chatReq)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "internal_error",
+				"message": err.Error(),
+			})
+		}
+
+	case "agent/stop":
+		ctx.JSON(http.StatusOK, gin.H{
+			"stopped": false,
+			"message": "Unimplemented",
+		})
+
+	default:
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Unknown method: " + req.Method,
+		})
 	}
 }
