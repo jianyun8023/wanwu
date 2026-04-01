@@ -72,13 +72,10 @@ type GeneralAgentWorkspaceResp struct {
 }
 
 type GeneralAgentConversationDetailInfo struct {
-	ThreadID     string                 `json:"threadId"`
-	RunID        string                 `json:"runId"`
-	CreatedAt    int64                  `json:"createdAt"`
-	Messages     []interface{}          `json:"messages"`
-	RequestFiles []AssistantRequestFile `json:"requestFiles"`
-
-	Workspace GeneralAgentConversationWorkspaceInfo `json:"workspace"`
+	ThreadID  string        `json:"threadId"`
+	RunID     string        `json:"runId"`
+	CreatedAt int64         `json:"createdAt"`
+	Events    []interface{} `json:"events"`
 }
 
 type GeneralAgentConversationWorkspaceInfo struct {

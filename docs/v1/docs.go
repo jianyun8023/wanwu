@@ -5842,6 +5842,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/config": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "获取通用智能体配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.GetGeneralAgentConfigResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "更新通用智能体工具配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "修改通用智能体配置",
+                "parameters": [
+                    {
+                        "description": "更新通用智能体配置请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateGeneralAgentConfigReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/conversation": {
             "post": {
                 "security": [
@@ -5976,7 +6053,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "获取指定会话的配置信息，包括模型、工具",
+                "description": "获取指定会话的对话配置信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -5986,7 +6063,7 @@ const docTemplate = `{
                 "tags": [
                     "wga"
                 ],
-                "summary": "通用智能体配置选择",
+                "summary": "通用智能体对话配置",
                 "parameters": [
                     {
                         "type": "string",
@@ -6008,7 +6085,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/response.GetGeneralAgentConfigResp"
+                                            "$ref": "#/definitions/response.GetGeneralAgentConversationConfigResp"
                                         }
                                     }
                                 }
@@ -6023,7 +6100,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "修改通用智能体配置",
+                "description": "修改通用智能体对话配置",
                 "consumes": [
                     "application/json"
                 ],
@@ -6033,15 +6110,15 @@ const docTemplate = `{
                 "tags": [
                     "wga"
                 ],
-                "summary": "修改通用智能体配置",
+                "summary": "修改通用智能体对话配置",
                 "parameters": [
                     {
-                        "description": "修改通用智能体配置请求参数",
+                        "description": "修改通用智能体对话配置请求参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.UpdateGeneralAgentConfigReq"
+                            "$ref": "#/definitions/request.UpdateGeneralAgentConversationConfigReq"
                         }
                     }
                 ],
@@ -6126,18 +6203,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "会话ID",
                         "name": "threadId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码，默认1",
-                        "name": "pageNo",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页数量，默认1000",
-                        "name": "pageSize",
                         "in": "query"
                     }
                 ],
@@ -6438,83 +6503,6 @@ const docTemplate = `{
                         "description": "CopilotRuntime信息",
                         "schema": {
                             "$ref": "#/definitions/response.GeneralAgentCopilotRuntimeInfoResp"
-                        }
-                    }
-                }
-            }
-        },
-        "/general/agent/tool/config": {
-            "get": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "获取通用智能体工具配置",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wga"
-                ],
-                "summary": "获取通用智能体工具配置",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/response.GetGeneralAgentToolConfigResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "更新通用智能体工具配置",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wga"
-                ],
-                "summary": "更新通用智能体工具配置",
-                "parameters": [
-                    {
-                        "description": "更新通用智能体工具配置请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.UpdateGeneralAgentToolConfigReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -11202,6 +11190,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -19466,7 +19455,6 @@ const docTemplate = `{
         "request.CreateGeneralAgentConversationReq": {
             "type": "object",
             "required": [
-                "modelConfig",
                 "title"
             ],
             "properties": {
@@ -22594,6 +22582,25 @@ const docTemplate = `{
         },
         "request.UpdateGeneralAgentConfigReq": {
             "type": "object",
+            "properties": {
+                "assistantList": {
+                    "description": "智能体ID",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.AssistantSelected"
+                    }
+                },
+                "toolList": {
+                    "description": "工具ID",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.ToolSelected"
+                    }
+                }
+            }
+        },
+        "request.UpdateGeneralAgentConversationConfigReq": {
+            "type": "object",
             "required": [
                 "modelConfig",
                 "threadId"
@@ -22610,25 +22617,6 @@ const docTemplate = `{
                 "threadId": {
                     "description": "对话ID",
                     "type": "string"
-                }
-            }
-        },
-        "request.UpdateGeneralAgentToolConfigReq": {
-            "type": "object",
-            "properties": {
-                "assistantList": {
-                    "description": "智能体ID",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.AssistantSelected"
-                    }
-                },
-                "toolList": {
-                    "description": "工具ID",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.ToolSelected"
-                    }
                 }
             }
         },
@@ -25539,24 +25527,15 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "integer"
                 },
-                "messages": {
+                "events": {
                     "type": "array",
                     "items": {}
-                },
-                "requestFiles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.AssistantRequestFile"
-                    }
                 },
                 "runId": {
                     "type": "string"
                 },
                 "threadId": {
                     "type": "string"
-                },
-                "workspace": {
-                    "$ref": "#/definitions/response.GeneralAgentConversationWorkspaceInfo"
                 }
             }
         },
@@ -25574,26 +25553,6 @@ const docTemplate = `{
                 "title": {
                     "description": "对话标题",
                     "type": "string"
-                }
-            }
-        },
-        "response.GeneralAgentConversationWorkspaceInfo": {
-            "type": "object",
-            "properties": {
-                "fileCount": {
-                    "type": "integer"
-                },
-                "isDisplay": {
-                    "type": "boolean"
-                },
-                "runId": {
-                    "type": "string"
-                },
-                "threadId": {
-                    "type": "string"
-                },
-                "totalSize": {
-                    "type": "integer"
                 }
             }
         },
@@ -25814,6 +25773,25 @@ const docTemplate = `{
         "response.GetGeneralAgentConfigResp": {
             "type": "object",
             "properties": {
+                "assistantList": {
+                    "description": "智能体列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.AssistantSelected"
+                    }
+                },
+                "toolList": {
+                    "description": "工具列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.ToolSelected"
+                    }
+                }
+            }
+        },
+        "response.GetGeneralAgentConversationConfigResp": {
+            "type": "object",
+            "properties": {
                 "modelConfig": {
                     "description": "模型",
                     "allOf": [
@@ -25825,25 +25803,6 @@ const docTemplate = `{
                 "threadId": {
                     "description": "对话ID",
                     "type": "string"
-                }
-            }
-        },
-        "response.GetGeneralAgentToolConfigResp": {
-            "type": "object",
-            "properties": {
-                "assistantList": {
-                    "description": "智能体ID",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.AssistantSelected"
-                    }
-                },
-                "toolList": {
-                    "description": "工具ID",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.ToolSelected"
-                    }
                 }
             }
         },

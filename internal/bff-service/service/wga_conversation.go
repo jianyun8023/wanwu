@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	wgaConversationESIndexName = "wga_chat_history" // 通用智能体聊天历史ES索引
+	wgaConversationHistoryEventESIndexName = "wga_chat_history_event" // 通用智能体聊天历史ES索引
 )
 
 func GeneralAgentCopilotRuntimeInfo(_ *gin.Context) *response.GeneralAgentCopilotRuntimeInfoResp {
@@ -149,10 +149,13 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	}
 
 	processor := ag_ui_util.NewStreamProcessor(processorConfig)
-	processedEventCh, _ := processor.Process(ctx.Request.Context(), eventCh)
+	processedEventCh, historyEventCh := processor.Process(ctx.Request.Context(), eventCh, currentUserMessage)
 
 	// 保存智能体返回的消息
-	// go saveWgaChatHistory(context.Background(), historyCh, userId, orgId, req.ThreadID, runID)
+	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, userId, orgId, req.ThreadID, runID,
+		config.WgaCfg().Persistent.BaseDir,
+		config.WgaCfg().Persistent.Enabled,
+	)
 
 	outputCh := injectWgaWorkspaceActivity(
 		ctx.Request.Context(),
@@ -241,32 +244,6 @@ func buildWgaOptionsFromUserConfig(ctx *gin.Context, wgaConversationConfig *assi
 				ThreadID: threadID,
 				RunID:    runID,
 			}),
-		}
-	}
-
-	// 下载用户消息中的URL文件到inputDir
-	if config.WgaCfg().Persistent.Enabled && currentUserMessage != nil {
-		urls := extractURLsFromContent(currentUserMessage.Content)
-		if len(urls) > 0 {
-			mode := wga_persistent.ModeVersioned
-			if config.WgaCfg().Persistent.Mode == string(wga_persistent.ModeOverwrite) {
-				mode = wga_persistent.ModeOverwrite
-			}
-			store, err := wga_persistent.NewStore(mode, config.WgaCfg().Persistent.BaseDir, threadID)
-			if err == nil {
-				_, info, err := store.GetRunDir(runID, wga_persistent.WithMkdir(true))
-				if err == nil {
-					//TODO 测试是否正确
-					inputDir := filepath.Clean(info.Dir)
-					if err := downloadURLsToDir(urls, inputDir); err != nil {
-						log.Errorf("[GeneralAgentConversationChat] download URLs to inputDir failed: %v", err)
-					}
-					opts = append(opts,
-						wga_option.WithInputDir(inputDir),
-						wga_option.WithOutputDir(info.Dir),
-					)
-				}
-			}
 		}
 	}
 
@@ -642,50 +619,30 @@ func filterMessages(messages []request.GeneralAgentConversationMessage) []reques
 	return filtered
 }
 
-// formatMessageContent 格式化消息内容，参考 convertWgaMessage 处理多模态内容
-func formatMessageContent(content interface{}) interface{} {
-	switch v := content.(type) {
-	case string:
-		return v
-	case []interface{}:
-		parts := make([]map[string]interface{}, 0, len(v))
-		for _, item := range v {
-			if m, ok := item.(map[string]interface{}); ok {
-				part := make(map[string]interface{})
-				typ, _ := m["type"].(string)
-				part["type"] = typ
-				switch typ {
-				case "text":
-					if text, ok := m["text"].(string); ok {
-						part["text"] = text
-					}
-				case "binary":
-					if url, ok := m["url"].(string); ok {
-						part["url"] = url
-					}
-					if mimeType, ok := m["mimeType"].(string); ok {
-						part["mimeType"] = mimeType
-					}
-				}
-				parts = append(parts, part)
+// saveWgaChatHistoryEvent 保存智能体返回的聊天历史到 ES
+func saveWgaChatHistoryEvent(ctx context.Context, historyEventCh <-chan aguievents.Event, userId, orgId, threadId, runId, baseDir string, persistentEnabled bool) {
+	defer util.PrintPanicStack()
+
+	var events []aguievents.Event
+	for event := range historyEventCh {
+		if event.Type() == aguievents.EventTypeRunFinished {
+			if wsEvent := buildWgaWorkspaceEvent(threadId, runId, baseDir, persistentEnabled); wsEvent != nil {
+				events = append(events, wsEvent)
 			}
 		}
-		if len(parts) == 0 {
-			return nil
-		}
-		return parts
-	case map[string]interface{}:
-		if text, ok := v["text"].(string); ok {
-			return text
-		}
-		return nil
-	default:
-		return nil
+		events = append(events, event)
 	}
-}
+	b, _ := json.Marshal(events)
 
-// saveChatHistoryItem 保存单条历史记录到 ES
-func saveChatHistoryItem(ctx context.Context, doc map[string]interface{}) {
+	doc := map[string]interface{}{
+		"id":        util.GenUUID(),
+		"threadId":  threadId,
+		"runId":     runId,
+		"userId":    userId,
+		"orgId":     orgId,
+		"createdAt": time.Now().UnixMilli(),
+		"events":    string(b),
+	}
 	docJson, err := json.Marshal(doc)
 	if err != nil {
 		log.Warnf("[wga] marshal history doc failed: %v", err)
@@ -693,69 +650,10 @@ func saveChatHistoryItem(ctx context.Context, doc map[string]interface{}) {
 	}
 
 	_, err = assistant.SaveToES(ctx, &assistant_service.SaveToESReq{
-		IndexName: wgaConversationESIndexName,
+		IndexName: wgaConversationHistoryEventESIndexName,
 		DocJson:   string(docJson),
 	})
 	if err != nil {
 		log.Warnf("[wga] save history to ES failed: %v", err)
 	}
 }
-
-// saveWgaChatHistoryEvent 保存智能体返回的聊天历史到 ES
-// func saveWgaChatHistoryEvent(ctx context.Context, historyEventCh <-chan interface{}, userId, orgId, threadId, runId string) {
-// 	defer util.PrintPanicStack()
-
-// 	var messages []map[string]interface{}
-// 	for msg := range historyEventCh {
-// 		data, err := json.Marshal(msg)
-// 		if err != nil {
-// 			log.Warnf("[wga] marshal history msg failed: %v", err)
-// 			continue
-// 		}
-
-// 		var item map[string]interface{}
-// 		if err := json.Unmarshal(data, &item); err != nil {
-// 			log.Warnf("[wga] unmarshal history msg failed: %v", err)
-// 			continue
-// 		}
-
-// 		messages = append(messages, normalizeMessageForES(item))
-// 	}
-
-// 	createdAt := time.Now().UnixMilli()
-
-// 	userMsgItem := map[string]interface{}{
-// 		"role":    "user",
-// 		"content": userMessage.Content,
-// 	}
-
-// 	allMessages := append([]map[string]interface{}{userMsgItem}, messages...)
-
-// 	doc := map[string]interface{}{
-// 		"id":        util.GenUUID(),
-// 		"threadId":  threadId,
-// 		"runId":     runId,
-// 		"userId":    userId,
-// 		"orgId":     orgId,
-// 		"createdAt": createdAt,
-// 		"messages":  allMessages,
-// 	}
-
-// 	cfg := config.WgaCfg()
-// 	if cfg.Persistent.Enabled {
-// 		store, err := wga_persistent.NewStore(wga_persistent.ModeVersioned, cfg.Persistent.BaseDir, threadId)
-// 		if err == nil {
-// 			ok, info, err := store.GetRunDir(runId)
-// 			if err == nil && ok {
-// 				totalSize, fileCount, _ := getWgaWorkspaceInfo(info.Dir, info.Dir)
-// 				doc["workspace"] = map[string]interface{}{
-// 					"fileCount":    fileCount,
-// 					"totalSize":    totalSize,
-// 					"workspaceDir": info.Dir,
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	saveChatHistoryItem(ctx, doc)
-// }

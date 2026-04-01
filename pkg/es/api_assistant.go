@@ -210,13 +210,13 @@ func InitAsistantChatHistoryIndexTemplate(ctx context.Context) error {
 	return nil
 }
 
-func InitWgaChatHistoryIndexTemplate(ctx context.Context) error {
-	templateName := "wga_chat_history_template"
+func InitWgaChatHistoryEventIndexTemplate(ctx context.Context) error {
+	templateName := "wga_chat_history_event_template"
 
 	// 创建或更新索引模板
 	template := `{
 		"index_patterns": [
-			"wga_chat_history"
+			"wga_chat_history_event"
 		],
 		"template": {
 			"mappings": {
@@ -241,7 +241,7 @@ func InitWgaChatHistoryIndexTemplate(ctx context.Context) error {
 						"type": "keyword",
 						"index": true
 					},
-					"messages": {
+					"events": {
 						"type": "text",
 						"index": false
 					},

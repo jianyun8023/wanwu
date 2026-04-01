@@ -227,7 +227,7 @@ func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 	resp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
 		Prompt:           req.Title,
 		ModelConfig:      modelConfig,
-		ConversationType: wgaConversationESIndexName,
+		ConversationType: constant.ConversationTypeWga,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -263,28 +263,31 @@ func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req
 	return &response.ListResult{List: result, Total: resp.Total}, nil
 }
 
-func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationDetailReq) (*response.ListResult, error) {
+func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId, threadId string) (*response.ListResult, error) {
+
+	exist, err := assistant.WgaConversationExists(ctx.Request.Context(), &assistant_service.WgaConversationExistsReq{
+		ThreadId: threadId,
+		Identity: &assistant_service.Identity{UserId: userId, OrgId: orgId},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !exist.Exists {
+		return &response.ListResult{}, nil
+	}
+
 	conditions := map[string]string{
-		"threadId": req.ThreadID,
+		"threadId": threadId,
 		"userId":   userId,
 		"orgId":    orgId,
 	}
 
-	pageNo := req.PageNo
-	if pageNo <= 0 {
-		pageNo = 1
-	}
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 1000
-	}
-
 	resp, err := assistant.SearchFromES(ctx.Request.Context(), &assistant_service.SearchFromESReq{
-		IndexName:  wgaConversationESIndexName,
+		IndexName:  wgaConversationHistoryEventESIndexName,
 		Conditions: conditions,
 		SortOrder:  "asc",
-		PageNo:     int32(pageNo),
-		PageSize:   int32(pageSize),
+		PageNo:     1,
+		PageSize:   1000,
 	})
 	if err != nil {
 		return nil, err
@@ -297,41 +300,26 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId string, r
 			continue
 		}
 
-		createdAt, _ := doc["createdAt"].(float64)
+		createdAt, _ := doc["createdAt"].(int64)
 		runId, _ := doc["runId"].(string)
 
 		info := response.GeneralAgentConversationDetailInfo{
-			ThreadID:     req.ThreadID,
-			RunID:        runId,
-			CreatedAt:    int64(createdAt),
-			RequestFiles: []response.AssistantRequestFile{},
+			ThreadID:  threadId,
+			RunID:     runId,
+			CreatedAt: createdAt,
 		}
-
-		if messages, ok := doc["messages"].([]interface{}); ok {
-			info.Messages = messages
-		}
-
-		if workspace, ok := doc["workspace"].(map[string]interface{}); ok {
-			info.Workspace = response.GeneralAgentConversationWorkspaceInfo{
-				ThreadID:  req.ThreadID,
-				RunID:     runId,
-				FileCount: int32(getFloat64(workspace["fileCount"])),
-				TotalSize: int64(getFloat64(workspace["totalSize"])),
-				IsDisplay: true,
+		if eventsStr, ok := doc["events"].(string); ok {
+			var events []interface{}
+			if err := json.Unmarshal([]byte(eventsStr), &events); err != nil {
+				log.Errorf("[wga] unmarshal thread %v events err: %v", threadId, err)
+				continue
 			}
+			info.Events = events
 		}
-
 		result = append(result, info)
 	}
 
 	return &response.ListResult{List: result, Total: int64(len(result))}, nil
-}
-
-func getFloat64(v interface{}) float64 {
-	if f, ok := v.(float64); ok {
-		return f
-	}
-	return 0
 }
 
 func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.DeleteGeneralAgentConversationReq) error {
@@ -349,7 +337,7 @@ func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 
 	// 同步删除 ES 中的聊天历史
 	_, err = assistant.DeleteFromES(ctx.Request.Context(), &assistant_service.DeleteFromESReq{
-		IndexName: wgaConversationESIndexName,
+		IndexName: wgaConversationHistoryEventESIndexName,
 		Conditions: map[string]string{
 			"threadId": req.ThreadID,
 			"userId":   userId,

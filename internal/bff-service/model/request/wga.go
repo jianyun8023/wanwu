@@ -35,8 +35,6 @@ func (c *GetGeneralAgentConversationListReq) Check() error { return nil }
 
 type GetGeneralAgentConversationDetailReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID
-	PageNo   int    `json:"pageNo" form:"pageNo"`                         // 页码，默认1
-	PageSize int    `json:"pageSize" form:"pageSize"`                     // 每页数量，默认100
 }
 
 func (c *GetGeneralAgentConversationDetailReq) Check() error { return nil }

@@ -1,12 +1,17 @@
 package v1
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/internal/bff-service/service"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
+	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/gin-gonic/gin"
 )
 
@@ -162,8 +167,6 @@ func GetGeneralAgentConversationList(ctx *gin.Context) {
 //	@Security		JWT
 //	@Produce		json
 //	@Param			threadId	query		string	false	"会话ID"
-//	@Param			pageNo		query		int		false	"页码，默认1"
-//	@Param			pageSize	query		int		false	"每页数量，默认1000"
 //	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
 //	@Router			/general/agent/conversation/detail [get]
 func GetGeneralAgentConversationDetail(ctx *gin.Context) {
@@ -171,7 +174,7 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context) {
 	if !gin_util.BindQuery(ctx, &req) {
 		return
 	}
-	resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req)
+	resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req.ThreadID)
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -354,9 +357,36 @@ func GeneralAgentCopilotRuntime(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, resp)
 
 	case "agent/connect":
+		resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req.GetThreadID())
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "internal_error",
+				"message": err.Error(),
+			})
+		}
+
 		ctx.Header("Content-Type", "text/event-stream")
 		ctx.Header("Cache-Control", "no-cache")
 		ctx.Header("Connection", "keep-alive")
+		if resp.List == nil {
+			return
+		}
+
+		var builder strings.Builder
+		for _, run := range resp.List.([]response.GeneralAgentConversationDetailInfo) {
+			for _, event := range run.Events {
+				b, _ := json.Marshal(event)
+				if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {
+					log.Errorf("[wga] agent/connect write string err: %v", err)
+					continue
+				}
+			}
+		}
+
+		if _, err := ctx.Writer.Write([]byte(builder.String())); err != nil {
+			log.Errorf("[wga] agent/connect write sse err: %v", err)
+		}
+		ctx.Writer.Flush()
 
 	case "agent/run":
 		threadID := req.GetThreadID()

@@ -64,7 +64,7 @@ func main() {
 		log.Fatalf("init es index template err: %v", err)
 	}
 
-	if err := es.InitWgaChatHistoryIndexTemplate(ctx); err != nil {
+	if err := es.InitWgaChatHistoryEventIndexTemplate(ctx); err != nil {
 		log.Fatalf("init wga chat history index template err: %v", err)
 	}
 
