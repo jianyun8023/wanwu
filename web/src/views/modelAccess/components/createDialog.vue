@@ -663,7 +663,7 @@ export default {
         model: modelId !== CUSTOM_MODEL_ID ? modelId : '',
         functionCalling: modelObj.functionCalling || DEFAULT_CALLING,
         visionSupport: modelObj.visionSupport || DEFAULT_SUPPORT,
-        thinkingSupport: modelObj.think || DEFAULT_SUPPORT,
+        thinkingSupport: modelObj.thinkingSupport || DEFAULT_SUPPORT,
       };
     },
     uploadAvatar(file, key) {
