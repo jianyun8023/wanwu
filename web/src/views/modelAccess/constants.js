@@ -40,14 +40,14 @@ export const ZHIPU = 'ZhiPu';
 
 export const PROVIDER_OBJ = {
   [OPENAI_API]: 'OpenAI-API-compatible',
-  [YUAN_JING]: i18n.t('modelAccess.type.yuanjing'),
   [OLLAMA]: 'Ollama',
+  [YUAN_JING]: i18n.t('modelAccess.type.yuanjing'),
   [QWEN]: i18n.t('modelAccess.type.qwen'),
   [HUOSHAN]: i18n.t('modelAccess.type.huoshan'),
   [INFINI]: i18n.t('modelAccess.type.infini'),
-  [DEEPSEEK]: 'DeepSeek',
   [QIANFAN]: i18n.t('modelAccess.type.qianfan'),
   [JINA]: 'Jina',
+  [DEEPSEEK]: 'DeepSeek',
   [ZHIPU]: i18n.t('modelAccess.type.zhipu'),
 };
 
