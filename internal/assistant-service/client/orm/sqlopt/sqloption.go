@@ -63,7 +63,7 @@ func WithOrgID(orgId string) SQLOption {
 	})
 }
 
-func WithUserId(userId string) SQLOption {
+func WithUserID(userId string) SQLOption {
 	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
 		return db.Where("user_id = ?", userId)
 	})
@@ -74,12 +74,12 @@ func DataPerm(userId, orgId string) SQLOption {
 		if userId != "" && orgId == "" {
 			//数据权限：所有org内本人，userId传有效值，orgId不传有效值
 			return SQLOptions(
-				WithUserId(userId),
+				WithUserID(userId),
 			).Apply(db)
 		} else if userId != "" && orgId != "" {
 			//数据权限：本org内本人，userId和orgId都需要传有效值
 			return SQLOptions(
-				WithUserId(userId),
+				WithUserID(userId),
 				WithOrgID(orgId),
 			).Apply(db)
 		} else if userId == "" && orgId != "" {
@@ -211,7 +211,7 @@ func WithSkillType(skillType string) SQLOption {
 	})
 }
 
-func WithThreadId(threadId string) SQLOption {
+func WithThreadID(threadId string) SQLOption {
 	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
 		if threadId != "" {
 			return db.Where("thread_id = ?", threadId)

@@ -59,11 +59,6 @@ const (
 	ConversationTypeWga       = "wga"       // 通用智能体
 )
 
-// es index
-const (
-	ESIndexWgaChatHistory = "wga_chat_history" // 通用智能体聊天历史ES索引
-)
-
 // skill type
 const (
 	SkillTypeBuiltIn = "builtin" // 内置技能

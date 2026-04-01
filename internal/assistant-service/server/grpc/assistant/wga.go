@@ -39,19 +39,13 @@ func (s *Service) UpdateWgaConversationConfig(ctx context.Context, req *assistan
 		return nil, grpc_util.ErrorStatus(errs.Code_WgaConversationUpdateErr, "identity is required")
 	}
 
-	var modelConfigJSON string
-	if req.ModelConfig != nil {
-		modelConfigBytes, _ := json.Marshal(req.ModelConfig)
-		modelConfigJSON = string(modelConfigBytes)
-	} else {
-		modelConfigJSON = "null"
-	}
+	modelConfigBytes, _ := json.Marshal(req.ModelConfig)
 
 	config := &model.WgaConversationConfig{
 		ThreadID:    req.ThreadId,
 		UserID:      req.Identity.UserId,
 		OrgID:       req.Identity.OrgId,
-		ModelConfig: modelConfigJSON,
+		ModelConfig: string(modelConfigBytes),
 	}
 
 	status := s.cli.UpdateWgaConversationConfig(ctx, config)

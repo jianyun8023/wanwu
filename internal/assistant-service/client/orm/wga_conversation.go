@@ -16,7 +16,7 @@ func (c *Client) CreateWgaConversation(ctx context.Context, conversation *model.
 }
 
 func (c *Client) DeleteWgaConversation(ctx context.Context, threadId string) *err_code.Status {
-	if err := sqlopt.WithThreadId(threadId).Apply(c.db.WithContext(ctx)).Delete(&model.WgaConversation{}).Error; err != nil {
+	if err := sqlopt.WithThreadID(threadId).Apply(c.db.WithContext(ctx)).Delete(&model.WgaConversation{}).Error; err != nil {
 		return toErrStatus("wga_conversation_delete", err.Error())
 	}
 	return nil
@@ -27,7 +27,7 @@ func (c *Client) GetWgaConversationList(ctx context.Context, conversationType, u
 	var count int64
 
 	if err := sqlopt.SQLOptions(
-		sqlopt.WithUserId(userID),
+		sqlopt.WithUserID(userID),
 		sqlopt.WithOrgID(orgID),
 		sqlopt.WithConversationType(conversationType),
 	).Apply(c.db.WithContext(ctx).Model(&model.WgaConversation{})).Offset(int(offset)).Limit(int(limit)).Order("created_at DESC").Find(&conversations).Error; err != nil {
@@ -40,9 +40,9 @@ func (c *Client) GetWgaConversationList(ctx context.Context, conversationType, u
 func (c *Client) WgaConversationExists(ctx context.Context, threadId, userID, orgID string) (bool, *err_code.Status) {
 	var count int64
 	if err := sqlopt.SQLOptions(
-		sqlopt.WithUserId(userID),
+		sqlopt.WithUserID(userID),
 		sqlopt.WithOrgID(orgID),
-		sqlopt.WithThreadId(threadId),
+		sqlopt.WithThreadID(threadId),
 	).Apply(c.db.WithContext(ctx).Model(&model.WgaConversation{})).Count(&count).Error; err != nil {
 		return false, toErrStatus("wga_conversation_exists", err.Error())
 	}

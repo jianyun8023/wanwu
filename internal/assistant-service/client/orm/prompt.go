@@ -19,7 +19,7 @@ func (c *Client) CreateCustomPrompt(ctx context.Context, avatarPath, name, desc,
 	var count int64
 	if err := sqlopt.SQLOptions(
 		sqlopt.WithCustomPromptName(name),
-		sqlopt.WithUserId(userId),
+		sqlopt.WithUserID(userId),
 		sqlopt.WithOrgID(orgID),
 	).Apply(c.db.WithContext(ctx)).Model(&model.CustomPrompt{}).
 		Count(&count).Error; err != nil {
@@ -73,7 +73,7 @@ func (c *Client) UpdateCustomPrompt(ctx context.Context, info *assistant_service
 		if err := sqlopt.SQLOptions(
 			sqlopt.WithCustomPromptNotID(customPromptID),
 			sqlopt.WithCustomPromptName(info.Name),
-			sqlopt.WithUserId(existingPrompt.UserId),
+			sqlopt.WithUserID(existingPrompt.UserId),
 			sqlopt.WithOrgID(existingPrompt.OrgId),
 		).Apply(c.db.WithContext(ctx)).Model(&model.CustomPrompt{}).
 			Count(&count).Error; err != nil {
@@ -113,7 +113,7 @@ func (c *Client) GetCustomPromptList(ctx context.Context, userID, orgID string, 
 	// 查询记录
 	var customPrompts []*model.CustomPrompt
 	if err := sqlopt.SQLOptions(
-		sqlopt.WithUserId(userID),
+		sqlopt.WithUserID(userID),
 		sqlopt.WithOrgID(orgID),
 		sqlopt.WithCustomPromptLikeName(name),
 	).Apply(c.db.WithContext(ctx)).Order("updated_at DESC").Find(&customPrompts).Error; err != nil {

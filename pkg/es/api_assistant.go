@@ -242,7 +242,8 @@ func InitWgaChatHistoryIndexTemplate(ctx context.Context) error {
 						"index": true
 					},
 					"messages": {
-						"type": "keyword"
+						"type": "text",
+						"index": false
 					},
 					"createdAt": {
 						"type": "long"

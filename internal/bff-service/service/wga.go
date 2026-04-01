@@ -165,7 +165,7 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 	return result, nil
 }
 
-func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId string, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
+func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
 	resp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
 		ToolSquareId: toolId,
 		Identity: &mcp_service.Identity{
@@ -227,7 +227,7 @@ func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 	resp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
 		Prompt:           req.Title,
 		ModelConfig:      modelConfig,
-		ConversationType: constant.ConversationTypeWga,
+		ConversationType: wgaConversationESIndexName,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -280,7 +280,7 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId string, r
 	}
 
 	resp, err := assistant.SearchFromES(ctx.Request.Context(), &assistant_service.SearchFromESReq{
-		IndexName:  constant.ESIndexWgaChatHistory,
+		IndexName:  wgaConversationESIndexName,
 		Conditions: conditions,
 		SortOrder:  "asc",
 		PageNo:     int32(pageNo),
@@ -349,7 +349,7 @@ func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 
 	// 同步删除 ES 中的聊天历史
 	_, err = assistant.DeleteFromES(ctx.Request.Context(), &assistant_service.DeleteFromESReq{
-		IndexName: constant.ESIndexWgaChatHistory,
+		IndexName: wgaConversationESIndexName,
 		Conditions: map[string]string{
 			"threadId": req.ThreadID,
 			"userId":   userId,
