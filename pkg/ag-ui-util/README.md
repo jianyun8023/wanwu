@@ -44,6 +44,12 @@ interface Message {
   content?: string;        // 文本内容
 }
 
+// UserMessage - 用户输入
+interface UserMessage extends Message {
+  role: "user";
+  content: string | InputContent[];  // 纯文本或多模态内容（文本+文件）
+}
+
 // AssistantMessage - AI 回复
 interface AssistantMessage extends Message {
   role: "assistant";
@@ -72,6 +78,65 @@ interface ToolCall {
     name: string;          // 工具名称
     arguments: string;     // JSON 格式的参数
   };
+}
+```
+
+#### 用户上传文件
+
+UserMessage 的 `content` 可以是多模态内容数组，支持文本和文件：
+
+```typescript
+// InputContent 联合类型
+type InputContent = TextInputContent | BinaryInputContent;
+
+// 文本内容
+interface TextInputContent {
+  type: "text";
+  text: string;
+}
+
+// 二进制内容（文件/图片）
+interface BinaryInputContent {
+  type: "binary";
+  mimeType: string;        // 如 "image/png", "application/pdf"
+  id?: string;             // 文件引用 ID
+  url?: string;            // 文件 URL
+  data?: string;           // Base64 编码数据
+  filename?: string;       // 文件名
+}
+```
+
+**必须提供 `id`、`url` 或 `data` 中至少一个。**
+
+示例：
+```json
+// 用户上传图片
+{
+  "id": "msg-123",
+  "role": "user",
+  "content": [
+    { "type": "text", "text": "请分析这张图片" },
+    { 
+      "type": "binary", 
+      "mimeType": "image/png", 
+      "url": "https://example.com/image.png" 
+    }
+  ]
+}
+
+// 用户上传 PDF 文件（Base64）
+{
+  "id": "msg-456",
+  "role": "user",
+  "content": [
+    { "type": "text", "text": "请总结这个文档" },
+    { 
+      "type": "binary", 
+      "mimeType": "application/pdf",
+      "filename": "report.pdf",
+      "data": "JVBERi0xLjQK..."
+    }
+  ]
 }
 ```
 

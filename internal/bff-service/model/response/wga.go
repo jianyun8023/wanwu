@@ -1,6 +1,14 @@
 package response
 
-import "github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+import (
+	"github.com/ThinkInAIXYZ/go-mcp/protocol"
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+)
+
+type GetGeneralAgentToolConfigResp struct {
+	ToolList      []request.ToolSelected      `json:"toolList"`      // 工具ID
+	AssistantList []request.AssistantSelected `json:"assistantList"` // 智能体ID
+}
 
 type CreateGeneralAgentConversationResp struct {
 	ThreadID string `json:"threadId"` // 对话ID
@@ -23,8 +31,8 @@ type GetGeneralAgentToolSelectResp struct {
 }
 
 type GeneralAgentToolInfoResp struct {
-	ToolName string `json:"toolName"` // 工具名称
-	ToolDesc string `json:"toolDesc"` // 工具描述
+	Actions []*protocol.Tool `json:"actions"` // action列表
+	ToolInfo
 }
 
 type GetGeneralAgentConfigResp struct {

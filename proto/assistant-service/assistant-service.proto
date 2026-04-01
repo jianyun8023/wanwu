@@ -68,6 +68,10 @@ service AssistantService {
   rpc AssistantConversionStream(AssistantConversionStreamReq) returns (stream AssistantConversionStreamResp) {}
   rpc MultiAssistantConversionStream(MultiAssistantConversionStreamReq) returns (stream AssistantConversionStreamResp) {}
 
+  // --- wga config ---
+  rpc GetWgaConfig(GetWgaConfigReq) returns (GetWgaConfigResp) {}
+  rpc UpdateWgaConfig(UpdateWgaConfigReq) returns (google.protobuf.Empty) {}
+
   // --- custom prompt ---
   rpc CustomPromptCreate(CustomPromptCreateReq) returns (CustomPromptIDResp) {}
   rpc CustomPromptDelete(CustomPromptDeleteReq) returns (google.protobuf.Empty) {}
@@ -86,6 +90,12 @@ service AssistantService {
   rpc CreateSkillConversation(CreateSkillConversationReq) returns (CreateSkillConversationResp) {}
   rpc DeleteSkillConversation(DeleteSkillConversationReq) returns (google.protobuf.Empty) {}
   rpc GetSkillConversationList(GetSkillConversationListReq) returns (GetSkillConversationListResp) {}
+
+  // --- wga conversation ---
+  rpc WgaConversationCreate(WgaConversationCreateReq) returns (WgaConversationCreateResp) {}
+  rpc WgaConversationDelete(WgaConversationDeleteReq) returns (google.protobuf.Empty) {}
+  rpc WgaConversationList(WgaConversationListReq) returns (WgaConversationListResp) {}
+  rpc WgaConversationExists(WgaConversationExistsReq) returns (WgaConversationExistsResp) {}
 }
 
 message SaveToESReq {
@@ -564,7 +574,7 @@ message ConversationInfo{
   string conversationId = 1;
   string assistantId = 2;
   string title = 3;
-  int64 creatTime = 4;
+  int64 createdAt = 4;
 }
 
 message GetConversationDetailListReq {
@@ -851,4 +861,96 @@ message SkillConversationItem {
   string conversationId = 1;
   string title = 2;
   int64 createdAt = 3;
+}
+
+// --- wga conversation messages ---
+message WgaConversationCreateReq {
+  string prompt = 1;
+  string conversationType = 2;
+  Identity identity = 3;
+}
+
+message WgaConversationCreateResp {
+  string uuid = 1;
+}
+
+message WgaConversationDeleteReq {
+  string uuid = 1;
+  Identity identity = 2;
+}
+
+message WgaConversationListReq {
+  int32 pageSize = 1;
+  int32 pageNo = 2;
+  string conversationType = 3;
+  Identity identity = 4;
+}
+
+message WgaConversationListResp {
+  repeated WgaConversationInfo data = 1;
+  int64 total = 2;
+  int32 pageSize = 3;
+  int32 pageNo = 4;
+}
+
+message WgaConversationInfo {
+  string uuid = 1;
+  string title = 2;
+  int64 createdAt = 3;
+}
+
+message WgaConversationExistsReq {
+  string threadId = 1;
+  Identity identity = 2;
+}
+
+message WgaConversationExistsResp {
+  bool exists = 1;
+}
+
+// --- wga config messages ---
+message WgaConfigTool {
+  string toolId = 1;
+  string toolType = 2;
+}
+
+message WgaConfigAssistant {
+  string assistantId = 1;
+  string assistantType = 2;
+}
+
+message WgaModelConfig {
+  string modelId = 1;
+  string provider = 2;
+  string model = 3;
+  string modelType = 4;
+  string config = 5;
+}
+
+message WgaConfig {
+  string threadId = 1;
+  WgaModelConfig modelConfig = 2;
+  repeated WgaConfigAssistant assistantList = 3;
+  repeated WgaConfigTool toolList = 4;
+  string userId = 5;
+  string orgId = 6;
+  int64 createdAt = 7;
+  int64 updatedAt = 8;
+}
+
+message GetWgaConfigReq {
+  string threadId = 1;
+  Identity identity = 2;
+}
+
+message GetWgaConfigResp {
+  WgaConfig config = 1;
+}
+
+message UpdateWgaConfigReq {
+  string threadId = 1;
+  WgaModelConfig modelConfig = 2;
+  repeated WgaConfigAssistant assistantList = 3;
+  repeated WgaConfigTool toolList = 4;
+  Identity identity = 5;
 }

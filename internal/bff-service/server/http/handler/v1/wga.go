@@ -58,6 +58,41 @@ func GetGeneralAgentToolInfo(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
+// UpdateGeneralAgentToolConfig
+//
+//	@Tags			wga
+//	@Summary		更新通用智能体工具配置
+//	@Description	更新通用智能体工具配置
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.UpdateGeneralAgentToolConfigReq	true	"更新通用智能体工具配置请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/general/agent/tool/config [put]
+func UpdateGeneralAgentToolConfig(ctx *gin.Context) {
+	var req request.UpdateGeneralAgentToolConfigReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.UpdateGeneralAgentToolConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GetGeneralAgentToolConfig
+//
+//	@Tags			wga
+//	@Summary		获取通用智能体工具配置
+//	@Description	获取通用智能体工具配置
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	response.Response{data=response.GetGeneralAgentToolConfigResp}
+//	@Router			/general/agent/tool/config [get]
+func GetGeneralAgentToolConfig(ctx *gin.Context) {
+	resp, err := service.GetGeneralAgentToolConfig(ctx, getUserID(ctx), getOrgID(ctx))
+	gin_util.Response(ctx, resp, err)
+}
+
 // CreateGeneralAgentConversation
 //
 //	@Tags			wga
@@ -126,7 +161,9 @@ func GetGeneralAgentConversationList(ctx *gin.Context) {
 //	@Description	获取指定会话的对话详情，包括对话标题、创建时间等信息
 //	@Security		JWT
 //	@Produce		json
-//	@Param			threadId	query		string	true	"会话ID"
+//	@Param			threadId	query		string	false	"会话ID"
+//	@Param			pageNo		query		int		false	"页码，默认1"
+//	@Param			pageSize	query		int		false	"每页数量，默认1000"
 //	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
 //	@Router			/general/agent/conversation/detail [get]
 func GetGeneralAgentConversationDetail(ctx *gin.Context) {
@@ -232,7 +269,7 @@ func GeneralAgentWorkspaceDownload(ctx *gin.Context) {
 //	@Description	通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览
 //	@Security		JWT
 //	@Accept			json
-//	@Produce		application/octet-stream
+//	@Produce		*/*
 //	@Param			data	query	request.GeneralAgentWorkspacePreviewReq	true	"workspace预览请求参数"
 //	@Success		200		{file}	stream
 //	@Router			/general/agent/conversation/workspace/preview [get]

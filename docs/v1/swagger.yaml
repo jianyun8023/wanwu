@@ -1377,15 +1377,15 @@ definitions:
     type: object
   request.AssistantSelected:
     properties:
-      assistantCategory:
-        description: 智能体类型
-        type: string
       assistantId:
         description: 智能体ID
         type: string
+      assistantType:
+        description: 智能体类型
+        type: string
     required:
-    - assistantCategory
     - assistantId
+    - assistantType
     type: object
   request.AssistantSkillAddRequest:
     properties:
@@ -6041,12 +6041,38 @@ definitions:
     type: object
   response.GeneralAgentToolInfoResp:
     properties:
-      toolDesc:
+      actions:
+        description: action列表
+        items:
+          $ref: '#/definitions/protocol.Tool'
+        type: array
+      apiKey:
+        description: apiKey
+        type: string
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 图标
+      desc:
         description: 工具描述
+        type: string
+      needApiKeyInput:
+        description: 是否需要apiKey输入
+        type: boolean
+      toolId:
+        description: 工具id
         type: string
       toolName:
         description: 工具名称
         type: string
+      toolType:
+        description: 工具类型
+        enum:
+        - custom
+        - builtin
+        type: string
+    required:
+    - toolType
     type: object
   response.GeneralAgentWorkspaceResp:
     properties:
@@ -11862,8 +11888,15 @@ paths:
       - description: 会话ID
         in: query
         name: threadId
-        required: true
         type: string
+      - description: 页码，默认1
+        in: query
+        name: pageNo
+        type: integer
+      - description: 每页数量，默认1000
+        in: query
+        name: pageSize
+        type: integer
       produces:
       - application/json
       responses:
@@ -12013,7 +12046,7 @@ paths:
         required: true
         type: string
       produces:
-      - application/octet-stream
+      - '*/*'
       responses:
         "200":
           description: OK
@@ -14838,7 +14871,6 @@ paths:
       description: 获取模型体验对话记录列表
       parameters:
       - description: 模型体验对话ID
-        format: int32
         in: query
         name: modelExperienceId
         required: true

@@ -66,6 +66,7 @@ func (s *Service) ConversationDelete(ctx context.Context, req *assistant_service
 		"conversationId.keyword": req.ConversationId,
 		"userId.keyword":         req.Identity.UserId,
 	}
+
 	indexPattern := "conversation_detail_infos_*"
 	if err := es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions); err != nil {
 		log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
@@ -105,7 +106,7 @@ func (s *Service) GetConversationList(ctx context.Context, req *assistant_servic
 			ConversationId: util.Int2Str(conversation.ID),
 			AssistantId:    util.Int2Str(conversation.AssistantId),
 			Title:          conversation.Title,
-			CreatTime:      conversation.CreatedAt,
+			CreatedAt:      conversation.CreatedAt,
 		})
 	}
 
@@ -347,4 +348,69 @@ func buildSubConversation(detail *model.SubConversationDetail, index int, oldDat
 		ConversationType: string(detail.ConversationType),
 		Order:            int32(order),
 	}
+}
+
+// WgaConversationCreate 创建WGA对话
+func (s *Service) WgaConversationCreate(ctx context.Context, req *assistant_service.WgaConversationCreateReq) (*assistant_service.WgaConversationCreateResp, error) {
+	uuid := util.GenUUID()
+	conversation := &model.WgaConversation{
+		ThreadId:         uuid,
+		Title:            req.Prompt,
+		ConversationType: req.ConversationType,
+		UserId:           req.Identity.UserId,
+		OrgId:            req.Identity.OrgId,
+	}
+
+	if status := s.cli.CreateWgaConversation(ctx, conversation); status != nil {
+		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+	}
+
+	return &assistant_service.WgaConversationCreateResp{
+		Uuid: uuid,
+	}, nil
+}
+
+// WgaConversationDelete 删除WGA对话
+func (s *Service) WgaConversationDelete(ctx context.Context, req *assistant_service.WgaConversationDeleteReq) (*emptypb.Empty, error) {
+	if status := s.cli.DeleteWgaConversation(ctx, req.Uuid); status != nil {
+		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// WgaConversationList 获取WGA对话列表
+func (s *Service) WgaConversationList(ctx context.Context, req *assistant_service.WgaConversationListReq) (*assistant_service.WgaConversationListResp, error) {
+	offset := (req.PageNo - 1) * req.PageSize
+
+	conversations, total, status := s.cli.GetWgaConversationList(ctx, req.ConversationType, req.Identity.UserId, req.Identity.OrgId, offset, req.PageSize)
+	if status != nil {
+		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+	}
+
+	var conversationInfos []*assistant_service.WgaConversationInfo
+	for _, conversation := range conversations {
+		conversationInfos = append(conversationInfos, &assistant_service.WgaConversationInfo{
+			Uuid:      conversation.ThreadId,
+			Title:     conversation.Title,
+			CreatedAt: conversation.CreatedAt.UnixMilli(),
+		})
+	}
+
+	return &assistant_service.WgaConversationListResp{
+		Data:     conversationInfos,
+		Total:    total,
+		PageSize: req.PageSize,
+		PageNo:   req.PageNo,
+	}, nil
+}
+
+// WgaConversationExists 检查WGA对话是否存在
+func (s *Service) WgaConversationExists(ctx context.Context, req *assistant_service.WgaConversationExistsReq) (*assistant_service.WgaConversationExistsResp, error) {
+	exists, status := s.cli.WgaConversationExists(ctx, req.ThreadId, req.Identity.UserId, req.Identity.OrgId)
+	if status != nil {
+		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+	}
+	return &assistant_service.WgaConversationExistsResp{
+		Exists: exists,
+	}, nil
 }

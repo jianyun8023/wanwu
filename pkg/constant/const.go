@@ -56,6 +56,12 @@ const (
 	ConversationTypePublished = "published" // 已发布
 	ConversationTypeDraft     = "draft"     // 草稿
 	ConversationTypeOpenAPI   = "openapi"   // openapi
+	ConversationTypeWga       = "wga"       // 通用智能体
+)
+
+// es index
+const (
+	ESIndexWgaChatHistory = "wga_chat_history" // 通用智能体聊天历史ES索引
 )
 
 // skill type

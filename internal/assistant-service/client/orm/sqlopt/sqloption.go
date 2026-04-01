@@ -210,3 +210,12 @@ func WithSkillType(skillType string) SQLOption {
 		return db.Where("skill_type = ?", skillType)
 	})
 }
+
+func WithThreadId(threadId string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if threadId != "" {
+			return db.Where("thread_id = ?", threadId)
+		}
+		return db
+	})
+}

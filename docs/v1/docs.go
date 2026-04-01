@@ -6126,8 +6126,19 @@ const docTemplate = `{
                         "type": "string",
                         "description": "会话ID",
                         "name": "threadId",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "pageNo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认1000",
+                        "name": "pageSize",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -6354,7 +6365,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "produces": [
-                    "application/octet-stream"
+                    "*/*"
                 ],
                 "tags": [
                     "wga"
@@ -11114,7 +11125,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -18688,16 +18698,16 @@ const docTemplate = `{
         "request.AssistantSelected": {
             "type": "object",
             "required": [
-                "assistantCategory",
-                "assistantId"
+                "assistantId",
+                "assistantType"
             ],
             "properties": {
-                "assistantCategory": {
-                    "description": "智能体类型",
-                    "type": "string"
-                },
                 "assistantId": {
                     "description": "智能体ID",
+                    "type": "string"
+                },
+                "assistantType": {
+                    "description": "智能体类型",
                     "type": "string"
                 }
             }
@@ -25583,14 +25593,52 @@ const docTemplate = `{
         },
         "response.GeneralAgentToolInfoResp": {
             "type": "object",
+            "required": [
+                "toolType"
+            ],
             "properties": {
-                "toolDesc": {
+                "actions": {
+                    "description": "action列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/protocol.Tool"
+                    }
+                },
+                "apiKey": {
+                    "description": "apiKey",
+                    "type": "string"
+                },
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
                     "description": "工具描述",
+                    "type": "string"
+                },
+                "needApiKeyInput": {
+                    "description": "是否需要apiKey输入",
+                    "type": "boolean"
+                },
+                "toolId": {
+                    "description": "工具id",
                     "type": "string"
                 },
                 "toolName": {
                     "description": "工具名称",
                     "type": "string"
+                },
+                "toolType": {
+                    "description": "工具类型",
+                    "type": "string",
+                    "enum": [
+                        "custom",
+                        "builtin"
+                    ]
                 }
             }
         },

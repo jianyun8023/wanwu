@@ -209,3 +209,89 @@ func InitESIndexTemplate(ctx context.Context) error {
 	log.Infof("成功创建ES索引模板: %s", templateName)
 	return nil
 }
+
+func InitWgaChatHistoryIndexTemplate(ctx context.Context) error {
+	templateName := "wga_chat_history_template"
+
+	// 创建或更新索引模板
+	template := `{
+		"index_patterns": [
+			"wga_chat_history"
+		],
+		"template": {
+			"mappings": {
+				"properties": {
+					"id": {
+						"type": "keyword",
+						"index": true
+					},
+					"threadId": {
+						"type": "keyword",
+						"index": true
+					},
+					"runId": {
+						"type": "keyword",
+						"index": true
+					},
+					"userId": {
+						"type": "keyword",
+						"index": true
+					},
+					"orgId": {
+						"type": "keyword",
+						"index": true
+					},
+					"messageType": {
+						"type": "keyword",
+						"index": true
+					},
+					"messageId": {
+						"type": "keyword",
+						"index": true
+					},
+					"role": {
+						"type": "keyword",
+						"index": true
+					},
+					"content": {
+						"type": "text",
+						"index": false
+					},
+					"toolCallId": {
+						"type": "keyword",
+						"index": true
+					},
+					"toolName": {
+						"type": "keyword",
+						"index": true
+					},
+					"toolArguments": {
+						"type": "text",
+						"index": false
+					},
+					"activityId": {
+						"type": "keyword",
+						"index": true
+					},
+					"activityType": {
+						"type": "keyword",
+						"index": true
+					},
+					"activityContent": {
+						"type": "object",
+						"enabled": false
+					},
+					"createdAt": {
+						"type": "long"
+					}
+				}
+			}
+		}
+	}`
+	if err := Assistant().CreateIndexTemplate(ctx, templateName, template); err != nil {
+		return fmt.Errorf("创建ES索引模板失败: %v", err)
+	}
+	log.Infof("成功创建ES索引模板: %s", templateName)
+
+	return nil
+}

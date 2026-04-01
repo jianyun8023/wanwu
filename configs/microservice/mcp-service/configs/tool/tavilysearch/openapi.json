@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Tavily News Search API",
+    "title": "Tavily AI搜索",
     "description": "基于 Tavily 的新闻搜索服务接口，支持基础搜索、深度搜索、图片搜索及按时间维度的搜索。",
     "version": "1.0.0"
   },
