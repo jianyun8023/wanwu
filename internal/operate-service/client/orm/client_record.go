@@ -12,6 +12,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/operate-service/client/orm/sqlopt"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func (c *Client) AddClientRecord(ctx context.Context, clientId string) *err_code.Status {
@@ -180,7 +181,7 @@ func statisticActiveClient(ctx context.Context, db *gorm.DB, startDate, endDate 
 		}
 	}
 	// 查询活跃client（最后操作时间在指定时间段内）
-	var activeClient model.ClientDailyStats
+	var activeClient model.ClientDailyRecord
 	if err := sqlopt.SQLOptions(
 		sqlopt.StartDate(startDate),
 		sqlopt.EndDate(endDate),
@@ -206,30 +207,15 @@ func updateActiveDailyStats(ctx context.Context, db *gorm.DB, date string) error
 		Count(&activeCount).Error; err != nil {
 		return fmt.Errorf("count active client err: %v", err)
 	}
-	// 更新或插入某一天的活跃统计记录
-	var existingRecord model.ClientDailyStats
-	if err := db.WithContext(ctx).Where("date=?", date).First(&existingRecord).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 记录不存在，创建新记录
-			if err := db.WithContext(ctx).Create(&model.ClientDailyStats{
-				Date:     date,
-				DauCount: int32(activeCount),
-			}).Error; err != nil {
-				return fmt.Errorf("create client daily stats err: %v", err)
-			}
-		} else {
-			// 其他数据库错误
-			return err
-		}
-	} else {
-		// 记录已存在，更新dau_count字段
-		if err := db.WithContext(ctx).Model(&existingRecord).Updates(map[string]interface{}{
-			"dau_count": int32(activeCount),
-		}).Error; err != nil {
-			return fmt.Errorf("update client daily stats err: %v", err)
-		}
-	}
-	return nil
+
+	// 使用 upsert 保证并发安全（需确保 date 有唯一索引）
+	return db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "date"}},
+		DoUpdates: clause.AssignmentColumns([]string{"dau_count"}),
+	}).Create(&model.ClientDailyRecord{
+		Date:     date,
+		DauCount: int32(activeCount),
+	}).Error
 }
 
 // 计算环比
@@ -300,7 +286,7 @@ func statisticActiveClientTrend(ctx context.Context, db *gorm.DB, startDate, end
 	if err != nil {
 		return nil, err
 	}
-	var stats []*model.ClientDailyStats
+	var stats []*model.ClientDailyRecord
 	if err := sqlopt.SQLOptions(
 		sqlopt.StartDate(startDate),
 		sqlopt.EndDate(endDate),
