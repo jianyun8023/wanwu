@@ -19,14 +19,43 @@ type ProcessorConfig struct {
 	ResultFormatters   map[string]func(string) string
 }
 
+type RunStartedEventWithInput struct {
+	*aguievents.BaseEvent
+	ThreadIDValue string      `json:"threadId"`
+	RunIDValue    string      `json:"runId"`
+	Input         interface{} `json:"input,omitempty"`
+}
+
+func NewRunStartedEventWithInput(threadID, runID string, input interface{}) *RunStartedEventWithInput {
+	return &RunStartedEventWithInput{
+		BaseEvent:     aguievents.NewBaseEvent(aguievents.EventTypeRunStarted),
+		ThreadIDValue: threadID,
+		RunIDValue:    runID,
+		Input:         input,
+	}
+}
+
+func (e *RunStartedEventWithInput) ThreadID() string { return e.ThreadIDValue }
+func (e *RunStartedEventWithInput) RunID() string    { return e.RunIDValue }
+func (e *RunStartedEventWithInput) Validate() error  { return nil }
+func (e *RunStartedEventWithInput) ToJSON() ([]byte, error) {
+	type alias RunStartedEventWithInput
+	return json.Marshal((*alias)(e))
+}
+
 type StreamProcessor struct {
 	mu     sync.RWMutex
 	config *ProcessorConfig
 
-	currentTextMsg      *TextMessage
-	currentReasoningMsg *ReasoningMessage
-	currentToolMessage  *ToolMessage
-	toolCallMap         map[string]*ToolCall
+	currentTextMsgID           string
+	currentTextMsgContent      string
+	currentReasoningMsgID      string
+	currentReasoningMsgContent string
+	currentToolMessage         *ToolMessage
+	toolCallMap                map[string]*ToolCall
+
+	currentTextMsgBackup      *TextMessage
+	currentReasoningMsgBackup *ReasoningMessage
 }
 
 // ============================================================================
@@ -47,7 +76,7 @@ func NewStreamProcessor(config *ProcessorConfig) *StreamProcessor {
 // 公开方法
 // ============================================================================
 
-func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Event) (<-chan aguievents.Event, <-chan interface{}) {
+func (p *StreamProcessor) ProcessBackup(ctx context.Context, in <-chan aguievents.Event) (<-chan aguievents.Event, <-chan interface{}) {
 	cleanedOut := make(chan aguievents.Event, 1024)
 	historyOut := make(chan interface{}, 1024)
 
@@ -70,11 +99,62 @@ func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Even
 					continue
 				}
 
-				if msg := p.aggregateEvent(cleanedEvent); msg != nil {
+				if msg := p.aggregateEventBackup(cleanedEvent); msg != nil {
 					select {
 					case historyOut <- msg:
 					case <-ctx.Done():
 						return
+					}
+				}
+
+				select {
+				case cleanedOut <- cleanedEvent:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	return cleanedOut, historyOut
+}
+
+func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Event, input interface{}) (<-chan aguievents.Event, <-chan aguievents.Event) {
+	cleanedOut := make(chan aguievents.Event, 1024)
+	historyOut := make(chan aguievents.Event, 1024)
+
+	go func() {
+		defer close(cleanedOut)
+		defer close(historyOut)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-in:
+				if !ok {
+					return
+				}
+
+				cleanedEvent := p.cleanEvent(event)
+
+				if cleanedEvent == nil {
+					continue
+				}
+
+				if cleanedEvent.Type() == aguievents.EventTypeRunStarted {
+					if runStarted, ok := cleanedEvent.(*aguievents.RunStartedEvent); ok {
+						cleanedEvent = NewRunStartedEventWithInput(runStarted.ThreadID(), runStarted.RunID(), input)
+					}
+				}
+
+				for _, aggregatedEvent := range p.aggregateEventForHistory(cleanedEvent) {
+					if aggregatedEvent != nil {
+						select {
+						case historyOut <- aggregatedEvent:
+						case <-ctx.Done():
+							return
+						}
 					}
 				}
 
@@ -192,7 +272,7 @@ func (p *StreamProcessor) findToolNameByID(toolCallID string) string {
 // 私有方法 - 事件聚合
 // ============================================================================
 
-func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
+func (p *StreamProcessor) aggregateEventBackup(event aguievents.Event) interface{} {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -202,43 +282,43 @@ func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 		if e.Role != nil {
 			role = *e.Role
 		}
-		p.currentTextMsg = &TextMessage{
+		p.currentTextMsgBackup = &TextMessage{
 			MessageID: e.MessageID,
 			Role:      role,
 		}
 		return nil
 
 	case *aguievents.TextMessageContentEvent:
-		if p.currentTextMsg != nil {
-			p.currentTextMsg.Content += e.Delta
+		if p.currentTextMsgBackup != nil {
+			p.currentTextMsgBackup.Content += e.Delta
 		}
 		return nil
 
 	case *aguievents.TextMessageEndEvent:
-		if p.currentTextMsg != nil {
-			msg := p.currentTextMsg
-			p.currentTextMsg = nil
+		if p.currentTextMsgBackup != nil {
+			msg := p.currentTextMsgBackup
+			p.currentTextMsgBackup = nil
 			return msg
 		}
 		return nil
 
 	case *aguievents.ReasoningMessageStartEvent:
-		p.currentReasoningMsg = &ReasoningMessage{
+		p.currentReasoningMsgBackup = &ReasoningMessage{
 			MessageID: e.MessageID,
 			Role:      e.Role,
 		}
 		return nil
 
 	case *aguievents.ReasoningMessageContentEvent:
-		if p.currentReasoningMsg != nil {
-			p.currentReasoningMsg.Content += e.Delta
+		if p.currentReasoningMsgBackup != nil {
+			p.currentReasoningMsgBackup.Content += e.Delta
 		}
 		return nil
 
 	case *aguievents.ReasoningMessageEndEvent:
-		if p.currentReasoningMsg != nil {
-			msg := p.currentReasoningMsg
-			p.currentReasoningMsg = nil
+		if p.currentReasoningMsgBackup != nil {
+			msg := p.currentReasoningMsgBackup
+			p.currentReasoningMsgBackup = nil
 			return msg
 		}
 		return nil
@@ -297,6 +377,77 @@ func (p *StreamProcessor) aggregateEvent(event aguievents.Event) interface{} {
 
 	default:
 		return nil
+	}
+}
+
+func (p *StreamProcessor) aggregateEventForHistory(event aguievents.Event) []aguievents.Event {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	switch e := event.(type) {
+
+	case *aguievents.TextMessageStartEvent:
+		p.currentTextMsgID = e.MessageID
+		p.currentTextMsgContent = ""
+		return []aguievents.Event{event}
+
+	case *aguievents.TextMessageContentEvent:
+		if p.currentTextMsgID != "" {
+			p.currentTextMsgContent += e.Delta
+		}
+		return nil
+
+	case *aguievents.TextMessageEndEvent:
+		if p.currentTextMsgID != "" {
+			evt := aguievents.NewTextMessageContentEvent(p.currentTextMsgID, p.currentTextMsgContent)
+			p.currentTextMsgID = ""
+			p.currentTextMsgContent = ""
+			return []aguievents.Event{evt, event}
+		}
+		return []aguievents.Event{event}
+
+	case *aguievents.ReasoningMessageStartEvent:
+		p.currentReasoningMsgID = e.MessageID
+		p.currentReasoningMsgContent = ""
+		return []aguievents.Event{event}
+
+	case *aguievents.ReasoningMessageContentEvent:
+		if p.currentReasoningMsgID != "" {
+			p.currentReasoningMsgContent += e.Delta
+		}
+		return nil
+
+	case *aguievents.ReasoningMessageEndEvent:
+		if p.currentReasoningMsgID != "" {
+			evt := aguievents.NewReasoningMessageContentEvent(p.currentReasoningMsgID, p.currentReasoningMsgContent)
+			p.currentReasoningMsgID = ""
+			p.currentReasoningMsgContent = ""
+			return []aguievents.Event{evt, event}
+		}
+		return []aguievents.Event{event}
+
+	case *aguievents.ToolCallStartEvent:
+		tc := &ToolCall{
+			ID:   e.ToolCallID,
+			Type: ToolCallTypeFunction,
+			Function: ToolCallFunction{
+				Name: e.ToolCallName,
+			},
+		}
+		p.toolCallMap[e.ToolCallID] = tc
+		return []aguievents.Event{event}
+
+	case *aguievents.ToolCallArgsEvent:
+		if tc, ok := p.toolCallMap[e.ToolCallID]; ok {
+			tc.Function.Arguments += e.Delta
+		}
+		return []aguievents.Event{event}
+
+	case *aguievents.ToolCallEndEvent:
+		return []aguievents.Event{event}
+
+	default:
+		return []aguievents.Event{event}
 	}
 }
 
