@@ -99,6 +99,7 @@ export default {
 <style lang="scss" scoped>
 .provider-card-wrapper {
   padding-left: 24px;
+  padding-top: 5px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
