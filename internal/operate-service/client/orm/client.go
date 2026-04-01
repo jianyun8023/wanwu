@@ -30,7 +30,7 @@ func NewClient(db *gorm.DB) (*Client, error) {
 	if err := db.AutoMigrate(
 		model.SystemCustom{},
 		model.ClientRecord{},
-		model.ClientDailyStats{},
+		model.ClientDailyRecord{},
 	); err != nil {
 		return nil, err
 	}
