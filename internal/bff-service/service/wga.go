@@ -582,12 +582,12 @@ func GeneralAgentWorkspaceDownload(ctx *gin.Context, userId, orgId string, req r
 	}
 
 	if fi.IsDir() {
-		tarName := fmt.Sprintf("workspace_%s_%s.tar", req.RunID, filepath.Base(req.Path))
-		tarData, err := util.TarDir(targetPath+"/.", false)
+		zipName := fmt.Sprintf("workspace_%s_%s.zip", req.RunID, filepath.Base(req.Path))
+		zipData, err := util.ZipDir(targetPath + "/.")
 		if err != nil {
-			return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to create tar: %v", err))
+			return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to create zip: %v", err))
 		}
-		return tarName, tarData, nil
+		return zipName, zipData, nil
 	}
 
 	fileName := filepath.Base(req.Path)
