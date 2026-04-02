@@ -20,6 +20,8 @@ const (
 	SubAgentToolEventType = 5 //子智能体工具事件
 	ThinkingEventType     = 6 //智能体思考事件
 
+	SkillTextEventType = 20 //技能内容事件
+
 	EventStartStatus   SubEventStatus = 1 //开始事件
 	EventProcessStatus SubEventStatus = 2 //输出中
 	EventEndStatus     SubEventStatus = 3 //结束事件
@@ -60,7 +62,12 @@ func BuildEventTypeByTool(agentTool *AgentTool) int {
 }
 
 func BuildStartSubAgent(respContext *AgentChatRespContext) *SubEventData {
-	return StartSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, 0)
+	subAgent := StartSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, 0)
+	parent := respContext.MultiAgentContext.PeekParentAgent()
+	if parent != nil {
+		subAgent.ParentId = parent.Id
+	}
+	return subAgent
 }
 
 func BuildProcessSubAgent(respContext *AgentChatRespContext) *SubEventData {

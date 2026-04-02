@@ -7,6 +7,7 @@ import (
 	agent_util "github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/cloudwego/eino/schema"
+	"strconv"
 )
 
 type SkillMessageBuilder struct {
@@ -41,7 +42,7 @@ func (*SkillMessageBuilder) BuildContent(req *request.AgentChatContext, respCont
 	content, err := NewMultiBuilder().BuildContent(req, respContext, message, &style)
 	bytes, _ := json.Marshal(content)
 	log.Infof("buildDataContent, %s", string(bytes))
-	buildSkillEvent(content)
+	buildSkillEvent(content, respContext.Order)
 	return content, err
 }
 
@@ -103,13 +104,19 @@ func buildToolCall(call schema.ToolCall) []schema.ToolCall {
 	}
 }
 
-func buildSkillEvent(contentList []*response.AgentMessageContent) {
+func buildSkillEvent(contentList []*response.AgentMessageContent, order int) {
 	if len(contentList) > 0 {
 		for _, content := range contentList {
 			event := content.SubEventData
 			if event != nil {
 				if event.EventType == response.SubAgentEventType || event.EventType == response.MainAgentEventType {
-					event.EventType = response.SkillEventType
+					if event.Status == response.EventProcessStatus {
+						event.EventType = response.SkillTextEventType
+						event.ParentId = event.Id
+						event.Id = event.Id + "_" + strconv.Itoa(order)
+					} else {
+						event.EventType = response.SkillEventType
+					}
 				}
 			}
 		}

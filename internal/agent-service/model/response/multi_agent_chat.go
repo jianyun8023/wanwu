@@ -47,6 +47,18 @@ func (m *MultiAgentContext) WriteAgentName(chatMessage *schema.Message) {
 	m.AgentTempMessage.WriteString(chatMessage.ToolCalls[0].Function.Arguments)
 }
 
+func (m *MultiAgentContext) PeekParentAgent() *AgentInfo {
+	agent := m.CurrentAgent
+	if agent == nil {
+		return nil
+	}
+	peekParent, has := agent.PeekParent()
+	if !has {
+		return nil
+	}
+	return peekParent
+}
+
 func (m *MultiAgentContext) PeekAgent() *AgentInfo {
 	agent := m.CurrentAgent
 	if agent == nil {

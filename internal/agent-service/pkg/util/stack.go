@@ -34,6 +34,15 @@ func (s *Stack[T]) Peek() (T, bool) {
 	return s.items[len(s.items)-1], true
 }
 
+// PeekParent 查看栈次顶元素但不弹出，返回元素和是否成功
+func (s *Stack[T]) PeekParent() (T, bool) {
+	if len(s.items) == 0 || len(s.items) == 1 {
+		var zero T
+		return zero, false
+	}
+	return s.items[len(s.items)-2], true
+}
+
 // Len 返回栈中元素个数
 func (s *Stack[T]) Len() int {
 	return len(s.items)

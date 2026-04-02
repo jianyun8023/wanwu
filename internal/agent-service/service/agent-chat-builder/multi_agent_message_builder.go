@@ -45,7 +45,7 @@ func (*MultiAgentMessageBuilder) BuildContent(req *request.AgentChatContext, res
 	case AgentAllFinishStep: //直接返回内容
 		return buildMessageContent([]string{chatMessage.Content}, nil), nil
 	case AgentChatStep: //智能体内容输出
-		return buildChatMessage(req, respContext, chatMessage, buildSubAgentEvent(respContext, step), changeStyle)
+		return buildChatMessage(req, respContext, chatMessage, changeStyle, step)
 	default: //智能体开始/结束
 		if len(chatMessage.Content) > 0 {
 			if req.AgentChatReq.NewStyle {
@@ -83,11 +83,12 @@ func buildAgentStep(req *request.AgentChatContext, chatMessage *schema.Message, 
 }
 
 // buildChatMessage 构造智能体对话消息
-func buildChatMessage(req *request.AgentChatContext, respContext *response.AgentChatRespContext, chatMessage *schema.Message, event *response.SubEventData, changeStyle *bool) ([]*response.AgentMessageContent, error) {
+func buildChatMessage(req *request.AgentChatContext, respContext *response.AgentChatRespContext, chatMessage *schema.Message, changeStyle *bool, step AgentStep) ([]*response.AgentMessageContent, error) {
 	contentList, err := NewSingleBuilder().BuildContent(req, respContext, chatMessage, changeStyle)
 	if err != nil {
 		return nil, err
 	}
+	event := buildSubAgentEvent(respContext, step)
 	for _, messageContent := range contentList {
 		if event == nil {
 			continue
@@ -95,7 +96,9 @@ func buildChatMessage(req *request.AgentChatContext, respContext *response.Agent
 		if messageContent.SubEventData == nil {
 			messageContent.SubEventData = event
 		} else {
-			messageContent.SubEventData.ParentId = event.Id
+			if len(messageContent.SubEventData.ParentId) == 0 {
+				messageContent.SubEventData.ParentId = event.Id
+			}
 		}
 		newStyle := buildChangeStyle(changeStyle, req)
 		if !newStyle {
@@ -119,6 +122,8 @@ func buildMultiAgentEventType(eventType int) int {
 		return response.SubAgentEventType
 	case response.SkillEventType:
 		return response.SkillEventType
+	case response.SkillTextEventType:
+		return response.SkillTextEventType
 	default:
 		return response.SubAgentEventType
 	}
