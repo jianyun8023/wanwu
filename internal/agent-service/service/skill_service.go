@@ -39,10 +39,6 @@ var specialNameSet = map[rune]bool{
 	'\'': true,
 }
 
-var resultFilterMap = map[string]bool{
-	".py": true,
-}
-
 type SkillParams struct {
 	UploadFileUrl []string `json:"uploadFileUrl"`
 }
@@ -208,6 +204,10 @@ func (s *SkillExecutor) runStream(runnerType wga_sandbox_option.RunnerType) (*sc
 					continue
 				}
 				for _, message := range contentList {
+					if message.ResponseMeta != nil && message.ResponseMeta.FinishReason == "stop" {
+						//自己手动添加结束，不需要沙箱的结束
+						message.ResponseMeta = nil
+					}
 					marshal, err2 := json.Marshal(message)
 					if err2 != nil {
 						log.Errorf("skillTool Run error: %v", err1)
@@ -244,32 +244,29 @@ func skillOutputProcessor(outputDir string) (string, map[string]any, error) {
 	fileList, err := uploadResultFile(outputDir)
 	if err != nil {
 		log.Errorf("skillTool uploadResultFile error: %v", err)
+		return "", nil, err
 	}
-	var extra map[string]any
+	var extra = map[string]any{}
 	if len(fileList) > 0 {
 		builder.WriteString("生成文件结果如下:")
 		for _, file := range fileList {
 			builder.WriteString(util.MdImageFile(file.FileName, file.FilePath))
 		}
-		extra = map[string]any{
-			"fileList": fileList,
-		}
+		extra["fileList"] = fileList
 	}
 	return builder.String(), extra, nil
 }
 
 // 上传结果文件
 func uploadResultFile(outputDir string) ([]*response.DownloadFileInfo, error) {
-	list, err := util.DirFileList(outputDir, false, true)
+	list, err := util.FindDirAndFileList(outputDir, false, true, true)
 	if err != nil {
 		return nil, err
 	}
 	var fileList []*response.DownloadFileInfo
-	for _, path := range list {
+	for _, fileInfo := range list {
+		path := buildFilePath(fileInfo)
 		log.Infof("uploadResultFile %s", path)
-		if resultFilterMap[filepath.Ext(path)] {
-			continue
-		}
 		fileName, minioPath, fileSize, err1 := minio_service.UploadLocalFile(context.Background(), uuid.New().String(), filepath.Base(path), path, true)
 		if err1 != nil {
 			return nil, err1
@@ -281,6 +278,23 @@ func uploadResultFile(outputDir string) ([]*response.DownloadFileInfo, error) {
 		})
 	}
 	return fileList, nil
+}
+
+func buildFilePath(info *util.FileInfo) string {
+	if !info.IsDir {
+		return info.FilePath
+	}
+	dirZipName := buildDirZipName(info.FilePath)
+	err := util.ZipDirToLocal(info.FilePath, dirZipName)
+	if err != nil {
+		log.Errorf("skillTool uploadResultFile error: %v", err)
+		return ""
+	}
+	return dirZipName
+}
+
+func buildDirZipName(path string) string {
+	return filepath.Base(path) + ".zip"
 }
 
 func buildModeConfig(chatInfo *service_model.AgentChatInfo) *wga_sandbox_option.ModelConfig {

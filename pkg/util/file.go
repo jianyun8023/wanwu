@@ -27,6 +27,11 @@ const (
 
 var specialFileExtList = []string{".tar.gz"}
 
+type FileInfo struct {
+	IsDir    bool
+	FilePath string
+}
+
 type FileMergeResult struct {
 	TotalSuccessCount int64
 	TotalLineCount    int64
@@ -78,7 +83,19 @@ func FileExist(filePath string) (bool, error) {
 }
 
 func DirFileList(dir string, subDir bool, fullPath bool) ([]string, error) {
+	fileList, err := FindDirAndFileList(dir, subDir, fullPath, false)
+	if err != nil {
+		return nil, err
+	}
 	var fileNameList []string
+	for _, info := range fileList {
+		fileNameList = append(fileNameList, info.FilePath)
+	}
+	return fileNameList, nil
+}
+
+func FindDirAndFileList(dir string, subDir bool, fullPath bool, dirPath bool) ([]*FileInfo, error) {
+	var fileNameList []*FileInfo
 	// 读取目录
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -97,14 +114,35 @@ func DirFileList(dir string, subDir bool, fullPath bool) ([]string, error) {
 		// 判断是否是文件
 		if !info.IsDir() {
 			if fullPath {
-				fileNameList = append(fileNameList, dir+"/"+entry.Name())
+				fileNameList = append(fileNameList, &FileInfo{
+					IsDir:    false,
+					FilePath: dir + "/" + entry.Name(),
+				})
 			} else {
-				fileNameList = append(fileNameList, entry.Name())
+				fileNameList = append(fileNameList, &FileInfo{
+					IsDir:    false,
+					FilePath: entry.Name(),
+				})
 			}
-		} else if !subDir { //不需要校验底层目录
 			continue
-		} else {
-			list, err := DirFileList(dir+"/"+entry.Name(), subDir, fullPath)
+		}
+
+		if dirPath { // 需要返回目录名称
+			if fullPath {
+				fileNameList = append(fileNameList, &FileInfo{
+					IsDir:    true,
+					FilePath: dir + "/" + entry.Name(),
+				})
+			} else {
+				fileNameList = append(fileNameList, &FileInfo{
+					IsDir:    true,
+					FilePath: entry.Name(),
+				})
+			}
+		}
+
+		if subDir { //需要校验底层目录
+			list, err := FindDirAndFileList(dir+"/"+entry.Name(), subDir, fullPath, dirPath)
 			if err != nil {
 				return nil, err
 			} else {

@@ -1,10 +1,8 @@
 package agent_chat_builder
 
 import (
-	"encoding/json"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/response"
-	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/cloudwego/eino/schema"
 )
@@ -41,8 +39,6 @@ func (*MultiAgentMessageBuilder) FilterMessage(respContext *response.AgentChatRe
 }
 func (*MultiAgentMessageBuilder) BuildContent(req *request.AgentChatContext, respContext *response.AgentChatRespContext, chatMessage *schema.Message, changeStyle *bool) ([]*response.AgentMessageContent, error) {
 	step := buildAgentStep(req, chatMessage, respContext)
-	marshal, _ := json.Marshal(chatMessage)
-	log.Infof("step:%d, messageL %s", step, string(marshal))
 	switch step {
 	case AgentNoneProcessStep: //无需处理
 		return buildSkipMessage(), nil
@@ -121,6 +117,8 @@ func buildMultiAgentEventType(eventType int) int {
 	switch eventType {
 	case response.ToolEventType:
 		return response.SubAgentEventType
+	case response.SkillEventType:
+		return response.SkillEventType
 	default:
 		return response.SubAgentEventType
 	}
