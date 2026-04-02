@@ -65,7 +65,7 @@ func (a *sandboxAgent) buildSandboxOpts(messages []adk.Message) []wga_sandbox_op
 		wga_sandbox_option.WithInstruction(a.cfg.Prompt),
 		wga_sandbox_option.WithMessages(messages),
 		wga_sandbox_option.WithEnableThinking(a.cfg.Configure.EnableThinking),
-		wga_sandbox_option.WithSkipCleanup(true),
+		wga_sandbox_option.WithRunnerType(wga_sandbox_option.RunnerTypeOpencode),
 		wga_sandbox_option.WithAgentName(a.cfg.ID),
 	}
 

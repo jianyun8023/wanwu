@@ -34,7 +34,7 @@ func Assistant() *client {
 	return _esAssistant
 }
 
-func InitESIndexTemplate(ctx context.Context) error {
+func InitAsistantChatHistoryIndexTemplate(ctx context.Context) error {
 	templateName := "conversation_detail_infos_template"
 
 	// 创建或更新索引模板（每次启动都更新，确保模板是最新的）
@@ -207,5 +207,55 @@ func InitESIndexTemplate(ctx context.Context) error {
 	}
 
 	log.Infof("成功创建ES索引模板: %s", templateName)
+	return nil
+}
+
+func InitWgaChatHistoryEventIndexTemplate(ctx context.Context) error {
+	templateName := "wga_chat_history_event_template"
+
+	// 创建或更新索引模板
+	template := `{
+		"index_patterns": [
+			"wga_chat_history_event"
+		],
+		"template": {
+			"mappings": {
+				"properties": {
+					"id": {
+						"type": "keyword",
+						"index": true
+					},
+					"threadId": {
+						"type": "keyword",
+						"index": true
+					},
+					"runId": {
+						"type": "keyword",
+						"index": true
+					},
+					"userId": {
+						"type": "keyword",
+						"index": true
+					},
+					"orgId": {
+						"type": "keyword",
+						"index": true
+					},
+					"events": {
+						"type": "text",
+						"index": false
+					},
+					"createdAt": {
+						"type": "long"
+					}
+				}
+			}
+		}
+	}`
+	if err := Assistant().CreateIndexTemplate(ctx, templateName, template); err != nil {
+		return fmt.Errorf("创建ES索引模板失败: %v", err)
+	}
+	log.Infof("成功创建ES索引模板: %s", templateName)
+
 	return nil
 }

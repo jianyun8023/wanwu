@@ -87,4 +87,16 @@ type IClient interface {
 	CreateSkillConversation(ctx context.Context, conversation *model.SkillConversation) *err_code.Status
 	DeleteSkillConversation(ctx context.Context, conversationId, userId, orgId string) *err_code.Status
 	GetSkillConversationList(ctx context.Context, userId, orgId string, pageNo, pageSize int) ([]*model.SkillConversation, int64, *err_code.Status)
+
+	//=================WgaConversationConfig================
+	GetWgaConversationConfig(ctx context.Context, threadId string, userId, orgId string) (*model.WgaConversationConfig, *err_code.Status)
+	UpdateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status
+	CreateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status
+	DeleteWgaConversationConfig(ctx context.Context, threadId string) *err_code.Status
+	GetWgaConversationConfigList(ctx context.Context, userID, orgID string, offset, limit int32) ([]*model.WgaConversationConfig, int64, *err_code.Status)
+	WgaConversationConfigExists(ctx context.Context, threadId, userID, orgID string) (bool, *err_code.Status)
+
+	//=================WgaConfig================
+	GetWgaConfig(ctx context.Context, userId, orgId string) (*model.WgaConfig, *err_code.Status)
+	UpdateWgaConfig(ctx context.Context, config *model.WgaConfig) *err_code.Status
 }

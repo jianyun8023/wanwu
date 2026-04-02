@@ -497,7 +497,13 @@ func (r *Runner) buildSystemAndPrompt() (system string, prompt string, err error
 		return "", "", err
 	}
 	if len(r.opt.Messages) > 0 {
-		prompt = r.opt.Messages[len(r.opt.Messages)-1].Content
+		message := r.opt.Messages[len(r.opt.Messages)-1]
+		if len(message.UserInputMultiContent) > 0 {
+			b, _ := json.Marshal(message.UserInputMultiContent)
+			prompt = string(b)
+		} else {
+			prompt = message.Content
+		}
 	}
 	return system, prompt, nil
 }

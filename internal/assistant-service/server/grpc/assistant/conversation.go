@@ -105,7 +105,7 @@ func (s *Service) GetConversationList(ctx context.Context, req *assistant_servic
 			ConversationId: util.Int2Str(conversation.ID),
 			AssistantId:    util.Int2Str(conversation.AssistantId),
 			Title:          conversation.Title,
-			CreatTime:      conversation.CreatedAt,
+			CreatedAt:      conversation.CreatedAt,
 		})
 	}
 

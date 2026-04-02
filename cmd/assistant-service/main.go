@@ -60,8 +60,12 @@ func main() {
 		log.Fatalf("init es err: %v", err)
 	}
 
-	if err := es.InitESIndexTemplate(ctx); err != nil {
+	if err := es.InitAsistantChatHistoryIndexTemplate(ctx); err != nil {
 		log.Fatalf("init es index template err: %v", err)
+	}
+
+	if err := es.InitWgaChatHistoryEventIndexTemplate(ctx); err != nil {
+		log.Fatalf("init wga chat history index template err: %v", err)
 	}
 
 	if err := minio.InitAssistant(ctx, minio.Config{

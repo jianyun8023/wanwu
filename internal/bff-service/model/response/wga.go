@@ -1,6 +1,19 @@
 package response
 
-import "github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+import (
+	"github.com/ThinkInAIXYZ/go-mcp/protocol"
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+)
+
+type GetGeneralAgentConfigResp struct {
+	ToolList      []request.ToolSelected      `json:"toolList"`      // 工具列表
+	AssistantList []request.AssistantSelected `json:"assistantList"` // 智能体列表
+}
+
+type GetGeneralAgentConversationConfigResp struct {
+	ThreadID    string                 `json:"threadId"`    // 对话ID
+	ModelConfig request.AppModelConfig `json:"modelConfig"` // 模型
+}
 
 type CreateGeneralAgentConversationResp struct {
 	ThreadID string `json:"threadId"` // 对话ID
@@ -23,15 +36,8 @@ type GetGeneralAgentToolSelectResp struct {
 }
 
 type GeneralAgentToolInfoResp struct {
-	ToolName string `json:"toolName"` // 工具名称
-	ToolDesc string `json:"toolDesc"` // 工具描述
-}
-
-type GetGeneralAgentConfigResp struct {
-	ThreadID      string                 `json:"threadId"`      // 对话ID
-	ModelConfig   request.AppModelConfig `json:"modelConfig"`   // 模型
-	AssistantList []*AssistantAgentInfo  `json:"assistantList"` // 能体列表
-	ToolList      []*AssistantToolInfo   `json:"toolList"`      // 工具列表
+	Actions []*protocol.Tool `json:"actions"` // action列表
+	ToolInfo
 }
 
 type GeneralAgentConfigCheckResponse struct {
@@ -66,13 +72,10 @@ type GeneralAgentWorkspaceResp struct {
 }
 
 type GeneralAgentConversationDetailInfo struct {
-	ThreadID     string                 `json:"threadId"`
-	RunID        string                 `json:"runId"`
-	CreatedAt    int64                  `json:"createdAt"`
-	Messages     []interface{}          `json:"messages"`
-	RequestFiles []AssistantRequestFile `json:"requestFiles"`
-
-	Workspace GeneralAgentConversationWorkspaceInfo `json:"workspace"`
+	ThreadID  string        `json:"threadId"`
+	RunID     string        `json:"runId"`
+	CreatedAt int64         `json:"createdAt"`
+	Events    []interface{} `json:"events"`
 }
 
 type GeneralAgentConversationWorkspaceInfo struct {

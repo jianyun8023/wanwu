@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
+	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
@@ -24,6 +27,10 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+)
+
+const (
+	wgaConversationHistoryEventESIndexName = "wga_chat_history_event" // 通用智能体聊天历史ES索引
 )
 
 func GeneralAgentCopilotRuntimeInfo(_ *gin.Context) *response.GeneralAgentCopilotRuntimeInfoResp {
@@ -43,13 +50,67 @@ func GeneralAgentCopilotRuntimeInfo(_ *gin.Context) *response.GeneralAgentCopilo
 }
 
 func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
-	agentID := config.WgaCfg().AgentID
+	// 验证 threadId 是否存在
+	existsResp, err := assistant.WgaConversationExists(ctx.Request.Context(), &assistant_service.WgaConversationExistsReq{
+		ThreadId: req.ThreadID,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if !existsResp.Exists {
+		return fmt.Errorf("threadId not found: %s", req.ThreadID)
+	}
+
 	runID := uuid.NewString()
 
-	opts := buildWgaOptions(ctx, config.WgaCfg(), req.ThreadID, runID, req.Messages)
+	// 获取 WGA Conversation 配置
+	wgaConversationConfigResp, err := assistant.GetWgaConversationConfig(ctx.Request.Context(), &assistant_service.GetWgaConversationConfigReq{
+		ThreadId: req.ThreadID,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
 
-	_, iter, err := wga.Run(ctx.Request.Context(), agentID, opts...)
+	// 获取 WGA 配置
+	wgaConfigResp, err := assistant.GetWgaConfig(ctx.Request.Context(), &assistant_service.GetWgaConfigReq{
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
 	if err != nil {
+		return err
+	}
+	wgaConversationConfig := wgaConversationConfigResp.Config
+	wgaConfig := wgaConfigResp.Config
+
+	// 过滤消息
+	messages := filterMessages(req.Messages)
+
+	var currentUserMessage *request.GeneralAgentConversationMessage
+	for i := len(req.Messages) - 1; i >= 0; i-- {
+		if req.Messages[i].Role == ag_ui_util.RoleUser {
+			currentUserMessage = &req.Messages[i]
+			break
+		}
+	}
+
+	// ---- 用户配置 ---
+	// 构建 WGA 选项
+	opts, err := buildWgaOptionsFromUserConfig(ctx, wgaConversationConfig, wgaConfig, req.ThreadID, runID, messages, currentUserMessage)
+	if err != nil {
+		log.Errorf("[GeneralAgentConversationChat] threadId=%s, runId=%s, buildWgaOptionsFromUserConfig error: %v", req.ThreadID, runID, err)
+		return err
+	}
+
+	_, iter, err := wga.Run(ctx.Request.Context(), config.WgaCfg().AgentID, opts...)
+	if err != nil {
+		log.Errorf("[GeneralAgentConversationChat] threadId=%s, runId=%s, wga.Run error: %v", req.ThreadID, runID, err)
 		return err
 	}
 
@@ -58,12 +119,11 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 
 	processorConfig := &ag_ui_util.ProcessorConfig{
 		ToolNameMapper: map[string]string{
-			"transfer_to_agent": "正在交给专业智能体",
+			"transfer_to_agent": "正在交给智能体",
 		},
-		ExcludedAgentNames: []string{
-			"default",
-			"Supervisor Agent",
-		},
+		// ExcludedAgentNames: []string{
+		// 	"Supervisor Agent",
+		// },
 		ResultFormatters: map[string]func(string) string{
 			"bochaWebSearch":      WgaFormatBochaWebSearchResult,
 			"tavily_basic_search": WgaFormatTavilySearchResult,
@@ -76,7 +136,21 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	}
 
 	processor := ag_ui_util.NewStreamProcessor(processorConfig)
-	processedEventCh, _ := processor.Process(ctx.Request.Context(), eventCh)
+	processedEventCh, historyEventCh := processor.Process(ctx.Request.Context(), eventCh, map[string]interface{}{
+		"threadId":       req.ThreadID,
+		"runId":          runID,
+		"messages":       []interface{}{currentUserMessage},
+		"state":          map[string]interface{}{},
+		"tools":          []interface{}{},
+		"context":        []interface{}{},
+		"forwardedProps": map[string]interface{}{},
+	})
+
+	// 保存智能体返回的消息
+	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, userId, orgId, req.ThreadID, runID,
+		config.WgaCfg().Persistent.BaseDir,
+		config.WgaCfg().Persistent.Enabled,
+	)
 
 	outputCh := injectWgaWorkspaceActivity(
 		ctx.Request.Context(),
@@ -95,6 +169,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		select {
 		case line, ok := <-outputCh:
 			if !ok {
+				log.Infof("[GeneralAgentConversationChat] threadId=%s, runId=%s, outputCh closed", req.ThreadID, runID)
 				return false
 			}
 			_, _ = fmt.Fprintf(w, "data: %s\n\n", line)
@@ -106,37 +181,97 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	return nil
 }
 
-func buildWgaOptions(ctx *gin.Context, cfg *config.WgaConfig, threadID, runID string, messages []request.GeneralAgentConversationMessage) []wga_option.Option {
+func buildWgaOptionsFromUserConfig(ctx *gin.Context, wgaConversationConfig *assistant_service.WgaConversationConfig, wgaConfig *assistant_service.WgaConfig, threadID, runID string, messages []request.GeneralAgentConversationMessage, currentUserMessage *request.GeneralAgentConversationMessage) ([]wga_option.Option, error) {
 	opts := []wga_option.Option{
-		wga_option.WithModelConfig(wga_option.ModelConfig{
-			Provider:     cfg.Model.Provider,
-			ProviderName: cfg.Model.ProviderName,
-			BaseURL:      cfg.Model.BaseURL,
-			APIKey:       cfg.Model.APIKey,
-			Model:        cfg.Model.Model,
-			ModelName:    cfg.Model.ModelName,
-		}),
 		wga_option.WithRunSession(wga_option.RunSession{
 			ThreadID: threadID,
 			RunID:    runID,
 		}),
 	}
 
-	if cfg.Persistent.Enabled {
-		// 持久化存储
+	// 校验并构建模型配置选项
+	modelConfigValid := false
+	if wgaConversationConfig != nil && wgaConversationConfig.ModelConfig != nil && wgaConversationConfig.ModelConfig.ModelId != "" {
+		if err := checkModelConfigFromProto(ctx, wgaConversationConfig.GetModelConfig()); err == nil {
+			modelOpt, err := buildModelOption(ctx, wgaConversationConfig.ModelConfig)
+			if err == nil {
+				opts = append(opts, modelOpt)
+				modelConfigValid = true
+			}
+		}
+	}
+
+	// 用户模型配置无效，尝试使用默认配置
+	if !modelConfigValid {
+		defaultModelConfig := config.WgaCfg().Model
+		if defaultModelConfig.Model != "" && defaultModelConfig.BaseURL != "" {
+			opts = append(opts, wga_option.WithModelConfig(wga_option.ModelConfig{
+				Provider:     defaultModelConfig.Provider,
+				ProviderName: defaultModelConfig.ProviderName,
+				BaseURL:      defaultModelConfig.BaseURL,
+				APIKey:       defaultModelConfig.APIKey,
+				Model:        defaultModelConfig.Model,
+				ModelName:    defaultModelConfig.ModelName,
+			}))
+		} else {
+			return nil, fmt.Errorf("model config is required: user config invalid and default config not set")
+		}
+	}
+
+	// 校验并构建工具配置选项
+	toolConfigValid := false
+	if wgaConfig != nil && len(wgaConfig.ToolList) > 0 {
+		if err := checkWgaToolConfig(ctx, wgaConfig.UserId, wgaConfig.OrgId, wgaConfig.ToolList); err == nil {
+			toolOpts, err := buildToolOptions(ctx, wgaConfig.UserId, wgaConfig.OrgId, wgaConfig.ToolList)
+			if err == nil {
+				opts = append(opts, toolOpts...)
+				toolConfigValid = true
+			}
+		}
+	}
+
+	// 用户工具配置无效，尝试使用默认配置
+	if !toolConfigValid {
+		defaultTools := config.WgaCfg().Tools
+		if len(defaultTools) > 0 {
+			for _, tool := range defaultTools {
+				opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
+					Title:   tool.Title,
+					APIAuth: &tool.APIAuth,
+				}))
+			}
+		} else {
+			return nil, fmt.Errorf("tool list is required: user config invalid and default config not set")
+		}
+	}
+
+	// TODO 智能体配置
+
+	// 持久化存储
+	if config.WgaCfg().Persistent.Enabled {
+		var inputDir string
 		mode := wga_persistent.ModeVersioned
-		if cfg.Persistent.Mode == string(wga_persistent.ModeOverwrite) {
+		if config.WgaCfg().Persistent.Mode == string(wga_persistent.ModeOverwrite) {
 			mode = wga_persistent.ModeOverwrite
 		}
-		store, err := wga_persistent.NewStore(mode, cfg.Persistent.BaseDir, threadID)
+		store, err := wga_persistent.NewStore(mode, config.WgaCfg().Persistent.BaseDir, threadID)
 		if err == nil {
 			// 创建目录并从上一次输出复制
 			_, info, err := store.GetRunDir(runID, wga_persistent.WithMkdir(true))
 			if err == nil {
+				inputDir = info.Dir
 				opts = append(opts,
 					wga_option.WithInputDir(filepath.Clean(info.Dir)+"/."),
 					wga_option.WithOutputDir(info.Dir),
 				)
+			}
+		}
+		// 下载用户消息中的URL文件到inputDir
+		if currentUserMessage != nil {
+			if urls := extractURLsFromContent(currentUserMessage.Content); len(urls) > 0 {
+				if err := downloadURLsToDir(urls, inputDir); err != nil {
+					log.Errorf("[GeneralAgentConversationChat] download URLs to inputDir failed: %v", err)
+				}
 			}
 		}
 	}
@@ -150,14 +285,62 @@ func buildWgaOptions(ctx *gin.Context, cfg *config.WgaConfig, threadID, runID st
 		opts = append(opts, wga_option.WithMessages(msgs))
 	}
 
-	for _, tool := range cfg.Tools {
-		opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
-			Title:   tool.Title,
-			APIAuth: &tool.APIAuth,
-		}))
-	}
+	return opts, nil
+}
 
-	return opts
+func isURLString(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https")
+}
+
+func extractURLsFromContent(content interface{}) []string {
+	var urls []string
+	switch v := content.(type) {
+	case []interface{}:
+		for _, item := range v {
+			if m, ok := item.(map[string]interface{}); ok {
+				if m["type"] == "binary" {
+					if urlStr, ok := m["url"].(string); ok {
+						urls = append(urls, urlStr)
+					}
+				}
+			}
+		}
+	}
+	return urls
+}
+
+func downloadURLsToDir(urls []string, dir string) error {
+	log.Infof("[downloadURLsToDir] start downloading %d URLs to dir: %s", len(urls), dir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("create input dir failed: %w", err)
+	}
+	for _, urlStr := range urls {
+		log.Infof("[downloadURLsToDir] downloading: %s", urlStr)
+		u, err := url.Parse(urlStr)
+		if err != nil {
+			log.Errorf("parse URL failed: %v", err)
+			continue
+		}
+		body, err := http_client.Default().Get(context.Background(), &http_client.HttpRequestParams{
+			Url: urlStr,
+		})
+		if err != nil {
+			log.Errorf("download URL %s failed: %v", urlStr, err)
+			continue
+		}
+		filename := filepath.Base(u.Path)
+		if filename == "" || strings.Contains(filename, "?") {
+			filename = uuid.NewString()
+		}
+		filePath := filepath.Join(dir, filename)
+		if err := os.WriteFile(filePath, body, 0644); err != nil {
+			log.Errorf("save file failed: %v", err)
+			continue
+		}
+		log.Infof("[downloadURLsToDir] downloaded %s to %s, size: %d bytes", urlStr, filePath, len(body))
+	}
+	return nil
 }
 
 func injectWgaWorkspaceActivity(
@@ -167,6 +350,7 @@ func injectWgaWorkspaceActivity(
 	persistentEnabled bool,
 ) <-chan string {
 	out := make(chan string, 1024)
+
 	go func() {
 		defer util.PrintPanicStack()
 		defer close(out)
@@ -284,6 +468,9 @@ func getWgaWorkspaceInfo(rootDir, currentDir string) (int64, int, error) {
 func convertWgaMessage(ctx *gin.Context, role string, content interface{}) *schema.Message {
 	switch v := content.(type) {
 	case string:
+		if isURLString(v) {
+			return nil
+		}
 		return &schema.Message{
 			Role:    schema.RoleType(role),
 			Content: v,
@@ -364,4 +551,63 @@ func convertWgaMessageInputPart(ctx *gin.Context, m map[string]interface{}) sche
 		}
 	}
 	return part
+}
+
+// 对话过滤
+// 过滤规则：
+// 1. 过滤掉 role 非 user/assistant 的消息
+// 2. 过滤掉 role 为 assistant 且 content 为空的消息
+func filterMessages(messages []request.GeneralAgentConversationMessage) []request.GeneralAgentConversationMessage {
+	filtered := make([]request.GeneralAgentConversationMessage, 0, len(messages))
+	for _, msg := range messages {
+		// 过滤掉 tool 消息
+		if msg.Role != ag_ui_util.RoleUser && msg.Role != ag_ui_util.RoleAssistant {
+			continue
+		}
+		// 过滤掉空内容的消息
+		if msg.Content == nil {
+			continue
+		}
+		filtered = append(filtered, msg)
+	}
+	return filtered
+}
+
+// saveWgaChatHistoryEvent 保存智能体返回的聊天历史到 ES
+func saveWgaChatHistoryEvent(ctx context.Context, historyEventCh <-chan aguievents.Event, userId, orgId, threadId, runId, baseDir string, persistentEnabled bool) {
+	defer util.PrintPanicStack()
+
+	var events []aguievents.Event
+	for event := range historyEventCh {
+		if event.Type() == aguievents.EventTypeRunFinished {
+			if wsEvent := buildWgaWorkspaceEvent(threadId, runId, baseDir, persistentEnabled); wsEvent != nil {
+				events = append(events, wsEvent)
+			}
+		}
+		events = append(events, event)
+	}
+	b, _ := json.Marshal(events)
+
+	doc := map[string]interface{}{
+		"id":        util.GenUUID(),
+		"threadId":  threadId,
+		"runId":     runId,
+		"userId":    userId,
+		"orgId":     orgId,
+		"createdAt": time.Now().UnixMilli(),
+		"events":    string(b),
+	}
+	docJson, err := json.Marshal(doc)
+	if err != nil {
+		log.Warnf("[wga] marshal history doc failed: %v", err)
+		return
+	}
+
+	_, err = assistant.SaveToES(ctx, &assistant_service.SaveToESReq{
+		IndexName: wgaConversationHistoryEventESIndexName,
+		DocJson:   string(docJson),
+	})
+	if err != nil {
+		log.Warnf("[wga] save history to ES failed: %v", err)
+	}
 }

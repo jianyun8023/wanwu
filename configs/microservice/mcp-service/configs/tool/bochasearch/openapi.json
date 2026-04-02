@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Bocha Search API",
+    "title": "博查搜索",
     "description": "Bocha 多模态搜索服务接口文档",
     "version": "1.0.0"
   },

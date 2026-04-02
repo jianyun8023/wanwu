@@ -41,9 +41,9 @@ func TarDir(srcDir string, useGzip bool) ([]byte, error) {
 		baseName = filepath.Base(srcDir)
 	}
 
-	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
 
 		relPath, err := filepath.Rel(srcDir, path)
@@ -51,40 +51,40 @@ func TarDir(srcDir string, useGzip bool) ([]byte, error) {
 			return fmt.Errorf("get relative path failed: %w", err)
 		}
 
-		header, err := tar.FileInfoHeader(info, "")
+		// 跳过目录，目录会在文件写入时自动创建
+		if info.IsDir() {
+			return nil
+		}
+
+		// 打开文件并获取实时文件信息，避免因文件大小变化导致 write too long 错误
+		file, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("open file failed: %w", err)
+		}
+		defer func() { _ = file.Close() }()
+
+		// 重新获取文件信息，确保 header 中的大小与实际文件一致
+		fileInfo, err := file.Stat()
+		if err != nil {
+			return fmt.Errorf("stat file failed: %w", err)
+		}
+
+		header, err := tar.FileInfoHeader(fileInfo, "")
 		if err != nil {
 			return fmt.Errorf("create tar header failed: %w", err)
 		}
 
-		if relPath == "." {
-			if skipBase {
-				// 跳过根目录本身
-				return nil
-			}
-			header.Name = baseName + "/"
+		if skipBase {
+			header.Name = filepath.ToSlash(relPath)
 		} else {
-			if skipBase {
-				header.Name = filepath.ToSlash(relPath)
-			} else {
-				header.Name = baseName + "/" + filepath.ToSlash(relPath)
-			}
+			header.Name = baseName + "/" + filepath.ToSlash(relPath)
 		}
 
 		if err := tw.WriteHeader(header); err != nil {
 			return fmt.Errorf("write tar header failed: %w", err)
 		}
 
-		if info.IsDir() {
-			return nil
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("open file failed: %w", err)
-		}
-		_, err = io.Copy(tw, file)
-		_ = file.Close()
-		if err != nil {
+		if _, err := io.Copy(tw, file); err != nil {
 			return fmt.Errorf("write file content failed: %w", err)
 		}
 

@@ -1,10 +1,14 @@
 package v1
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/internal/bff-service/service"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	"github.com/gin-gonic/gin"
@@ -13,8 +17,8 @@ import (
 // GetGeneralAgentAssistantSelect
 //
 //	@Tags			wga
-//	@Summary		通用智能体智能体选择
-//	@Description	获取通用智能体智能体选择
+//	@Summary		通用智能体智能体选择，只返回单智能体
+//	@Description	获取通用智能体智能体选择，只返回单智能体
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
@@ -55,6 +59,41 @@ func GetGeneralAgentToolSelect(ctx *gin.Context) {
 //	@Router			/general/agent/tool/info [get]
 func GetGeneralAgentToolInfo(ctx *gin.Context) {
 	resp, err := service.GetGeneralAgentToolInfo(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("toolId"), ctx.Query("toolType"))
+	gin_util.Response(ctx, resp, err)
+}
+
+// UpdateGeneralAgentConfig
+//
+//	@Tags			wga
+//	@Summary		修改通用智能体配置
+//	@Description	更新通用智能体工具配置
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.UpdateGeneralAgentConfigReq	true	"更新通用智能体配置请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/general/agent/config [put]
+func UpdateGeneralAgentConfig(ctx *gin.Context) {
+	var req request.UpdateGeneralAgentConfigReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.UpdateGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GetGeneralAgentConfig
+//
+//	@Tags			wga
+//	@Summary		获取通用智能体配置
+//	@Description	获取通用智能体配置
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	response.Response{data=response.GetGeneralAgentConfigResp}
+//	@Router			/general/agent/config [get]
+func GetGeneralAgentConfig(ctx *gin.Context) {
+	resp, err := service.GetGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx))
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -126,7 +165,7 @@ func GetGeneralAgentConversationList(ctx *gin.Context) {
 //	@Description	获取指定会话的对话详情，包括对话标题、创建时间等信息
 //	@Security		JWT
 //	@Produce		json
-//	@Param			threadId	query		string	true	"会话ID"
+//	@Param			threadId	query		string	false	"会话ID"
 //	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
 //	@Router			/general/agent/conversation/detail [get]
 func GetGeneralAgentConversationDetail(ctx *gin.Context) {
@@ -134,47 +173,47 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context) {
 	if !gin_util.BindQuery(ctx, &req) {
 		return
 	}
-	resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req)
+	resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req.ThreadID)
 	gin_util.Response(ctx, resp, err)
 }
 
-// GetGeneralAgentConfig
+// GetGeneralAgentConversationConfig
 //
 //	@Tags			wga
-//	@Summary		通用智能体配置选择
-//	@Description	获取指定会话的配置信息，包括模型、工具
+//	@Summary		通用智能体对话配置
+//	@Description	获取指定会话的对话配置信息
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
 //	@Param			threadId	query		string	true	"会话ID"
-//	@Success		200			{object}	response.Response{data=response.GetGeneralAgentConfigResp}
+//	@Success		200			{object}	response.Response{data=response.GetGeneralAgentConversationConfigResp}
 //	@Router			/general/agent/conversation/config [get]
-func GetGeneralAgentConfig(ctx *gin.Context) {
-	var req request.GetGeneralAgentConfigReq
+func GetGeneralAgentConversationConfig(ctx *gin.Context) {
+	var req request.GetGeneralAgentConversationConfigReq
 	if !gin_util.BindQuery(ctx, &req) {
 		return
 	}
-	resp, err := service.GetGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	resp, err := service.GetGeneralAgentConversationConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
 }
 
-// UpdateGeneralAgentConfig
+// UpdateGeneralAgentConversationConfig
 //
 //	@Tags			wga
-//	@Summary		修改通用智能体配置
-//	@Description	修改通用智能体配置
+//	@Summary		修改通用智能体对话配置
+//	@Description	修改通用智能体对话配置
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
-//	@Param			data	body		request.UpdateGeneralAgentConfigReq	true	"修改通用智能体配置请求参数"
+//	@Param			data	body		request.UpdateGeneralAgentConversationConfigReq	true	"修改通用智能体对话配置请求参数"
 //	@Success		200		{object}	response.Response
 //	@Router			/general/agent/conversation/config [put]
-func UpdateGeneralAgentConfig(ctx *gin.Context) {
-	var req request.UpdateGeneralAgentConfigReq
+func UpdateGeneralAgentConversationConfig(ctx *gin.Context) {
+	var req request.UpdateGeneralAgentConversationConfigReq
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	err := service.UpdateGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	err := service.UpdateGeneralAgentConversationConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, nil, err)
 }
 
@@ -232,7 +271,7 @@ func GeneralAgentWorkspaceDownload(ctx *gin.Context) {
 //	@Description	通用智能体workspace预览接口，查看所给path的文件内容，返回文件内容用于前端预览
 //	@Security		JWT
 //	@Accept			json
-//	@Produce		application/octet-stream
+//	@Produce		*/*
 //	@Param			data	query	request.GeneralAgentWorkspacePreviewReq	true	"workspace预览请求参数"
 //	@Success		200		{file}	stream
 //	@Router			/general/agent/conversation/workspace/preview [get]
@@ -317,9 +356,39 @@ func GeneralAgentCopilotRuntime(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, resp)
 
 	case "agent/connect":
+		resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req.GetThreadID())
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "internal_error",
+				"message": err.Error(),
+			})
+		}
+
 		ctx.Header("Content-Type", "text/event-stream")
 		ctx.Header("Cache-Control", "no-cache")
 		ctx.Header("Connection", "keep-alive")
+		if resp.List == nil {
+			return
+		}
+
+		// FIXME 目前一条条重现，并且delay=5ms；而非一次性全部重现所有sse
+		// var builder strings.Builder
+		for _, run := range resp.List.([]response.GeneralAgentConversationDetailInfo) {
+			for _, event := range run.Events {
+				b, _ := json.Marshal(event)
+				ctx.Writer.Write([]byte(fmt.Sprintf("data: %v\n\n", string(b))))
+				ctx.Writer.Flush()
+				time.Sleep(time.Millisecond * 5)
+				// if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {
+				// 	log.Errorf("[wga] agent/connect write string err: %v", err)
+				// 	continue
+				// }
+			}
+		}
+		// if _, err := ctx.Writer.Write([]byte(builder.String())); err != nil {
+		// 	log.Errorf("[wga] agent/connect write sse err: %v", err)
+		// }
+		// ctx.Writer.Flush()
 
 	case "agent/run":
 		threadID := req.GetThreadID()

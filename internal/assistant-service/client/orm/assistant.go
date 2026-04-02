@@ -146,7 +146,7 @@ func (c *Client) GetAssistantList(ctx context.Context, userID, orgID string, nam
 func (c *Client) CheckSameAssistantName(ctx context.Context, userID, orgID, name, assistantID string) *err_code.Status {
 	return c.transaction(ctx, func(tx *gorm.DB) *err_code.Status {
 		query := sqlopt.SQLOptions(
-			sqlopt.WithUserId(userID),
+			sqlopt.WithUserID(userID),
 			sqlopt.WithOrgID(orgID),
 		).Apply(tx.Model(&model.Assistant{}))
 
