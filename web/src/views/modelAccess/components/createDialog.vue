@@ -591,6 +591,7 @@ export default {
         this.$refs.createForm && this.$refs.createForm.clearValidate();
         if (!this.isEdit) {
           this.setDefaultInferUrl();
+          this.clearSelectModelId();
           this.getModelIdList();
         }
       },
@@ -665,6 +666,7 @@ export default {
         visionSupport: modelObj.visionSupport || DEFAULT_SUPPORT,
         thinkingSupport: modelObj.thinkingSupport || DEFAULT_SUPPORT,
       };
+      this.$refs.createForm.clearValidate('model');
     },
     uploadAvatar(file, key) {
       const formData = new FormData();
@@ -723,10 +725,14 @@ export default {
         this.formatValue(row);
       }
     },
-    handleClose() {
-      this.dialogVisible = false;
+    clearSelectModelId() {
+      this.createForm.model = '';
       this.modelObjStr = '';
       this.currentModelId = '';
+    },
+    handleClose() {
+      this.dialogVisible = false;
+      this.clearSelectModelId();
       this.formatValue({
         modelType: LLM,
         functionCalling: DEFAULT_CALLING,
