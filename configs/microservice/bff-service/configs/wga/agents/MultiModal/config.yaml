@@ -33,6 +33,9 @@ tool_categories:
           - operation_id: wan26_i2v_flash
           - operation_id: wan22_kf2v_flash
           - operation_id: wan26_t2v
+  - category: wga_tool_category_search
+    condition: optional
+    tools:
       - path: configs/microservice/mcp-service/configs/tool/bochasearch/openapi.json
         auth_required: true
         operations:
