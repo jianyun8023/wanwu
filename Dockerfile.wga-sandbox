@@ -3,32 +3,53 @@ FROM crpi-6pj79y7ddzdpexs8.cn-hangzhou.personal.cr.aliyuncs.com/wanwulite/wga-sa
 USER root
 
 # ----------------------
+# 安装系统工具依赖
+# ----------------------
+RUN sed -i 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        libreoffice \
+        poppler-utils \
+        pandoc \
+        qpdf;
+
+# ----------------------
 # 安装中文字体（用于PDF渲染）
 # ----------------------
 RUN set -eux; \
-    apt-get update; \
     apt-get install -y --no-install-recommends \
         fonts-noto-cjk \
         fonts-wqy-zenhei \
         fonts-wqy-microhei \
-        fontconfig \
-        --no-install-recommends; \
+        fontconfig; \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*;
 
 # ----------------------
-# 安装Python PDF处理依赖（用于kimi-pdf skill）
+# 安装Python依赖
 # ----------------------
-RUN pip install --no-cache-dir \
-    pikepdf==9.7.0 \
-    pdfplumber==0.11.6 \
-    pypdf \
-    --break-system-packages
+# 阿里云
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+
+RUN set -eux; \
+    pip install --no-cache-dir \
+        pikepdf==9.7.0 \
+        pdfplumber==0.11.6 \
+        pypdf==4.2.0 \
+        pdf2image==1.17.0 \
+        reportlab==4.2.0 \
+        imageio==2.34.0 \
+        "markitdown[pptx]" \
+        --break-system-packages;
 
 # ----------------------
 # 安装.NET SDK 8.0（用于minimax-docx skill的C# OpenXML SDK）
 # ----------------------
-RUN curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && \
+RUN set -eux; \
+    curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && \
     chmod +x /tmp/dotnet-install.sh && \
     /tmp/dotnet-install.sh --channel 8.0 --install-dir /root/.dotnet && \
     rm /tmp/dotnet-install.sh && \
@@ -45,15 +66,18 @@ RUN dotnet tool install -g dotnet-script
 #
 # ----------------------
 # RUN npm i -g ${your_npm_package}
-#PPT
-RUN npm install -g pptxgenjs
+# 淘宝源
+RUN npm config set registry https://registry.npmmirror.com
 
-# Playwright + Chromium（用于PDF渲染）
-RUN npm install -g playwright && npx playwright install chromium
+RUN npm install -g pptxgenjs docx react react-icons react-dom
+
+# Playwright + Chromium（用于PDF渲染）FIXME uncomment
+# RUN npm install -g playwright && npx playwright install chromium
 
 # openapi-to-skills
 # 克隆源码、安装依赖、构建、全局链接
-RUN git clone https://github.com/colagold/openapi-to-skills.git /tmp/openapi-to-skills && \
+RUN set -eux; \
+    git clone https://github.com/colagold/openapi-to-skills.git /tmp/openapi-to-skills && \
     cd /tmp/openapi-to-skills && \
     npm install && \
     npm run build && \
