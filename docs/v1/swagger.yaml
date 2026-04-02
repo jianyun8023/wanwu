@@ -203,6 +203,8 @@ definitions:
         $ref: '#/definitions/mp_qwen.Embedding'
       llm:
         $ref: '#/definitions/mp_qwen.LLM'
+      multiModalEmbedding:
+        $ref: '#/definitions/mp_qwen.MultiModalEmbedding'
       rerank:
         $ref: '#/definitions/mp_qwen.Rerank'
     type: object
@@ -220,6 +222,15 @@ definitions:
         $ref: '#/definitions/mp_yuanjing.PdfParser'
       rerank:
         $ref: '#/definitions/mp_yuanjing.Rerank'
+    type: object
+  mp.ProviderModelByZhipu:
+    properties:
+      embedding:
+        $ref: '#/definitions/mp_zhipu.Embedding'
+      llm:
+        $ref: '#/definitions/mp_zhipu.LLM'
+      rerank:
+        $ref: '#/definitions/mp_zhipu.Rerank'
     type: object
   mp.ProviderModelConfig:
     properties:
@@ -239,6 +250,8 @@ definitions:
         $ref: '#/definitions/mp.ProviderModelByQwen'
       providerYuanJing:
         $ref: '#/definitions/mp.ProviderModelByYuanjing'
+      providerZhipu:
+        $ref: '#/definitions/mp.ProviderModelByZhipu'
     type: object
   mp_common.LLMParams:
     properties:
@@ -638,6 +651,25 @@ definitions:
         - support
         type: string
     type: object
+  mp_qwen.MultiModalEmbedding:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      maxImageSize:
+        type: integer
+      maxTextLength:
+        type: integer
+      maxVideoClipSize:
+        type: integer
+      supportFileTypes:
+        items:
+          type: string
+        type: array
+    type: object
   mp_qwen.Rerank:
     properties:
       apiKey:
@@ -726,6 +758,58 @@ definitions:
         type: string
     type: object
   mp_yuanjing.Rerank:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.Embedding:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.LLM:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      functionCalling:
+        enum:
+        - noSupport
+        - toolCall
+        type: string
+      maxImageSize:
+        type: integer
+      maxTokens:
+        type: integer
+      thinkingSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+      visionSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+    type: object
+  mp_zhipu.Rerank:
     properties:
       apiKey:
         description: ApiKey
@@ -5528,6 +5612,9 @@ definitions:
       skillMarkdown:
         description: 模板markdown预览
         type: string
+      skillPath:
+        description: markdown地址，内部使用，不要对外
+        type: string
       zipUrl:
         type: string
     type: object
@@ -7148,10 +7235,13 @@ definitions:
   response.MergeFileResp:
     properties:
       fileName:
-        description: 合并后文件名
+        description: 合并后文件名(在minio中的文件名)
         type: string
       filePath:
         description: minio文件的完整路径
+        type: string
+      originalFileName:
+        description: 原始文件名
         type: string
     type: object
   response.ModelExperienceDialogRecord:
@@ -7544,12 +7634,18 @@ definitions:
     properties:
       displayName:
         type: string
+      functionCalling:
+        type: string
       model:
         type: string
       tags:
         items:
           $ref: '#/definitions/response.ModelTagItem'
         type: array
+      thinkingSupport:
+        type: string
+      visionSupport:
+        type: string
     type: object
   response.RerankInfo:
     properties:
@@ -7760,6 +7856,9 @@ definitions:
         type: string
       skillMarkdown:
         description: 模板markdown预览
+        type: string
+      skillPath:
+        description: markdown地址，内部使用，不要对外
         type: string
     type: object
   response.SkillInfo:
@@ -17630,6 +17729,29 @@ paths:
       summary: 编辑用户头像
       tags:
       - common
+  /user/batch:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 通过Excel文件批量导入用户
+      parameters:
+      - description: 用户Excel文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 批量导入用户
+      tags:
+      - permission.user
   /user/info:
     get:
       consumes:

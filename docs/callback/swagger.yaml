@@ -131,6 +131,8 @@ definitions:
         $ref: '#/definitions/mp_qwen.Embedding'
       llm:
         $ref: '#/definitions/mp_qwen.LLM'
+      multiModalEmbedding:
+        $ref: '#/definitions/mp_qwen.MultiModalEmbedding'
       rerank:
         $ref: '#/definitions/mp_qwen.Rerank'
     type: object
@@ -148,6 +150,15 @@ definitions:
         $ref: '#/definitions/mp_yuanjing.PdfParser'
       rerank:
         $ref: '#/definitions/mp_yuanjing.Rerank'
+    type: object
+  mp.ProviderModelByZhipu:
+    properties:
+      embedding:
+        $ref: '#/definitions/mp_zhipu.Embedding'
+      llm:
+        $ref: '#/definitions/mp_zhipu.LLM'
+      rerank:
+        $ref: '#/definitions/mp_zhipu.Rerank'
     type: object
   mp.ProviderModelConfig:
     properties:
@@ -167,6 +178,8 @@ definitions:
         $ref: '#/definitions/mp.ProviderModelByQwen'
       providerYuanJing:
         $ref: '#/definitions/mp.ProviderModelByYuanjing'
+      providerZhipu:
+        $ref: '#/definitions/mp.ProviderModelByZhipu'
     type: object
   mp_common.EmbeddingData:
     properties:
@@ -512,6 +525,7 @@ definitions:
         type: array
       model:
         type: string
+      parameters: {}
     required:
     - input
     - model
@@ -1303,6 +1317,25 @@ definitions:
         - support
         type: string
     type: object
+  mp_qwen.MultiModalEmbedding:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      maxImageSize:
+        type: integer
+      maxTextLength:
+        type: integer
+      maxVideoClipSize:
+        type: integer
+      supportFileTypes:
+        items:
+          type: string
+        type: array
+    type: object
   mp_qwen.Rerank:
     properties:
       apiKey:
@@ -1391,6 +1424,58 @@ definitions:
         type: string
     type: object
   mp_yuanjing.Rerank:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.Embedding:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.LLM:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      functionCalling:
+        enum:
+        - noSupport
+        - toolCall
+        type: string
+      maxImageSize:
+        type: integer
+      maxTokens:
+        type: integer
+      thinkingSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+      visionSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+    type: object
+  mp_zhipu.Rerank:
     properties:
       apiKey:
         description: ApiKey
@@ -1905,6 +1990,15 @@ definitions:
     - knowledgeIdList
     - userId
     type: object
+  request.SearchBuiltinSkillListReq:
+    properties:
+      skillIdList:
+        items:
+          type: string
+        type: array
+    required:
+    - skillIdList
+    type: object
   request.SearchKnowledgeInfoReq:
     properties:
       categoryName:
@@ -2215,6 +2309,38 @@ definitions:
       msg:
         type: string
     type: object
+  response.SkillDetail:
+    properties:
+      author:
+        description: 作者
+        type: string
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 模板头像
+      desc:
+        description: 模板描述
+        type: string
+      name:
+        description: 模板名称
+        type: string
+      skillId:
+        description: 模板ID
+        type: string
+      skillMarkdown:
+        description: 模板markdown预览
+        type: string
+      skillPath:
+        description: markdown地址，内部使用，不要对外
+        type: string
+    type: object
+  response.SkillDetailListResp:
+    properties:
+      skillList:
+        items:
+          $ref: '#/definitions/response.SkillDetail'
+        type: array
+    type: object
   response.ToolSquareDetail:
     properties:
       actionSum:
@@ -2491,6 +2617,33 @@ paths:
       summary: 获取MCP Server详情
       tags:
       - mcp.server
+  /callback/v1/skill/builtin/list:
+    post:
+      consumes:
+      - application/json
+      description: 获取内置工具列表
+      parameters:
+      - description: 请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.SearchBuiltinSkillListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.SkillDetailListResp'
+              type: object
+      summary: 获取内置工具列表
+      tags:
+      - skill
   /callback/wga/sandbox/cleanup:
     post:
       consumes:

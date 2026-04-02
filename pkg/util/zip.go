@@ -3,7 +3,11 @@ package util
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/UnicomAI/wanwu/pkg/log"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,13 +20,92 @@ import (
 //   - "/path/to/dir/."：不包含最后一级目录名，zip 内容为 "file1.txt"
 func ZipDir(srcDir string) ([]byte, error) {
 	var buf bytes.Buffer
-	zipWriter := zip.NewWriter(&buf)
+	err := zipDirCore(srcDir, &buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// ZipDirToLocal 将目录打包为 zip 格式文件。
+// srcDir: 源目录路径，支持两种模式：
+//   - "/path/to/dir"：包含最后一级目录名，zip 内容为 "dir/file1.txt"
+//   - "/path/to/dir/."：不包含最后一级目录名，zip 内容为 "file1.txt"
+//
+// destZipPath: 目标 zip 文件路径，例如: "/path/to/output.zip"
+func ZipDirToLocal(srcDir, destZipPath string) error {
+	// 创建目标 zip 文件
+	zipFile, err := os.Create(destZipPath)
+	if err != nil {
+		return fmt.Errorf("create zip file failed: %w", err)
+	}
+	defer func() {
+		if err := zipFile.Close(); err != nil {
+			log.Errorf("close zip file error: %v", err)
+		}
+	}()
+	return zipDirCore(srcDir, zipFile)
+}
+
+func UnzipDir(ctx context.Context, localFilePath string, destDir string) (extractDir string, err error) {
+	fileReader, err := zip.OpenReader(localFilePath)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if err1 := fileReader.Close(); err1 != nil {
+			log.Errorf("ZipFileExtractServiceService file close error %v", err)
+		}
+	}()
+
+	for _, f := range fileReader.File {
+		var decodeFileName string
+		if f.Flags == 0 { //本地编码，默认GBK，转换成UTF-8
+			i := bytes.NewReader([]byte(f.Name))
+			decoder := transform.NewReader(i, simplifiedchinese.GB18030.NewDecoder())
+			content, _ := io.ReadAll(decoder)
+			decodeFileName = string(content)
+		} else {
+			decodeFileName = f.Name
+		}
+		// 构建完整的文件路径
+		destFilePath := filepath.Join(destDir, decodeFileName)
+		// 检查是否为目录
+		if f.FileInfo().IsDir() {
+			// 创建目录
+			if err := os.MkdirAll(destFilePath, f.Mode()); err != nil {
+				fmt.Printf("无法创建目录: %v\n", err)
+			}
+			continue
+		}
+		log.Infof("ExtractFile file path %s", destFilePath)
+		// 我们需要确保所有的文件夹都已经创建好
+		err = os.MkdirAll(filepath.Dir(destFilePath), f.Mode())
+		if err != nil {
+			return "", err
+		}
+		//写入文件
+		err = writeUnzipFile(f, destFilePath)
+		if err != nil {
+			return "", err
+		}
+	}
+	return destDir, nil
+}
+
+func zipDirCore(srcDir string, writer io.Writer) error {
+	zipWriter := zip.NewWriter(writer)
+	defer func() {
+		if err := zipWriter.Close(); err != nil {
+			log.Errorf("close zip writer error: %v", err)
+		}
+	}()
 
 	skipBase := strings.HasSuffix(srcDir, string(os.PathSeparator)+".")
 	srcDir = filepath.Clean(srcDir)
 
 	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("directory not found: %s", srcDir)
+		return fmt.Errorf("directory not found: %s", srcDir)
 	}
 
 	var baseName string
@@ -90,12 +173,38 @@ func ZipDir(srcDir string) ([]byte, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("walk directory failed: %w", err)
+		return fmt.Errorf("walk directory failed: %w", err)
 	}
+	return nil
+}
 
-	if err := zipWriter.Close(); err != nil {
-		return nil, fmt.Errorf("close zip writer failed: %w", err)
+// writeUnzipFile 写入文件
+func writeUnzipFile(zipFile *zip.File, destFilePath string) error {
+	//打开目标文件
+	destFile, err := os.OpenFile(destFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zipFile.Mode())
+	if err != nil {
+		return err
 	}
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			log.Errorf("ZipFileExtractServiceService file close error %v", err)
+		}
+	}()
 
-	return buf.Bytes(), nil
+	//打开源压缩文件
+	sourceFile, err := zipFile.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
+			log.Errorf("ZipFileExtractServiceService file close error %v", err)
+		}
+	}()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -52,6 +52,8 @@ definitions:
         $ref: '#/definitions/mp_qwen.Embedding'
       llm:
         $ref: '#/definitions/mp_qwen.LLM'
+      multiModalEmbedding:
+        $ref: '#/definitions/mp_qwen.MultiModalEmbedding'
       rerank:
         $ref: '#/definitions/mp_qwen.Rerank'
     type: object
@@ -69,6 +71,15 @@ definitions:
         $ref: '#/definitions/mp_yuanjing.PdfParser'
       rerank:
         $ref: '#/definitions/mp_yuanjing.Rerank'
+    type: object
+  mp.ProviderModelByZhipu:
+    properties:
+      embedding:
+        $ref: '#/definitions/mp_zhipu.Embedding'
+      llm:
+        $ref: '#/definitions/mp_zhipu.LLM'
+      rerank:
+        $ref: '#/definitions/mp_zhipu.Rerank'
     type: object
   mp.ProviderModelConfig:
     properties:
@@ -88,6 +99,8 @@ definitions:
         $ref: '#/definitions/mp.ProviderModelByQwen'
       providerYuanJing:
         $ref: '#/definitions/mp.ProviderModelByYuanjing'
+      providerZhipu:
+        $ref: '#/definitions/mp.ProviderModelByZhipu'
     type: object
   mp_common.Tag:
     properties:
@@ -451,6 +464,25 @@ definitions:
         - support
         type: string
     type: object
+  mp_qwen.MultiModalEmbedding:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      maxImageSize:
+        type: integer
+      maxTextLength:
+        type: integer
+      maxVideoClipSize:
+        type: integer
+      supportFileTypes:
+        items:
+          type: string
+        type: array
+    type: object
   mp_qwen.Rerank:
     properties:
       apiKey:
@@ -539,6 +571,58 @@ definitions:
         type: string
     type: object
   mp_yuanjing.Rerank:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.Embedding:
+    properties:
+      apiKey:
+        description: ApiKey
+        type: string
+      contextSize:
+        description: 上下文长度
+        type: integer
+      endpointUrl:
+        description: 推理url
+        type: string
+    type: object
+  mp_zhipu.LLM:
+    properties:
+      apiKey:
+        type: string
+      contextSize:
+        type: integer
+      endpointUrl:
+        type: string
+      functionCalling:
+        enum:
+        - noSupport
+        - toolCall
+        type: string
+      maxImageSize:
+        type: integer
+      maxTokens:
+        type: integer
+      thinkingSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+      visionSupport:
+        enum:
+        - noSupport
+        - support
+        type: string
+    type: object
+  mp_zhipu.Rerank:
     properties:
       apiKey:
         description: ApiKey

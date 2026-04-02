@@ -30,7 +30,11 @@ func APIKeyRecord(StreamType string) gin.HandlerFunc {
 		startTime := time.Now()
 		var reqBody string
 		var isStream bool
-		reqBody, _ = requestBody(ctx)
+		// 仅 JSON 读取 body：requestBody 会 ReadAll 且按 JSON 解析，multipart 会耗尽显存 body，
+		// 导致后续 MultipartForm / ShouldBind 报 multipart: NextPart: EOF（与 Record 中间件一致）。
+		if ctx.ContentType() == gin.MIMEJSON {
+			reqBody, _ = requestBody(ctx)
+		}
 		switch StreamType {
 		case RecordStreamType:
 			isStream = true

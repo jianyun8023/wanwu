@@ -15892,6 +15892,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/batch": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通过Excel文件批量导入用户",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "permission.user"
+                ],
+                "summary": "批量导入用户",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "用户Excel文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/user/info": {
             "get": {
                 "security": [
@@ -17081,6 +17118,9 @@ const docTemplate = `{
                 "llm": {
                     "$ref": "#/definitions/mp_qwen.LLM"
                 },
+                "multiModalEmbedding": {
+                    "$ref": "#/definitions/mp_qwen.MultiModalEmbedding"
+                },
                 "rerank": {
                     "$ref": "#/definitions/mp_qwen.Rerank"
                 }
@@ -17106,6 +17146,20 @@ const docTemplate = `{
                 },
                 "rerank": {
                     "$ref": "#/definitions/mp_yuanjing.Rerank"
+                }
+            }
+        },
+        "mp.ProviderModelByZhipu": {
+            "type": "object",
+            "properties": {
+                "embedding": {
+                    "$ref": "#/definitions/mp_zhipu.Embedding"
+                },
+                "llm": {
+                    "$ref": "#/definitions/mp_zhipu.LLM"
+                },
+                "rerank": {
+                    "$ref": "#/definitions/mp_zhipu.Rerank"
                 }
             }
         },
@@ -17135,6 +17189,9 @@ const docTemplate = `{
                 },
                 "providerYuanJing": {
                     "$ref": "#/definitions/mp.ProviderModelByYuanjing"
+                },
+                "providerZhipu": {
+                    "$ref": "#/definitions/mp.ProviderModelByZhipu"
                 }
             }
         },
@@ -17687,6 +17744,35 @@ const docTemplate = `{
                 }
             }
         },
+        "mp_qwen.MultiModalEmbedding": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "type": "string"
+                },
+                "contextSize": {
+                    "type": "integer"
+                },
+                "endpointUrl": {
+                    "type": "string"
+                },
+                "maxImageSize": {
+                    "type": "integer"
+                },
+                "maxTextLength": {
+                    "type": "integer"
+                },
+                "maxVideoClipSize": {
+                    "type": "integer"
+                },
+                "supportFileTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "mp_qwen.Rerank": {
             "type": "object",
             "properties": {
@@ -17810,6 +17896,81 @@ const docTemplate = `{
             }
         },
         "mp_yuanjing.Rerank": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "description": "ApiKey",
+                    "type": "string"
+                },
+                "contextSize": {
+                    "description": "上下文长度",
+                    "type": "integer"
+                },
+                "endpointUrl": {
+                    "description": "推理url",
+                    "type": "string"
+                }
+            }
+        },
+        "mp_zhipu.Embedding": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "description": "ApiKey",
+                    "type": "string"
+                },
+                "contextSize": {
+                    "description": "上下文长度",
+                    "type": "integer"
+                },
+                "endpointUrl": {
+                    "description": "推理url",
+                    "type": "string"
+                }
+            }
+        },
+        "mp_zhipu.LLM": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "type": "string"
+                },
+                "contextSize": {
+                    "type": "integer"
+                },
+                "endpointUrl": {
+                    "type": "string"
+                },
+                "functionCalling": {
+                    "type": "string",
+                    "enum": [
+                        "noSupport",
+                        "toolCall"
+                    ]
+                },
+                "maxImageSize": {
+                    "type": "integer"
+                },
+                "maxTokens": {
+                    "type": "integer"
+                },
+                "thinkingSupport": {
+                    "type": "string",
+                    "enum": [
+                        "noSupport",
+                        "support"
+                    ]
+                },
+                "visionSupport": {
+                    "type": "string",
+                    "enum": [
+                        "noSupport",
+                        "support"
+                    ]
+                }
+            }
+        },
+        "mp_zhipu.Rerank": {
             "type": "object",
             "properties": {
                 "apiKey": {
@@ -24903,6 +25064,10 @@ const docTemplate = `{
                     "description": "模板markdown预览",
                     "type": "string"
                 },
+                "skillPath": {
+                    "description": "markdown地址，内部使用，不要对外",
+                    "type": "string"
+                },
                 "zipUrl": {
                     "type": "string"
                 }
@@ -27306,11 +27471,15 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "fileName": {
-                    "description": "合并后文件名",
+                    "description": "合并后文件名(在minio中的文件名)",
                     "type": "string"
                 },
                 "filePath": {
                     "description": "minio文件的完整路径",
+                    "type": "string"
+                },
+                "originalFileName": {
+                    "description": "原始文件名",
                     "type": "string"
                 }
             }
@@ -27917,6 +28086,9 @@ const docTemplate = `{
                 "displayName": {
                     "type": "string"
                 },
+                "functionCalling": {
+                    "type": "string"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -27925,6 +28097,12 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.ModelTagItem"
                     }
+                },
+                "thinkingSupport": {
+                    "type": "string"
+                },
+                "visionSupport": {
+                    "type": "string"
                 }
             }
         },
@@ -28235,6 +28413,10 @@ const docTemplate = `{
                 },
                 "skillMarkdown": {
                     "description": "模板markdown预览",
+                    "type": "string"
+                },
+                "skillPath": {
+                    "description": "markdown地址，内部使用，不要对外",
                     "type": "string"
                 }
             }
