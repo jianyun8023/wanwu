@@ -15,15 +15,15 @@ export default {
 
 <style lang="scss">
 @font-face {
-  font-family: PingFang SC;
-  src: url(@/assets/fonts/PingFang.ttc) format('truetype');
+  font-family: NotoSansSC;
+  src: url(@/assets/fonts/NotoSansSC_VariableFont.ttf) format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 * {
   margin: 0;
   padding: 0;
-  font-family: PingFang SC;
+  font-family: NotoSansSC;
   font-size: 12px;
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased; /*chrome、safari*/
@@ -34,7 +34,7 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: PingFang SC;
+  font-family: NotoSansSC;
 }
 
 /*优化弹窗出现表格左移问题*/

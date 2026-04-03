@@ -377,6 +377,10 @@ export default {
       padding-right: 20px;
     }
 
+    .name {
+      white-space: nowrap;
+    }
+
     .desc {
       padding-top: 5px;
     }
