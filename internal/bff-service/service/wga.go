@@ -18,6 +18,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/pkg/constant"
+	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
@@ -83,7 +84,7 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 	result := make([]response.GetGeneralAgentToolSelectResp, 0, len(toolCategories))
 	for _, tc := range toolCategories {
 		categoryResp := response.GetGeneralAgentToolSelectResp{
-			Category:  tc.Category,
+			Category:  gin_util.I18nKey(ctx, tc.Category),
 			Condition: string(tc.Condition),
 			ToolList:  []response.ToolInfo{},
 		}

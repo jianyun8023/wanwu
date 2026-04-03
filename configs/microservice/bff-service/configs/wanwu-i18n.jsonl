@@ -462,6 +462,8 @@
 {"code":160018,"key":"wga_conversation_update","langs":{"zh":"更新通用智能体对话配置: %v"}}
 {"code":160019,"key":"wga_conversation_get","langs":{"zh":"获取通用智能体对话配置: %v"}}
 {"code":160020,"key":"wga_config_check","langs":{"zh":"通用智能体配置校验报错: %v"}}
+{"code":0,"key":"wga_tool_category_search","langs":{"zh":"搜索"}}
+{"code":0,"key":"wga_tool_category_multimodal","langs":{"zh":"多模态"}}
 {"code":300000,"key":"app_config_delete","langs":{"zh":"删除应用配置错误:%v"}}
 {"code":300001,"key":"app_api_keys_get","langs":{"zh":"获取AppKey列表错误:%v"}}
 {"code":300001,"key":"app_api_key_delete","langs":{"zh":"删除AppKey错误:%v"}}
