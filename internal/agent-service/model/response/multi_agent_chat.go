@@ -107,13 +107,20 @@ func buildAgentName(tempMessage string) string {
 // buildAgentAvatar 构造智能体头像
 func buildAgentAvatar(agentName string, subAgentMap map[string]*request.AgentConfig) string {
 	if len(subAgentMap) == 0 {
-		return defaultAgentAvatar
+		return buildDefaultAvatar(agentName)
 	}
 	agentConfig := subAgentMap[agentName]
 	if agentConfig == nil || len(agentConfig.AgentAvatar) == 0 {
-		return defaultAgentAvatar
+		return buildDefaultAvatar(agentName)
 	}
 	return agentConfig.AgentAvatar
+}
+
+func buildDefaultAvatar(agentName string) string {
+	if strings.HasPrefix(agentName, util.AgentSkillPrefix) {
+		return defaultSkillAvatar
+	}
+	return defaultAgentAvatar
 }
 
 type MultiAgentStep struct {
