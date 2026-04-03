@@ -46,7 +46,8 @@ func GetExplorationAppList(ctx *gin.Context, userId, orgId string, req request.G
 	}
 	apps := append(rags, append(agents, append(workFlows, chatFlows...)...)...)
 	sort.SliceStable(apps, func(i, j int) bool {
-		return apps[i].CreatedAt > apps[j].CreatedAt
+		// 按更新时间降序排序，保证列表刷新时最新的优先展示
+		return apps[i].UpdatedAt > apps[j].UpdatedAt
 	})
 	// 填充作者信息
 	var userIds []string
