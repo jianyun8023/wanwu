@@ -162,14 +162,6 @@
           <span class="thumbnail-number">{{ index + 1 }}</span>
         </div>
       </div>
-
-      <!-- 下载按钮 -->
-      <div class="ppt-actions">
-        <el-button size="small" @click="handleDownload">
-          <i class="el-icon-download"></i>
-          下载文件
-        </el-button>
-      </div>
     </div>
 
     <!-- 空状态 -->
@@ -266,8 +258,6 @@ export default {
       this.currentSlide = 0;
 
       try {
-        console.log('[PptPreview] 开始加载 PPT:', this.fileName);
-
         // 获取 ArrayBuffer
         let arrayBuffer;
         if (this.src instanceof Blob) {
@@ -283,8 +273,6 @@ export default {
           throw new Error('无效的文件源');
         }
 
-        console.log('[PptPreview] ArrayBuffer 大小:', arrayBuffer.byteLength);
-
         // 使用 pptxtojson 解析
         const result = await parse(arrayBuffer, {
           imageMode: 'base64',
@@ -292,17 +280,10 @@ export default {
           audioMode: 'none',
         });
 
-        console.log('[PptPreview] 解析结果:', result);
-
         if (result && result.slides && result.slides.length > 0) {
           this.slides = result.slides;
           this.slideSize = result.size || { width: 960, height: 540 };
           this.themeColors = result.themeColors || [];
-          console.log(
-            '[PptPreview] 解析成功，共',
-            this.slides.length,
-            '张幻灯片',
-          );
         } else {
           throw new Error('PPT 文件解析结果为空');
         }
@@ -1004,14 +985,6 @@ export default {
       font-weight: 500;
     }
   }
-}
-
-.ppt-actions {
-  display: flex;
-  justify-content: center;
-  padding: 12px;
-  background: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
 }
 
 .ppt-empty {

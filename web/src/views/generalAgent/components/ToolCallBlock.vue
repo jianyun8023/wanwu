@@ -3,72 +3,13 @@
     <div class="tool-header" @click="toggleExpand">
       <div class="header-left">
         <i
-          :class="isExpanded ? 'el-icon-arrow-down' : 'el-icon-arrow-right'"
+          :class="isExpanded ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"
         ></i>
         <div class="tool-icon-wrapper">
-          <!-- 运行中状态 -->
-          <div v-if="toolCall.status === 'running'" class="icon-running">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-dasharray="31.4 31.4"
-                stroke-linecap="round"
-              >
-                <animateTransform
-                  attributeName="transform"
-                  type="rotate"
-                  from="0 12 12"
-                  to="360 12 12"
-                  dur="1s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-            </svg>
-          </div>
-          <!-- 完成状态 -->
-          <svg
-            v-else-if="toolCall.status === 'completed'"
-            class="tool-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-          >
-            <path
-              fill="currentColor"
-              d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-            />
-          </svg>
-          <!-- 错误状态 -->
-          <svg
-            v-else-if="toolCall.status === 'error'"
-            class="tool-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-          >
-            <path
-              fill="currentColor"
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-            />
-          </svg>
-          <!-- 默认状态 -->
-          <svg
-            v-else
-            class="tool-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-          >
-            <path
-              fill="currentColor"
-              d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"
-            />
-          </svg>
+          <img
+            :src="require('@/assets/imgs/tool-icon.png')"
+            class="tool-icon-img"
+          />
         </div>
         <span class="tool-name">{{ formatToolName(toolCall.name) }}</span>
       </div>
@@ -124,7 +65,6 @@
           <div class="progress-bar">
             <div class="progress-fill"></div>
           </div>
-          <span class="progress-text">执行中...</span>
         </div>
       </div>
     </el-collapse-transition>
@@ -231,10 +171,17 @@ export default {
   watch: {
     'toolCall.status': {
       immediate: true,
-      handler(newStatus) {
-        // 运行中时自动展开（用户可能已手动折叠，运行时强制展开）
+      handler(newStatus, oldStatus) {
+        // 运行中时自动展开
         if (newStatus === 'running') {
           this.isExpanded = true;
+        }
+        // 完成或失败时自动收起（从 running 变化时）
+        if (
+          oldStatus === 'running' &&
+          (newStatus === 'completed' || newStatus === 'error')
+        ) {
+          this.isExpanded = false;
         }
       },
     },
@@ -275,30 +222,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 字体变量
-$font-sans:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-  'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-  sans-serif;
-$font-mono:
-  'JetBrains Mono', 'SF Mono', 'Fira Code', Monaco, Consolas, 'Liberation Mono',
-  monospace;
-
-// 颜色变量
-$text-primary: #1f2937;
-$text-secondary: #4b5563;
-$text-muted: #6b7280;
-$accent-color: #10a37f;
-$accent-dark: #0d8a6a;
-$orange-primary: #f97316;
-$orange-dark: #c2410c;
-$red-primary: #ef4444;
-$red-dark: #dc2626;
+@import '../styles/_variables.scss';
 
 .tool-call-block {
   margin-bottom: 14px;
   border-radius: 14px;
-  border: 1px solid #e8ecf0;
+  border: 1px solid rgba(249, 115, 22, 0.2);
   overflow: hidden;
   transition: all 0.3s ease;
   background: #fff;
@@ -306,7 +235,7 @@ $red-dark: #dc2626;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
   &.status-running {
-    border-color: $orange-primary;
+    border-color: rgba(249, 115, 22, 0.4);
     box-shadow: 0 4px 16px rgba(249, 115, 22, 0.15);
 
     .tool-header {
@@ -321,8 +250,8 @@ $red-dark: #dc2626;
       }
     }
 
-    .icon-running {
-      color: $orange-primary;
+    .tool-icon-img {
+      animation: spin 1s linear infinite;
     }
 
     .status-badge {
@@ -346,7 +275,7 @@ $red-dark: #dc2626;
   }
 
   &.status-completed {
-    border-color: $accent-color;
+    border-color: rgba(16, 163, 127, 0.3);
     box-shadow: 0 2px 8px rgba(16, 163, 127, 0.08);
 
     .tool-header {
@@ -381,7 +310,7 @@ $red-dark: #dc2626;
   }
 
   &.status-error {
-    border-color: $red-primary;
+    border-color: rgba(239, 68, 68, 0.3);
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
 
     .tool-header {
@@ -448,17 +377,12 @@ $red-dark: #dc2626;
         justify-content: center;
         width: 24px;
         height: 24px;
-        background: linear-gradient(
-          135deg,
-          rgba(16, 163, 127, 0.1) 0%,
-          rgba(16, 163, 127, 0.05) 100%
-        );
-        border-radius: 8px;
-      }
 
-      .tool-icon {
-        flex-shrink: 0;
-        color: $accent-color;
+        .tool-icon-img {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+        }
       }
 
       .tool-name {

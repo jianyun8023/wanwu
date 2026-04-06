@@ -1,79 +1,49 @@
 <template>
-  <div
-    :class="[
-      'thinking-block',
-      { expanded: isExpanded, streaming: isStreaming },
-    ]"
-  >
+  <div :class="['thinking-block', { streaming: isStreaming }]">
     <div class="thinking-header" @click="toggleExpand">
       <div class="header-left">
-        <i
-          :class="isExpanded ? 'el-icon-arrow-down' : 'el-icon-arrow-right'"
-        ></i>
+        <i :class="isExpanded ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
         <div class="thinking-icon-wrapper">
-          <!-- 思考图标 - 脑/灯泡 -->
-          <svg
-            v-if="!isStreaming"
-            class="thinking-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-          >
-            <path
-              fill="currentColor"
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-            />
-          </svg>
-          <!-- 流式时的加载动画 -->
-          <div v-else class="thinking-spinner">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-dasharray="31.4 31.4"
-                stroke-linecap="round"
-              >
-                <animateTransform
-                  attributeName="transform"
-                  type="rotate"
-                  from="0 12 12"
-                  to="360 12 12"
-                  dur="1s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-            </svg>
-          </div>
+          <img
+            :src="require('@/assets/imgs/think-icon.png')"
+            class="think-icon"
+          />
         </div>
         <span class="thinking-title">
           {{ isStreaming ? '思考中...' : '思考过程' }}
         </span>
-        <span v-if="isStreaming" class="thinking-timer">
-          {{ formattedTimer }}
-        </span>
-        <span v-else-if="duration" class="thinking-duration">
-          {{ duration }}
-        </span>
       </div>
       <div class="header-right">
-        <span v-if="lineCount > 0" class="line-count">{{ lineCount }} 行</span>
+        <span v-if="isStreaming" class="thinking-time">
+          {{ formattedTimer }}
+        </span>
+        <span v-else-if="duration" class="thinking-time">
+          {{ duration }}
+        </span>
+        <div v-if="isStreaming" class="status-badge running">
+          <span class="status-dot"></span>
+          <span class="status-text">执行中</span>
+        </div>
+        <div v-else class="status-badge completed">
+          <span class="status-dot"></span>
+          <span class="status-text">完成</span>
+        </div>
       </div>
     </div>
     <el-collapse-transition>
-      <div v-show="isExpanded" class="thinking-content">
-        <!-- 骨架屏加载动画 -->
+      <div v-show="isExpanded" class="thinking-body">
         <div v-if="isStreaming && !content" class="skeleton-loader">
           <div class="skeleton-line" style="width: 90%"></div>
           <div class="skeleton-line" style="width: 75%"></div>
           <div class="skeleton-line" style="width: 85%"></div>
           <div class="skeleton-line" style="width: 60%"></div>
         </div>
-        <!-- 实际内容 -->
-        <div v-else class="thinking-text" v-html="formattedContent"></div>
+        <div v-else-if="content" class="thinking-content">
+          <pre><code>{{ content }}</code></pre>
+          <button class="copy-btn" @click.stop="copyContent" title="复制">
+            <i :class="copied ? 'el-icon-check' : 'el-icon-document-copy'"></i>
+          </button>
+        </div>
       </div>
     </el-collapse-transition>
   </div>
@@ -97,7 +67,7 @@ export default {
     },
     defaultExpanded: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   data() {
@@ -105,23 +75,10 @@ export default {
       isExpanded: this.defaultExpanded,
       timer: 0,
       timerInterval: null,
+      copied: false,
     };
   },
   computed: {
-    formattedContent() {
-      if (!this.content) return '';
-      // 处理换行，保留空格
-      return this.content
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>')
-        .replace(/\s/g, '&nbsp;');
-    },
-    lineCount() {
-      if (!this.content) return 0;
-      return this.content.split('\n').length;
-    },
     formattedTimer() {
       const seconds = Math.floor(this.timer / 1000);
       const minutes = Math.floor(seconds / 60);
@@ -133,16 +90,19 @@ export default {
     },
   },
   watch: {
-    isStreaming(val) {
-      // 流式输出时自动展开并启动计时器
-      if (val) {
-        if (!this.isExpanded) {
+    isStreaming: {
+      immediate: true,
+      handler(val) {
+        if (val) {
           this.isExpanded = true;
+          this.startTimer();
+        } else {
+          this.stopTimer();
+          if (this.content) {
+            this.isExpanded = false;
+          }
         }
-        this.startTimer();
-      } else {
-        this.stopTimer();
-      }
+      },
     },
   },
   beforeDestroy() {
@@ -152,6 +112,30 @@ export default {
     toggleExpand() {
       this.isExpanded = !this.isExpanded;
     },
+
+    copyContent() {
+      if (!this.content) return;
+
+      const textArea = document.createElement('textarea');
+      textArea.value = this.content;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        this.copied = true;
+        setTimeout(() => {
+          this.copied = false;
+        }, 2000);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+
+      document.body.removeChild(textArea);
+    },
+
     startTimer() {
       this.timer = 0;
       this.stopTimer();
@@ -159,6 +143,7 @@ export default {
         this.timer += 100;
       }, 100);
     },
+
     stopTimer() {
       if (this.timerInterval) {
         clearInterval(this.timerInterval);
@@ -170,49 +155,55 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 字体变量
-$font-sans:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-  'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-  sans-serif;
-$font-mono:
-  'JetBrains Mono', 'SF Mono', 'Fira Code', Monaco, Consolas, 'Liberation Mono',
-  monospace;
-
-// 颜色变量
-$text-primary: #1f2937;
-$text-secondary: #4b5563;
-$text-muted: #6b7280;
-$thinking-color: #8b5cf6;
-$thinking-light: #a78bfa;
-$thinking-bg: rgba(139, 92, 246, 0.08);
+@import '../styles/_variables.scss';
 
 .thinking-block {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   border-radius: 14px;
-  background: linear-gradient(
-    135deg,
-    rgba(139, 92, 246, 0.04) 0%,
-    #fafafa 100%
-  );
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   overflow: hidden;
   transition: all 0.3s ease;
+  background: #fff;
   font-family: $font-sans;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
   &.streaming {
-    border-color: $thinking-color;
-    background: linear-gradient(
-      135deg,
-      rgba(139, 92, 246, 0.06) 0%,
-      #fafafa 100%
-    );
+    border-color: rgba(139, 92, 246, 0.4);
     box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
 
     .thinking-header {
+      background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.06) 0%,
+        #fafafa 100%
+      );
+
       .thinking-title {
-        color: $thinking-color;
+        color: $thinking-dark;
         font-weight: 600;
+      }
+    }
+
+    .think-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    .status-badge {
+      background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.12) 0%,
+        rgba(139, 92, 246, 0.08) 100%
+      );
+      border: 1px solid rgba(139, 92, 246, 0.2);
+
+      .status-dot {
+        background: $thinking-color;
+        animation: pulse 1.5s infinite;
+        box-shadow: 0 0 6px rgba(139, 92, 246, 0.5);
+      }
+
+      .status-text {
+        color: $thinking-dark;
       }
     }
   }
@@ -222,22 +213,29 @@ $thinking-bg: rgba(139, 92, 246, 0.08);
     align-items: center;
     justify-content: space-between;
     padding: 14px 18px;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.06) 0%,
+      #fafafa 100%
+    );
     cursor: pointer;
     user-select: none;
     transition: background 0.2s ease;
 
     &:hover {
-      background: rgba(139, 92, 246, 0.04);
+      background: linear-gradient(180deg, #f5f7f9 0%, #f3f4f6 100%);
     }
 
     .header-left {
       display: flex;
       align-items: center;
       gap: 12px;
+      flex: 1;
+      min-width: 0;
 
       i.el-icon-arrow-down,
       i.el-icon-arrow-right {
-        color: $thinking-color;
+        color: $text-muted;
         font-size: 12px;
         transition: transform 0.2s ease;
       }
@@ -246,74 +244,103 @@ $thinking-bg: rgba(139, 92, 246, 0.08);
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 28px;
-        height: 28px;
-        background: linear-gradient(
-          135deg,
-          rgba(139, 92, 246, 0.15) 0%,
-          rgba(167, 139, 250, 0.1) 100%
-        );
-        border-radius: 8px;
-      }
+        width: 24px;
+        height: 24px;
 
-      .thinking-icon {
-        color: $thinking-color;
-        flex-shrink: 0;
-      }
-
-      .thinking-spinner {
-        color: $thinking-color;
-
-        svg {
-          display: block;
+        .think-icon {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
         }
       }
 
       .thinking-title {
         font-size: 14px;
         font-weight: 600;
-        color: $thinking-color;
+        color: $text-primary;
         letter-spacing: 0.01em;
-      }
-
-      .thinking-timer {
-        font-size: 13px;
-        color: $thinking-color;
-        background: linear-gradient(
-          135deg,
-          rgba(139, 92, 246, 0.15) 0%,
-          rgba(139, 92, 246, 0.08) 100%
-        );
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-weight: 500;
-        font-variant-numeric: tabular-nums;
-        border: 1px solid rgba(139, 92, 246, 0.2);
-      }
-
-      .thinking-duration {
-        font-size: 13px;
-        color: $thinking-light;
-        margin-left: 4px;
-        font-variant-numeric: tabular-nums;
       }
     }
 
     .header-right {
-      .line-count {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+
+      .thinking-time {
+        font-size: 13px;
+        color: $text-muted;
+        font-variant-numeric: tabular-nums;
+        background: rgba(0, 0, 0, 0.04);
+        padding: 3px 8px;
+        border-radius: 8px;
+      }
+
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 14px;
         font-size: 12px;
-        color: $thinking-color;
-        padding: 4px 10px;
-        background: rgba(139, 92, 246, 0.1);
-        border-radius: 12px;
         font-weight: 500;
+        letter-spacing: 0.02em;
+
+        .status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+        }
+
+        .status-text {
+          line-height: 1;
+        }
+
+        &.running {
+          background: linear-gradient(
+            135deg,
+            rgba(139, 92, 246, 0.12) 0%,
+            rgba(139, 92, 246, 0.08) 100%
+          );
+          border: 1px solid rgba(139, 92, 246, 0.2);
+
+          .status-dot {
+            background: $thinking-color;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 6px rgba(139, 92, 246, 0.5);
+          }
+
+          .status-text {
+            color: $thinking-dark;
+          }
+        }
+
+        &.completed {
+          background: linear-gradient(
+            135deg,
+            rgba(16, 163, 127, 0.12) 0%,
+            rgba(16, 163, 127, 0.08) 100%
+          );
+          border: 1px solid rgba(16, 163, 127, 0.2);
+
+          .status-dot {
+            background: #10a37f;
+            box-shadow: 0 0 4px rgba(16, 163, 127, 0.4);
+          }
+
+          .status-text {
+            color: #0d8a6a;
+          }
+        }
       }
     }
   }
 
-  .thinking-content {
-    border-top: 1px solid rgba(139, 92, 246, 0.1);
+  .thinking-body {
+    padding: 16px 18px;
     background: #fff;
+    border-top: 1px solid #e8ecf0;
 
     .skeleton-loader {
       padding: 18px;
@@ -337,56 +364,59 @@ $thinking-bg: rgba(139, 92, 246, 0.08);
       }
     }
 
-    .thinking-text {
-      padding: 18px;
-      font-size: 14px;
-      line-height: 1.85;
-      color: $text-secondary;
-      font-family: $font-sans;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 400px;
-      overflow-y: auto;
-      animation: fadeIn 0.3s ease;
+    .thinking-content {
+      position: relative;
+      background: linear-gradient(135deg, #fafbfc 0%, #f8f9fa 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e8ecf0;
 
-      &::-webkit-scrollbar {
-        width: 5px;
+      pre {
+        margin: 0;
+        padding: 16px 50px 16px 16px;
+        overflow-x: auto;
+
+        code {
+          font-family: $font-mono;
+          font-size: 14px;
+          line-height: 1.7;
+          color: #1f2937;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
       }
 
-      &::-webkit-scrollbar-track {
-        background: #f8f9fa;
-        border-radius: 3px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: rgba(139, 92, 246, 0.3);
-        border-radius: 3px;
+      .copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 7px 14px;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        color: $text-secondary;
+        font-size: 13px;
+        font-family: $font-sans;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
         &:hover {
-          background: rgba(139, 92, 246, 0.5);
+          background: #f9fafb;
+          border-color: #9ca3af;
+          color: $text-primary;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        i.el-icon-check {
+          color: #10a37f;
         }
       }
     }
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -396,6 +426,25 @@ $thinking-bg: rgba(139, 92, 246, 0.08);
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

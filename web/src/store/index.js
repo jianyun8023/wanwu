@@ -5,7 +5,7 @@ import { login } from './module/login';
 import { user } from './module/user';
 import { app } from './module/app';
 import { workflow } from './module/workflow';
-import workspace from './module/workspace';
+import workspace from './module/generalAgentWorkspace';
 
 Vue.use(Vuex);
 // 用户信息持久化

@@ -16,7 +16,7 @@
             >
               <img
                 v-if="isImageFile(file)"
-                :src="file.url || file.data"
+                :src="file.displayUrl || file.url || file.data"
                 class="file-image"
                 @click="previewImage(file)"
               />
@@ -31,119 +31,179 @@
             {{ message.content }}
           </div>
         </div>
+        <div class="user-avatar">
+          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="You" />
+          <i v-else class="el-icon-user"></i>
+        </div>
       </div>
     </template>
 
     <!-- 助手消息左侧布局 -->
     <template v-else>
-      <!-- 消息头部 -->
-      <message-header
-        :role="message.role"
-        :timestamp="message.timestamp"
-        :is-streaming="message.isStreaming"
-      />
+      <div class="assistant-message-wrapper">
+        <!-- 头像 -->
+        <div class="assistant-avatar">
+          <message-header
+            :role="message.role"
+            :timestamp="message.timestamp"
+            :is-streaming="message.isStreaming"
+          />
+        </div>
+        <!-- 消息主体 -->
+        <div class="message-body">
+          <!-- 按片段顺序展示 -->
+          <template v-if="hasFragments">
+            <template v-for="(fragment, index) in messageFragments">
+              <!-- 思考片段 -->
+              <thinking-block
+                v-if="fragment.type === 'reasoning'"
+                :key="'reasoning-' + index"
+                :content="fragment.content"
+                :is-streaming="fragment.isStreaming || false"
+                :duration="fragment.duration || ''"
+                :default-expanded="false"
+              />
+              <!-- 工具调用片段 -->
+              <tool-call-block
+                v-else-if="fragment.type === 'tool_call' && fragment.toolCall"
+                :key="'tool-' + index"
+                :tool-call="fragment.toolCall"
+                :result="fragment.toolCall.result || ''"
+                :execution-time="fragment.toolCall.executionTime || ''"
+                :default-expanded="false"
+              />
+              <!-- Workspace活动片段 -->
+              <workspace-activity
+                v-else-if="fragment.type === 'workspace'"
+                :key="'workspace-' + index"
+                :workspace-info="fragment.workspaceInfo"
+                :thread-id="threadId"
+                :run-id="fragment.runId"
+                @view-workspace="$emit('view-workspace', $event)"
+                @download-all="$emit('download-all', $event)"
+              />
+              <!-- Activity 片段（子智能体） -->
+              <activity-block
+                v-else-if="fragment.type === 'activity'"
+                :key="'activity-' + index"
+                :activity-type="fragment.activityType"
+                :activity-name="fragment.agentName"
+                :fragments="fragment.fragments"
+                :is-streaming="fragment.isStreaming || false"
+                :duration="fragment.duration || ''"
+                :default-expanded="false"
+              >
+                <template v-for="(subFragment, subIndex) in fragment.fragments">
+                  <thinking-block
+                    v-if="subFragment.type === 'reasoning'"
+                    :key="'sub-reasoning-' + index + '-' + subIndex"
+                    :content="subFragment.content"
+                    :is-streaming="subFragment.isStreaming || false"
+                    :duration="subFragment.duration || ''"
+                    :default-expanded="false"
+                  />
+                  <tool-call-block
+                    v-else-if="
+                      subFragment.type === 'tool_call' && subFragment.toolCall
+                    "
+                    :key="'sub-tool-' + index + '-' + subIndex"
+                    :tool-call="subFragment.toolCall"
+                    :result="subFragment.toolCall.result || ''"
+                    :execution-time="subFragment.toolCall.executionTime || ''"
+                    :default-expanded="false"
+                  />
+                  <div
+                    v-else-if="
+                      subFragment.type === 'text' && subFragment.content
+                    "
+                    :key="'sub-text-' + index + '-' + subIndex"
+                    class="message-content"
+                  >
+                    <stream-markdown
+                      :content="subFragment.content"
+                      :is-streaming="subFragment.isStreaming || false"
+                    />
+                  </div>
+                </template>
+              </activity-block>
+              <!-- 文字片段 -->
+              <div
+                v-else-if="fragment.type === 'text' && fragment.content"
+                :key="'text-' + index"
+                class="message-content"
+              >
+                <stream-markdown
+                  :content="fragment.content"
+                  :is-streaming="fragment.isStreaming || message.isStreaming"
+                />
+              </div>
+            </template>
+          </template>
 
-      <!-- 消息主体 -->
-      <div class="message-body">
-        <!-- 按片段顺序展示 -->
-        <template v-if="hasFragments">
-          <div v-for="(fragment, index) in messageFragments" :key="index">
-            <!-- 思考片段 -->
-            <thinking-block
-              v-if="fragment.type === 'reasoning'"
-              :content="fragment.content"
-              :is-streaming="false"
-              :duration="fragment.duration || ''"
-              :default-expanded="false"
-            />
-            <!-- 工具调用片段 -->
-            <tool-call-block
-              v-else-if="fragment.type === 'tool_call'"
-              :tool-call="fragment.toolCall"
-              :result="fragment.toolCall.result"
-              :execution-time="fragment.toolCall.executionTime || ''"
-              :default-expanded="false"
-            />
-            <!-- Workspace活动片段 -->
-            <workspace-activity
-              v-else-if="fragment.type === 'workspace'"
-              :workspace-info="fragment.workspaceInfo"
-              :thread-id="threadId"
-              :run-id="fragment.runId"
-              @view-workspace="$emit('view-workspace', $event)"
-              @download-all="$emit('download-all', $event)"
-            />
-            <!-- 文字片段 -->
+          <!-- 兼容旧格式：没有 fragments 时使用原来的展示方式 -->
+          <template v-else>
+            <!-- 阶段区域：思考过程 + 工具调用（默认折叠） -->
+            <div v-if="hasStages" class="stages-container">
+              <!-- 思考过程块 -->
+              <thinking-block
+                v-if="message.reasoning && message.reasoning.length > 0"
+                :content="message.reasoning"
+                :is-streaming="message.isStreaming && !message.content"
+                :duration="message.reasoningDuration"
+                :default-expanded="false"
+              />
+
+              <!-- 工具调用块 -->
+              <tool-call-block
+                v-for="toolCall in visibleToolCalls"
+                :key="toolCall.id"
+                :tool-call="toolCall"
+                :result="getToolResult(toolCall.id)"
+                :execution-time="toolCall.executionTime"
+                :default-expanded="false"
+              />
+            </div>
+
+            <!-- 文本内容 -->
             <div
-              v-else-if="fragment.type === 'text' && fragment.content"
+              v-if="message.content && message.content.length > 0"
               class="message-content"
             >
-              <markdown-renderer :content="fragment.content" />
+              <stream-markdown
+                :content="message.content"
+                :is-streaming="message.isStreaming"
+              />
+              <typing-cursor v-if="message.isStreaming" />
+            </div>
+          </template>
+
+          <!-- 流式加载指示器 -->
+          <div v-if="message.isStreaming" class="streaming-indicator">
+            <div class="streaming-dots">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
             </div>
           </div>
-        </template>
 
-        <!-- 兼容旧格式：没有 fragments 时使用原来的展示方式 -->
-        <template v-else>
-          <!-- 阶段区域：思考过程 + 工具调用（默认折叠） -->
-          <div v-if="hasStages" class="stages-container">
-            <!-- 思考过程块 -->
-            <thinking-block
-              v-if="message.reasoning && message.reasoning.length > 0"
-              :content="message.reasoning"
-              :is-streaming="message.isStreaming && !message.content"
-              :duration="message.reasoningDuration"
-              :default-expanded="false"
-            />
-
-            <!-- 工具调用块 -->
-            <tool-call-block
-              v-for="toolCall in visibleToolCalls"
-              :key="toolCall.id"
-              :tool-call="toolCall"
-              :result="getToolResult(toolCall.id)"
-              :execution-time="toolCall.executionTime"
-              :default-expanded="false"
-            />
-          </div>
-
-          <!-- 文本内容 -->
+          <!-- 消息操作按钮 -->
           <div
-            v-if="message.content && message.content.length > 0"
-            class="message-content"
+            v-if="!message.isStreaming && hasContent"
+            class="message-actions"
           >
-            <markdown-renderer :content="message.content" />
-            <typing-cursor v-if="message.isStreaming" />
+            <el-tooltip content="复制内容" placement="top">
+              <button class="action-btn" @click="copyContent">
+                <i
+                  :class="copied ? 'el-icon-check' : 'el-icon-document-copy'"
+                ></i>
+              </button>
+            </el-tooltip>
+            <el-tooltip v-if="isLastMessage" content="重新生成" placement="top">
+              <button class="action-btn" @click="regenerate">
+                <i class="el-icon-refresh-right"></i>
+              </button>
+            </el-tooltip>
           </div>
-        </template>
-
-        <!-- 流式加载指示器 -->
-        <div
-          v-if="message.isStreaming && !hasContent"
-          class="streaming-indicator"
-        >
-          <div class="streaming-dots">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
-          <span class="streaming-text">AI 正在响应...</span>
-        </div>
-
-        <!-- 消息操作按钮 -->
-        <div v-if="!message.isStreaming && hasContent" class="message-actions">
-          <el-tooltip content="复制内容" placement="top">
-            <button class="action-btn" @click="copyContent">
-              <i
-                :class="copied ? 'el-icon-check' : 'el-icon-document-copy'"
-              ></i>
-            </button>
-          </el-tooltip>
-          <el-tooltip v-if="isLastMessage" content="重新生成" placement="top">
-            <button class="action-btn" @click="regenerate">
-              <i class="el-icon-refresh-right"></i>
-            </button>
-          </el-tooltip>
         </div>
       </div>
     </template>
@@ -151,12 +211,16 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
+import { avatarSrc } from '@/utils/util';
+import { isImageFile } from '../utils/helpers';
 import MessageHeader from './MessageHeader.vue';
 import ThinkingBlock from './ThinkingBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';
-import MarkdownRenderer from './MarkdownRenderer.vue';
+import StreamMarkdown from './StreamMarkdown.vue';
 import TypingCursor from './TypingCursor.vue';
 import WorkspaceActivity from './WorkspaceActivity.vue';
+import ActivityBlock from './ActivityBlock.vue';
 
 export default {
   name: 'MessageItem',
@@ -164,9 +228,10 @@ export default {
     MessageHeader,
     ThinkingBlock,
     ToolCallBlock,
-    MarkdownRenderer,
+    StreamMarkdown,
     TypingCursor,
     WorkspaceActivity,
+    ActivityBlock,
   },
   props: {
     message: {
@@ -192,6 +257,13 @@ export default {
     };
   },
   computed: {
+    ...mapGetters('user', ['userAvatar']),
+    userAvatarUrl() {
+      if (this.userAvatar) {
+        return avatarSrc(this.userAvatar);
+      }
+      return null;
+    },
     hasFragments() {
       return this.message.fragments && this.message.fragments.length > 0;
     },
@@ -212,12 +284,22 @@ export default {
         this.message.reasoning && this.message.reasoning.length > 0;
       const hasToolCalls =
         this.message.toolCalls && this.message.toolCalls.length > 0;
-      const hasFragmentsContent =
-        this.message.fragments &&
-        this.message.fragments.some(
+
+      const checkFragmentContent = fragments => {
+        if (!fragments) return false;
+        return fragments.some(
           f =>
-            f.content || (f.toolCall && f.toolCall.result) || f.workspaceInfo,
+            (f.type === 'text' && f.content) ||
+            (f.type === 'reasoning' && f.content) ||
+            (f.type === 'tool_call' && f.toolCall) ||
+            (f.type === 'workspace' && f.workspaceInfo) ||
+            (f.type === 'activity' &&
+              f.fragments &&
+              checkFragmentContent(f.fragments)),
         );
+      };
+
+      const hasFragmentsContent = checkFragmentContent(this.message.fragments);
       return hasText || hasReasoning || hasToolCalls || hasFragmentsContent;
     },
     visibleToolCalls() {
@@ -230,9 +312,9 @@ export default {
     fullContent() {
       const parts = [];
 
-      // 如果有 fragments，按片段顺序提取
-      if (this.message.fragments && this.message.fragments.length > 0) {
-        this.message.fragments.forEach(fragment => {
+      const processFragments = fragments => {
+        if (!fragments) return;
+        fragments.forEach(fragment => {
           if (fragment.type === 'text' && fragment.content) {
             parts.push(fragment.content);
           } else if (fragment.type === 'reasoning' && fragment.content) {
@@ -242,8 +324,16 @@ export default {
             parts.push(
               `【工具调用】${tc.name}\n参数: ${tc.arguments || '{}'}\n结果: ${tc.result || '无'}`,
             );
+          } else if (fragment.type === 'activity' && fragment.fragments) {
+            parts.push(`【子智能体】${fragment.agentName || ''}`);
+            processFragments(fragment.fragments);
           }
         });
+      };
+
+      // 如果有 fragments，按片段顺序提取
+      if (this.message.fragments && this.message.fragments.length > 0) {
+        processFragments(this.message.fragments);
       } else {
         // 兼容旧格式
         if (this.message.reasoning) {
@@ -265,27 +355,7 @@ export default {
     },
   },
   methods: {
-    isImageFile(file) {
-      const imageTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'image/bmp',
-      ];
-      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-
-      if (file.type && imageTypes.includes(file.type)) {
-        return true;
-      }
-
-      if (file.name) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        return imageExts.includes(ext);
-      }
-
-      return false;
-    },
+    isImageFile,
 
     getToolResult(toolCallId) {
       // 优先从 toolCall 本身获取 result
@@ -377,20 +447,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 字体变量
-$font-sans:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-  'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-  sans-serif;
-$font-mono:
-  'JetBrains Mono', 'SF Mono', 'Fira Code', Monaco, Consolas, 'Liberation Mono',
-  monospace;
+@import '../styles/_variables.scss';
 
-// 颜色变量
-$text-primary: #1f2937;
-$text-secondary: #4b5563;
-$accent-color: #10a37f;
-$accent-dark: #0d8a6a;
 $user-gradient-start: #10a37f;
 $user-gradient-end: #0d8a6a;
 
@@ -411,9 +469,35 @@ $user-gradient-end: #0d8a6a;
 
     .user-message-wrapper {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: flex-end;
+      gap: 12px;
       max-width: 70%;
+    }
+
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+      img {
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        object-fit: cover;
+      }
+
+      i {
+        color: #fff;
+        font-size: 18px;
+      }
     }
 
     .user-message-content {
@@ -517,8 +601,23 @@ $user-gradient-end: #0d8a6a;
   }
 }
 
+.assistant-message-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.assistant-avatar {
+  flex-shrink: 0;
+
+  .message-header {
+    margin-bottom: 0;
+  }
+}
+
 .message-body {
-  padding-left: 44px;
+  flex: 1;
+  min-width: 0;
 }
 
 .stages-container {
@@ -532,7 +631,7 @@ $user-gradient-end: #0d8a6a;
 
 .message-content {
   min-height: 20px;
-  // 行高由 MarkdownRenderer 组件控制
+  margin-bottom: 16px;
 }
 
 .message-actions {
@@ -583,13 +682,6 @@ $user-gradient-end: #0d8a6a;
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background: linear-gradient(
-    135deg,
-    rgba(16, 163, 127, 0.06) 0%,
-    #fafafa 100%
-  );
-  border-radius: 12px;
-  border: 1px solid rgba(16, 163, 127, 0.12);
 
   .streaming-dots {
     display: flex;
@@ -616,13 +708,6 @@ $user-gradient-end: #0d8a6a;
         animation-delay: 0.4s;
       }
     }
-  }
-
-  .streaming-text {
-    font-size: 14px;
-    color: $accent-color;
-    font-weight: 500;
-    letter-spacing: 0.02em;
   }
 }
 

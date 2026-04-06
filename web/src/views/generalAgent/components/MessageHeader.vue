@@ -1,25 +1,25 @@
 <template>
-  <div class="message-header">
+  <div class="message-header" :class="{ 'assistant-only': role === 'assistant' }">
     <div :class="['avatar', role]">
       <img v-if="computedAvatarUrl" :src="computedAvatarUrl" :alt="roleLabel" />
       <i v-else :class="avatarIcon"></i>
     </div>
-    <div class="header-info">
-      <span class="role-label">{{ roleLabel }}</span>
-      <span v-if="timestamp" class="timestamp">{{ formattedTime }}</span>
-    </div>
-    <div v-if="isStreaming" class="streaming-badge">
-      <span class="pulse"></span>
-      <span>生成中</span>
-    </div>
+    <template v-if="role !== 'assistant'">
+      <div class="header-info">
+        <span class="role-label">{{ roleLabel }}</span>
+        <span v-if="timestamp" class="timestamp">{{ formattedTime }}</span>
+      </div>
+      <div v-if="isStreaming" class="streaming-badge">
+        <span class="pulse"></span>
+        <span>生成中</span>
+      </div>
+    </template>
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
 import { avatarSrc } from '@/utils/util';
-
-const defaultAssistantAvatar = require('@/assets/imgs/robot-icon.png');
 
 export default {
   name: 'MessageHeader',
@@ -44,7 +44,7 @@ export default {
     },
   },
   computed: {
-    ...mapGetters('user', ['userAvatar']),
+    ...mapGetters('user', ['userAvatar', 'commonInfo']),
     roleLabel() {
       const labels = {
         user: 'You',
@@ -65,13 +65,22 @@ export default {
       };
       return icons[this.role] || 'el-icon-chat-dot-round';
     },
-    // 助手消息使用用户头像
+    platformLogo() {
+      const tab = this.commonInfo?.data?.tab || {};
+      return tab.logo?.path || null;
+    },
     computedAvatarUrl() {
-      if (this.role === 'assistant') {
+      if (this.role === 'user') {
         if (this.userAvatar) {
           return avatarSrc(this.userAvatar);
         }
-        return defaultAssistantAvatar;
+        return null;
+      }
+      if (this.role === 'assistant') {
+        if (this.platformLogo) {
+          return avatarSrc(this.platformLogo);
+        }
+        return null;
       }
       return this.avatarUrl;
     },
@@ -97,23 +106,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 字体变量
-$font-sans:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-  'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-  sans-serif;
-
-// 颜色变量
-$text-primary: #1f2937;
-$text-secondary: #4b5563;
-$text-muted: #6b7280;
-$accent-color: #10a37f;
+@import '../styles/_variables.scss';
 
 .message-header {
   display: flex;
   align-items: center;
   margin-bottom: 14px;
   font-family: $font-sans;
+
+  &.assistant-only {
+    margin-bottom: 0;
+  }
 
   .avatar {
     width: 38px;
@@ -149,12 +152,11 @@ $accent-color: #10a37f;
     }
 
     &.assistant {
-      background: transparent;
+      background: linear-gradient(135deg, #10a37f 0%, #0d8a6a 100%);
       color: #fff;
-      box-shadow: none;
 
       img {
-        border: 2px solid #e5e7eb;
+        border: 2px solid #fff;
         background: #fff;
       }
     }

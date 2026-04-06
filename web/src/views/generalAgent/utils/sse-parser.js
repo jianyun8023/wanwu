@@ -27,7 +27,7 @@ export const EventType = {
   REASONING_MESSAGE_END: 'REASONING_MESSAGE_END',
   REASONING_END: 'REASONING_END',
 
-  // 活动快照
+  // 活动快照 (包含 status: started/finished)
   ACTIVITY_SNAPSHOT: 'ACTIVITY_SNAPSHOT',
 };
 
@@ -37,21 +37,34 @@ export const ActivityType = {
   WORKSPACE: 'workspace',
 };
 
+// 活动状态
+export const ActivityStatus = {
+  STARTED: 'started',
+  FINISHED: 'finished',
+};
+
 /**
  * SSE 事件解析器类
+ * @class SSEEventParser
  */
 export class SSEEventParser {
   constructor() {
-    // 消息状态
+    /** @type {string|null} 当前消息ID */
     this.currentMessageId = null;
+    /** @type {string|null} 当前工具调用ID */
     this.currentToolCallId = null;
-    this.isReasoning = false;
-    this.isReasoningMessage = false;
   }
 
   /**
    * 解析 SSE 事件
    * @param {object} event - 原始事件对象
+   * @param {string} event.type - 事件类型
+   * @param {string} [event.messageId] - 消息ID
+   * @param {string} [event.toolCallId] - 工具调用ID
+   * @param {string} [event.toolCallName] - 工具名称
+   * @param {string} [event.delta] - 增量内容
+   * @param {string} [event.content] - 内容
+   * @param {object} [event.content] - 活动内容
    * @returns {object|null} 解析后的事件对象
    */
   parse(event) {
@@ -127,14 +140,12 @@ export class SSEEventParser {
         };
 
       case EventType.REASONING_START:
-        this.isReasoning = true;
         return {
           ...baseEvent,
           messageId: event.messageId,
         };
 
       case EventType.REASONING_MESSAGE_START:
-        this.isReasoningMessage = true;
         return {
           ...baseEvent,
           messageId: event.messageId,
@@ -149,26 +160,30 @@ export class SSEEventParser {
         };
 
       case EventType.REASONING_MESSAGE_END:
-        this.isReasoningMessage = false;
         return {
           ...baseEvent,
           messageId: event.messageId,
         };
 
       case EventType.REASONING_END:
-        this.isReasoning = false;
         return {
           ...baseEvent,
           messageId: event.messageId,
         };
 
-      case EventType.ACTIVITY_SNAPSHOT:
+      case EventType.ACTIVITY_SNAPSHOT: {
+        const content = event.content || {};
         return {
           ...baseEvent,
           messageId: event.messageId,
+          activityId: event.activityId || content.activityId,
           activityType: event.activityType,
-          content: event.content,
+          status: content.status,
+          agentName: content.agentName || '',
+          instanceNum: content.instanceNum,
+          content: content,
         };
+      }
 
       default:
         return baseEvent;
@@ -181,126 +196,6 @@ export class SSEEventParser {
   reset() {
     this.currentMessageId = null;
     this.currentToolCallId = null;
-    this.isReasoning = false;
-    this.isReasoningMessage = false;
-  }
-}
-
-/**
- * 消息聚合器
- * 用于将 SSE 事件聚合为消息对象
- */
-export class MessageAggregator {
-  constructor() {
-    this.messages = [];
-    this.currentMessage = null;
-    this.currentToolCall = null;
-  }
-
-  /**
-   * 添加事件并更新消息状态
-   * @param {object} event - 解析后的事件对象
-   */
-  addEvent(event) {
-    if (!event) return;
-
-    switch (event.type) {
-      case EventType.TEXT_MESSAGE_START:
-        this.currentMessage = {
-          id: event.messageId,
-          role: event.role,
-          content: '',
-          toolCalls: [],
-        };
-        break;
-
-      case EventType.TEXT_MESSAGE_CONTENT:
-        if (this.currentMessage && event.messageId === this.currentMessage.id) {
-          this.currentMessage.content += event.delta;
-        }
-        break;
-
-      case EventType.TEXT_MESSAGE_END:
-        if (this.currentMessage && event.messageId === this.currentMessage.id) {
-          this.messages.push({ ...this.currentMessage });
-          this.currentMessage = null;
-        }
-        break;
-
-      case EventType.TOOL_CALL_START:
-        if (this.currentMessage) {
-          this.currentToolCall = {
-            id: event.toolCallId,
-            name: event.toolCallName,
-            arguments: '',
-            parentMessageId: event.parentMessageId,
-          };
-        }
-        break;
-
-      case EventType.TOOL_CALL_ARGS:
-        if (
-          this.currentToolCall &&
-          event.toolCallId === this.currentToolCall.id
-        ) {
-          this.currentToolCall.arguments += event.delta;
-        }
-        break;
-
-      case EventType.TOOL_CALL_END:
-        if (this.currentToolCall && this.currentMessage) {
-          this.currentMessage.toolCalls.push({ ...this.currentToolCall });
-          this.currentToolCall = null;
-        }
-        break;
-
-      case EventType.TOOL_CALL_RESULT:
-        this.messages.push({
-          id: event.messageId,
-          role: 'tool',
-          toolCallId: event.toolCallId,
-          content: event.content,
-        });
-        break;
-
-      case EventType.REASONING_MESSAGE_START:
-        this.currentMessage = {
-          id: event.messageId,
-          role: 'reasoning',
-          content: '',
-        };
-        break;
-
-      case EventType.REASONING_MESSAGE_CONTENT:
-        if (this.currentMessage && event.messageId === this.currentMessage.id) {
-          this.currentMessage.content += event.delta;
-        }
-        break;
-
-      case EventType.REASONING_MESSAGE_END:
-        if (this.currentMessage && event.messageId === this.currentMessage.id) {
-          this.messages.push({ ...this.currentMessage });
-          this.currentMessage = null;
-        }
-        break;
-    }
-  }
-
-  /**
-   * 获取所有消息
-   * @returns {Array} 消息列表
-   */
-  getMessages() {
-    return [...this.messages];
-  }
-
-  /**
-   * 重置聚合器
-   */
-  reset() {
-    this.messages = [];
-    this.currentMessage = null;
-    this.currentToolCall = null;
   }
 }
 
@@ -340,3 +235,6 @@ export function formatToolResult(content, maxLength = 500) {
   }
   return content;
 }
+
+// 从 helpers.js 重新导出 formatDuration
+export { formatDuration } from './helpers';

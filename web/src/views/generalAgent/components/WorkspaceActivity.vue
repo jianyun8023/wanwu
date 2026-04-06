@@ -49,6 +49,8 @@
 </template>
 
 <script>
+import { formatFileSize } from '../utils/helpers';
+
 export default {
   name: 'WorkspaceActivity',
   props: {
@@ -77,17 +79,7 @@ export default {
     },
   },
   methods: {
-    formatSize(bytes) {
-      if (!bytes) return '0 B';
-      const units = ['B', 'KB', 'MB', 'GB'];
-      let size = bytes;
-      let unitIndex = 0;
-      while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-      }
-      return `${size.toFixed(1)} ${units[unitIndex]}`;
-    },
+    formatSize: formatFileSize,
 
     handleViewWorkspace() {
       this.$emit('view-workspace', {
@@ -109,15 +101,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$workspace-color: #3b82f6;
-$workspace-light: #60a5fa;
-$workspace-bg: rgba(59, 130, 246, 0.08);
+@import '../styles/_variables.scss';
 
 .workspace-activity {
   margin: 16px 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, $workspace-bg 0%, #fafafa 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba($workspace-color, 0.08) 0%, #fafafa 100%);
+  border: 1px solid rgba($workspace-color, 0.2);
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -129,10 +119,10 @@ $workspace-bg: rgba(59, 130, 246, 0.08);
   padding: 14px 16px;
   background: linear-gradient(
     135deg,
-    rgba(59, 130, 246, 0.1) 0%,
-    rgba(59, 130, 246, 0.05) 100%
+    rgba($workspace-color, 0.1) 0%,
+    rgba($workspace-color, 0.05) 100%
   );
-  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  border-bottom: 1px solid rgba($workspace-color, 0.1);
 }
 
 .activity-icon {
@@ -160,14 +150,14 @@ $workspace-bg: rgba(59, 130, 246, 0.08);
 .title-text {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+  color: $text-primary;
 }
 
 .activity-badge {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba($workspace-color, 0.15);
   border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
@@ -202,7 +192,7 @@ $workspace-bg: rgba(59, 130, 246, 0.08);
 
 .stat-label {
   font-size: 12px;
-  color: #6b7280;
+  color: $text-muted;
 }
 
 .stat-divider {

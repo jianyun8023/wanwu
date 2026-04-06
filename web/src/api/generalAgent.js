@@ -398,10 +398,49 @@ export const uploadGeneralAgentFile = (file, onProgress) => {
     onUploadProgress: progressEvent => {
       if (onProgress && progressEvent.total) {
         const percent = Math.round(
-          (progressEvent.loaded / progressEvent.total) * 100,
+          (progressEvent.loaded * 100) / progressEvent.total,
         );
         onProgress(percent);
       }
     },
   });
+};
+
+/**
+ * SSE 流式对话
+ * @param {string} threadId - 会话ID
+ * @param {string} content - 消息内容
+ * @param {Array} attachments - 附件列表
+ * @param {AbortSignal} signal - AbortController signal（可选）
+ * @returns {Promise<Response>} fetch Response 对象
+ */
+export const chatGeneralAgentStream = async (
+  threadId,
+  content,
+  attachments = [],
+  signal = null,
+) => {
+  const token = getToken();
+  const { userId, orgId } = getUserInfo();
+
+  const response = await fetch(
+    `${process.env.VUE_APP_BASE_URL || ''}${USER_API}/assistant/stream`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token ? `Bearer ${token}` : '',
+        'x-user-id': userId,
+        'x-org-id': orgId,
+      },
+      body: JSON.stringify({
+        threadId,
+        content,
+        attachments,
+      }),
+      signal,
+    },
+  );
+
+  return response;
 };

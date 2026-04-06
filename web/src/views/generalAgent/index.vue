@@ -2,34 +2,16 @@
   <div class="general-agent-page">
     <!-- 左侧会话列表 - 可折叠 -->
     <div :class="['sidebar', { collapsed: sidebarCollapsed }]">
-      <!-- 折叠状态下显示展开按钮 -->
-      <div v-if="sidebarCollapsed" class="sidebar-collapsed-bar">
-        <el-tooltip content="展开侧边栏" placement="right">
-          <div class="expand-btn" @click="toggleSidebar">
-            <i class="el-icon-s-unfold"></i>
-          </div>
-        </el-tooltip>
-        <el-tooltip content="新建对话" placement="right">
-          <div class="expand-btn" @click="createConversation">
-            <i class="el-icon-plus"></i>
-          </div>
-        </el-tooltip>
-      </div>
-
-      <!-- 展开状态 -->
-      <template v-else>
+      <div class="sidebar-content">
         <div class="sidebar-header">
           <el-button
             type="primary"
             class="new-chat-btn"
-            @click="createConversation"
+            @click="initNewConversation"
           >
             <i class="el-icon-plus"></i>
             新建对话
           </el-button>
-          <div class="sidebar-toggle" @click="toggleSidebar">
-            <i class="el-icon-s-fold"></i>
-          </div>
         </div>
 
         <div class="sidebar-divider"></div>
@@ -56,7 +38,7 @@
             </el-dropdown>
           </div>
         </div>
-      </template>
+      </div>
     </div>
 
     <!-- 主内容区 -->
@@ -69,33 +51,37 @@
         <!-- 顶部标题栏 -->
         <div class="header">
           <div class="header-left">
-            <button
-              v-if="!sidebarCollapsed"
-              class="sidebar-toggle-btn"
-              @click="toggleSidebar"
-            >
-              <i class="el-icon-s-fold"></i>
+            <button class="sidebar-toggle-btn" @click="toggleSidebar">
+              <i
+                :class="
+                  sidebarCollapsed ? 'el-icon-s-unfold' : 'el-icon-s-fold'
+                "
+              ></i>
             </button>
             <div class="header-title">{{ currentTitle }}</div>
           </div>
         </div>
 
         <!-- 消息区域 - 独立滚动 -->
-        <div class="message-area" ref="messageArea">
-          <!-- 空状态 -->
-          <div
-            v-if="messageList.length === 0 && !isStreaming"
-            class="empty-state"
-          >
-            <div class="empty-icon">
-              <i class="el-icon-chat-dot-round"></i>
-            </div>
-            <div class="empty-title">开始新对话</div>
-            <div class="empty-tips">输入您的问题，开始与智能体对话</div>
+        <div
+          :class="[
+            'message-area',
+            { empty: isEmptyConversation && !isLoadingHistory },
+          ]"
+          ref="messageArea"
+          @scroll="handleMessageAreaScroll"
+        >
+          <!-- 加载历史记录中 -->
+          <div v-if="isLoadingHistory" class="history-loading">
+            <i class="el-icon-loading"></i>
+            <span>加载中...</span>
           </div>
 
           <!-- 消息列表 -->
-          <div v-else class="message-list">
+          <div
+            v-else-if="messageList.length > 0 || isStreaming"
+            class="message-list"
+          >
             <message-item
               v-for="(msg, index) in messageList"
               :key="msg.id || index"
@@ -106,66 +92,57 @@
               @regenerate="handleRegenerate"
               @view-workspace="handleViewWorkspace"
             />
-            <div
-              v-if="isStreaming && !hasAssistantContent"
-              class="typing-indicator"
-            >
-              <span></span>
-              <span></span>
-              <span></span>
-              <span class="typing-text">思考中...</span>
-            </div>
           </div>
 
           <div ref="scrollAnchor"></div>
         </div>
 
-        <!-- 底部输入区 - 固定底部 -->
-        <div class="input-area">
-          <div class="input-container">
-            <!-- 模型选择和配置 -->
-            <div class="model-config-row">
-              <div class="model-selector">
-                <el-select
-                  v-model="selectedModel"
-                  size="small"
-                  placeholder="选择模型"
-                  filterable
-                  :filter-method="filterModel"
-                  @change="handleModelChange"
-                >
-                  <el-option
-                    v-for="model in filteredModelList"
-                    :key="model.modelId"
-                    :label="model.modelName"
-                    :value="model.modelId"
-                  >
-                    <div class="model-option">
-                      <span class="model-name">{{ model.modelName }}</span>
-                      <span v-if="model.provider" class="model-provider">
-                        {{ model.provider }}
-                      </span>
-                    </div>
-                  </el-option>
-                </el-select>
-              </div>
+        <!-- 滚动到底部按钮 -->
+        <transition name="scroll-btn-fade">
+          <button
+            v-if="showScrollToBottom"
+            class="scroll-to-bottom-btn"
+            @click="handleScrollToBottomClick"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </button>
+        </transition>
 
-              <!-- 配置按钮 -->
-              <div
-                class="config-btn"
-                :class="{ 'has-selection': selectedTools.length > 0 }"
-                @click="showConfigDrawer = true"
-              >
-                <i class="el-icon-setting"></i>
-                <span>配置</span>
-                <el-badge
-                  v-if="selectedTools.length > 0"
-                  :value="selectedTools.length"
-                  type="primary"
-                />
-              </div>
+        <!-- 底部输入区 -->
+        <div
+          :class="[
+            'input-area',
+            { 'is-centered': isEmptyConversation && !isLoadingHistory },
+          ]"
+        >
+          <!-- 欢迎词 - 仅居中时显示 -->
+          <div
+            v-if="isEmptyConversation && !isLoadingHistory"
+            class="welcome-section"
+          >
+            <div class="welcome-avatar">
+              <img
+                v-if="assistantAvatar"
+                :src="assistantAvatar"
+                alt="Assistant"
+              />
+              <i v-else class="el-icon-cpu"></i>
             </div>
+            <div class="welcome-title">你好，我是万悟</div>
+          </div>
 
+          <div class="input-container">
             <!-- 文件预览 -->
             <div v-if="uploadedFiles.length > 0" class="file-preview">
               <div
@@ -221,7 +198,35 @@
                 @keydown.enter.native="handleKeyDown"
                 :disabled="isStreaming"
               />
-              <div class="input-actions">
+            </div>
+
+            <!-- 底部工具栏：模型选择 + 发送按钮 -->
+            <div class="input-toolbar">
+              <div class="toolbar-left">
+                <ModelSelect
+                  v-model="selectedModel"
+                  :options="modelList"
+                  placeholder="选择模型"
+                  :loading="modelLoading"
+                  :filterable="true"
+                  @change="handleModelChange"
+                  class="model-select-inline"
+                />
+                <div
+                  class="config-btn"
+                  :class="{ 'has-selection': selectedTools.length > 0 }"
+                  @click="showConfigDrawer = true"
+                >
+                  <i class="el-icon-setting"></i>
+                  <span>配置</span>
+                  <el-badge
+                    v-if="selectedTools.length > 0"
+                    :value="selectedTools.length"
+                    type="primary"
+                  />
+                </div>
+              </div>
+              <div class="toolbar-right">
                 <el-upload
                   action="#"
                   :auto-upload="false"
@@ -230,32 +235,48 @@
                   multiple
                 >
                   <el-tooltip content="上传文件" placement="top">
-                    <i class="el-icon-paperclip action-icon"></i>
+                    <i class="action-icon el-icon-paperclip"></i>
                   </el-tooltip>
                 </el-upload>
                 <el-button
-                  type="primary"
-                  size="small"
-                  circle
-                  :loading="isStreaming"
-                  :disabled="!canSend"
-                  @click="sendMessage"
-                >
-                  <i v-if="!isStreaming" class="el-icon-top"></i>
-                </el-button>
-                <el-button
                   v-if="isStreaming"
-                  type="danger"
-                  size="small"
+                  class="send-btn stop-btn"
                   circle
                   @click="stopStreaming"
                 >
-                  <i class="el-icon-video-pause"></i>
+                  <svg
+                    class="stop-icon"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                  >
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                </el-button>
+                <el-button
+                  v-else
+                  type="primary"
+                  class="send-btn"
+                  circle
+                  :disabled="!canSend"
+                  @click="sendMessage"
+                >
+                  <svg
+                    class="send-icon"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
+                    />
+                  </svg>
                 </el-button>
               </div>
             </div>
           </div>
-          <div class="input-footer">
+          <div v-if="!isEmptyConversation" class="input-footer">
             <span>通用智能体 · 内容由 AI 生成，仅供参考</span>
           </div>
         </div>
@@ -265,127 +286,40 @@
       <transition name="workspace-slide">
         <workspace-panel
           v-if="panelVisible && activeWorkspace"
+          ref="workspacePanel"
           :thread-id="activeWorkspace.threadId"
           :run-id="activeWorkspace.runId"
           :initial-data="currentWorkspaceTree"
           @close="hidePanel"
+          @preview-file="handlePreviewFile"
         />
       </transition>
 
+      <!-- 文件预览抽屉 -->
+      <file-preview-drawer
+        :visible.sync="previewVisible"
+        :file="previewFile"
+        :file-path="previewFilePath"
+        :file-ext="previewFileExt"
+        :type="previewType"
+        :url="previewUrl"
+        :content="previewContent"
+        :loading="previewLoading"
+        :panel-style="previewPanelStyle"
+        :excel-data="previewExcelData"
+        @download="downloadPreviewFile"
+        @close="closePreview"
+      />
+
       <!-- 配置抽屉 -->
-      <el-drawer
+      <config-drawer
         :visible.sync="showConfigDrawer"
-        direction="rtl"
-        size="400px"
-        :with-header="false"
-        custom-class="config-drawer"
-      >
-        <div class="drawer-content">
-          <div class="drawer-header">
-            <h3>对话配置</h3>
-            <i class="el-icon-close" @click="showConfigDrawer = false"></i>
-          </div>
-
-          <div class="drawer-body">
-            <!-- 工具选择 -->
-            <div class="drawer-section">
-              <div class="section-header">
-                <i class="el-icon-setting"></i>
-                <span>工具选择</span>
-                <el-tag size="mini" type="info">
-                  {{ selectedTools.length }} 已选
-                </el-tag>
-              </div>
-
-              <!-- 搜索框 -->
-              <div class="tool-search">
-                <el-input
-                  v-model="toolSearchKeyword"
-                  size="small"
-                  placeholder="搜索工具..."
-                  prefix-icon="el-icon-search"
-                  clearable
-                />
-              </div>
-
-              <div class="section-body">
-                <div v-if="loadingTools" class="config-loading">
-                  <i class="el-icon-loading"></i>
-                  加载中...
-                </div>
-                <div
-                  v-else-if="filteredToolList.length === 0"
-                  class="config-empty"
-                >
-                  <i class="el-icon-search"></i>
-                  <span>未找到匹配的工具</span>
-                </div>
-                <div v-else class="tool-categories">
-                  <div
-                    v-for="category in filteredToolList"
-                    :key="category.category"
-                    class="tool-category"
-                  >
-                    <div class="category-header">
-                      <span class="category-name">{{ category.category }}</span>
-                      <el-tag
-                        size="mini"
-                        :type="getConditionType(category.condition)"
-                      >
-                        {{ getConditionLabel(category.condition) }}
-                      </el-tag>
-                    </div>
-                    <div class="tool-list">
-                      <el-tooltip
-                        v-for="tool in category.toolList"
-                        :key="tool.toolId"
-                        placement="top"
-                        :open-delay="500"
-                        :disabled="!tool.description && !tool.desc"
-                        effect="light"
-                        popper-class="tool-tooltip-popper"
-                      >
-                        <div slot="content" class="tool-detail-tooltip">
-                          <div class="tooltip-title">{{ tool.toolName }}</div>
-                          <div class="tooltip-desc">
-                            {{
-                              tool.description || tool.desc || '暂无详细描述'
-                            }}
-                          </div>
-                        </div>
-                        <div
-                          :class="[
-                            'tool-item',
-                            { selected: isToolSelected(tool.toolId) },
-                          ]"
-                          @click="toggleTool(tool)"
-                        >
-                          <div class="tool-avatar">
-                            <img
-                              v-if="tool.avatar?.path"
-                              :src="tool.avatar.path"
-                            />
-                            <i v-else class="el-icon-setting"></i>
-                          </div>
-                          <div class="tool-info">
-                            <div class="tool-name">{{ tool.toolName }}</div>
-                            <div class="tool-desc">{{ tool.desc }}</div>
-                          </div>
-                          <el-checkbox
-                            :value="isToolSelected(tool.toolId)"
-                            @click.native.stop
-                            @change="toggleTool(tool)"
-                          />
-                        </div>
-                      </el-tooltip>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </el-drawer>
+        :tool-list="toolList"
+        :selected-tools="selectedTools"
+        :loading="loadingTools"
+        @toggle-tool="toggleTool"
+        @close="showConfigDrawer = false"
+      />
     </div>
   </div>
 </template>
@@ -393,6 +327,9 @@
 <script>
 import MessageItem from './components/MessageItem.vue';
 import WorkspacePanel from './components/WorkspacePanel.vue';
+import FilePreviewDrawer from './components/FilePreviewDrawer.vue';
+import ConfigDrawer from './components/ConfigDrawer.vue';
+import ModelSelect from '@/components/modelSelect.vue';
 import {
   getGeneralAgentConversationList,
   createGeneralAgentConversation,
@@ -405,24 +342,39 @@ import {
   getLlmModelSelect,
   getGeneralAgentWorkspace,
   uploadGeneralAgentFile,
+  previewGeneralAgentWorkspace,
+  downloadGeneralAgentWorkspace,
 } from '@/api/generalAgent';
-import { SSEEventParser, EventType, ActivityType } from './utils/sse-parser';
+import {
+  SSEEventParser,
+  EventType,
+  ActivityType,
+  ActivityStatus,
+} from './utils/sse-parser';
+import { formatDuration } from './utils/helpers';
 import { mapState, mapActions, mapGetters } from 'vuex';
+import { avatarSrc } from '@/utils/util';
+import * as XLSX from 'xlsx';
 
 export default {
   name: 'GeneralAgent',
   components: {
     MessageItem,
     WorkspacePanel,
+    FilePreviewDrawer,
+    ConfigDrawer,
+    ModelSelect,
   },
   data() {
     return {
-      sidebarCollapsed: false,
+      sidebarCollapsed: true,
       conversationList: [],
       currentThreadId: '',
       pageNo: 1,
       pageSize: 50,
       total: 0,
+      isNewConversation: false,
+      isLoadingHistory: false,
 
       // 每个会话独立的消息列表 { threadId: messageList }
       messagesMap: {},
@@ -435,11 +387,10 @@ export default {
       selectedTools: [],
       selectedAssistants: [],
       modelList: [],
-      modelSearchKeyword: '',
+      modelLoading: false,
       toolList: [],
       loadingTools: false,
       showConfigDrawer: false,
-      toolSearchKeyword: '',
 
       currentRunId: '',
       currentStage: '',
@@ -448,11 +399,37 @@ export default {
       workspacePanelVisible: false,
       workspaceLoading: false,
       workspaceInfo: null,
+
+      // 文件预览
+      previewVisible: false,
+      previewLoading: false,
+      previewFile: null,
+      previewFilePath: '',
+      previewFileExt: '',
+      previewUrl: '',
+      previewContent: '',
+      previewType: '',
+      previewBlobUrl: '',
+      previewExcelData: null,
+      workspaceRect: null,
+      resizeObserver: null,
+
+      // 滚动控制
+      userHasScrolled: false,
+      showScrollToBottom: false,
+      isAutoScrolling: false,
     };
   },
   computed: {
     ...mapState('workspace', ['activeWorkspace', 'panelVisible']),
     ...mapGetters('workspace', ['hasWorkspace', 'currentWorkspaceTree']),
+    ...mapGetters('user', ['commonInfo']),
+
+    assistantAvatar() {
+      const tab = this.commonInfo?.data?.tab || {};
+      const path = tab.logo?.path;
+      return path ? avatarSrc(path) : null;
+    },
 
     // 当前会话的消息列表
     messageList: {
@@ -481,14 +458,41 @@ export default {
     },
 
     currentTitle() {
-      if (!this.currentThreadId) return '通用智能体';
+      if (!this.currentThreadId) return '';
       const conv = this.conversationList.find(
         c => c.threadId === this.currentThreadId,
       );
       return conv?.title || '新对话';
     },
     canSend() {
-      return this.inputMessage.trim() || this.uploadedFiles.length > 0;
+      const hasContent =
+        this.inputMessage.trim() || this.uploadedFiles.length > 0;
+      const hasModel = !!this.selectedModel;
+      return hasContent && hasModel;
+    },
+    previewPanelStyle() {
+      // 计算宽度：屏幕宽度的一半，最小 500px
+      const screenWidth = window.screen.width;
+      const halfScreenWidth = Math.floor(screenWidth / 2);
+      const width = Math.max(500, halfScreenWidth);
+
+      if (!this.workspaceRect) {
+        // 默认情况：workspace 未显示时，使用计算值
+        const sidebarWidth = this.sidebarCollapsed ? 0 : 240;
+        const sidebarMargin = this.sidebarCollapsed ? 0 : 16;
+        const workspaceWidth = 400;
+        const pagePadding = 16;
+        return {
+          right: `${pagePadding + sidebarWidth + sidebarMargin + workspaceWidth}px`,
+          width: `${width}px`,
+        };
+      }
+      // workspace 显示时，紧贴其左边缘
+      const rightEdge = window.innerWidth - this.workspaceRect.left;
+      return {
+        right: `${rightEdge}px`,
+        width: `${width}px`,
+      };
     },
     hasAssistantContent() {
       return this.messageList.some(
@@ -497,48 +501,8 @@ export default {
           (m.content || m.reasoning || (m.toolCalls && m.toolCalls.length > 0)),
       );
     },
-    // 过滤后的工具列表
-    filteredToolList() {
-      if (!this.toolSearchKeyword.trim()) {
-        return this.toolList;
-      }
-      const keyword = this.toolSearchKeyword.toLowerCase().trim();
-      return this.toolList
-        .map(category => {
-          const filteredTools = category.toolList.filter(tool => {
-            const name = (tool.toolName || '').toLowerCase();
-            const desc = (tool.desc || '').toLowerCase();
-            const description = (tool.description || '').toLowerCase();
-            return (
-              name.includes(keyword) ||
-              desc.includes(keyword) ||
-              description.includes(keyword)
-            );
-          });
-          if (filteredTools.length === 0) return null;
-          return {
-            ...category,
-            toolList: filteredTools,
-          };
-        })
-        .filter(Boolean);
-    },
-    // 过滤后的模型列表
-    filteredModelList() {
-      if (!this.modelSearchKeyword.trim()) {
-        return this.modelList;
-      }
-      const keyword = this.modelSearchKeyword.toLowerCase().trim();
-      return this.modelList.filter(model => {
-        const name = (model.modelName || '').toLowerCase();
-        const provider = (model.provider || '').toLowerCase();
-        const modelType = (model.modelType || '').toLowerCase();
-        return (
-          name.includes(keyword) ||
-          provider.includes(keyword) ||
-          modelType.includes(keyword)
-        );
-      });
+    isEmptyConversation() {
+      return this.messageList.length === 0;
     },
     // Workspace 相关
     workspaceThreadAndRun() {
@@ -556,13 +520,26 @@ export default {
       this.workspacePanelVisible = val;
       if (val && this.activeWorkspace) {
         this.loadWorkspaceFiles();
+        this.$nextTick(() => this.updateWorkspaceRect());
+      } else if (!val) {
+        // 工作空间关闭时，关闭文件预览
+        this.previewVisible = false;
+        this.closePreview();
+      }
+    },
+    previewVisible(val) {
+      if (val) {
+        this.$nextTick(() => this.updateWorkspaceRect());
       }
     },
   },
   mounted() {
+    this.initNewConversation();
     this.fetchModelList();
     this.fetchConversationList();
     this.fetchToolList();
+    this.initUserInfo();
+    this.setupResizeObserver();
   },
   beforeDestroy() {
     // 清理所有会话的流式状态
@@ -574,6 +551,10 @@ export default {
     });
     this.streamingMap = {};
     this.reset();
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   },
   methods: {
     ...mapActions('workspace', [
@@ -585,26 +566,73 @@ export default {
       'clearWorkspace',
       'reset',
     ]),
+    ...mapActions('user', ['getPermissionInfo', 'getCommonInfo']),
+
+    async initUserInfo() {
+      if (localStorage.getItem('access_cert')) {
+        await this.getPermissionInfo();
+        await this.getCommonInfo();
+      }
+    },
+
+    setupResizeObserver() {
+      if (typeof ResizeObserver === 'undefined') return;
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateWorkspaceRect();
+      });
+      // 监听整个页面容器
+      const pageEl = this.$el;
+      if (pageEl) {
+        this.resizeObserver.observe(pageEl);
+      }
+      // 也监听 sidebar 变化
+      const sidebar = pageEl?.querySelector('.sidebar');
+      if (sidebar) {
+        this.resizeObserver.observe(sidebar);
+      }
+    },
+
+    updateWorkspaceRect() {
+      this.$nextTick(() => {
+        const workspaceEl = this.$refs.workspacePanel?.$el;
+        if (workspaceEl) {
+          this.workspaceRect = workspaceEl.getBoundingClientRect();
+        } else {
+          // 如果 workspace 不可见，使用 mainContent 的右边界
+          const mainContent = this.$el?.querySelector('.agent-main-content');
+          if (mainContent) {
+            const rect = mainContent.getBoundingClientRect();
+            this.workspaceRect = { left: rect.right };
+          }
+        }
+      });
+    },
 
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed;
     },
 
     async fetchModelList() {
+      this.modelLoading = true;
       try {
         const res = await getLlmModelSelect();
         if (res.code === 0 && res.data?.list) {
           this.modelList = res.data.list.map(model => ({
             modelId: model.modelId || model.model,
-            modelName: model.displayName || model.model,
+            displayName: model.displayName || model.modelName || model.model,
+            modelName: model.displayName || model.modelName || model.model,
             model: model.model,
             provider: model.provider,
             modelType: model.modelType,
             config: model.config,
+            avatar: model.avatar || { path: '' },
+            tags: model.tags || [],
           }));
         }
       } catch (error) {
         console.error('获取模型列表失败:', error);
+      } finally {
+        this.modelLoading = false;
       }
     },
 
@@ -617,9 +645,6 @@ export default {
         if (res.code === 0) {
           this.conversationList = res.data?.list || [];
           this.total = res.data?.total || 0;
-          if (this.conversationList.length > 0 && !this.currentThreadId) {
-            this.selectConversation(this.conversationList[0].threadId);
-          }
         }
       } catch (error) {
         console.error('获取对话列表失败:', error);
@@ -637,6 +662,80 @@ export default {
         console.error('获取工具列表失败:', error);
       } finally {
         this.loadingTools = false;
+      }
+    },
+
+    initNewConversation() {
+      this.currentThreadId = '';
+      this.isNewConversation = true;
+      this.$set(this.messagesMap, '', []);
+      this.selectedTools = [];
+      // 重置滚动状态
+      this.userHasScrolled = false;
+      this.showScrollToBottom = false;
+      // 关闭工作区面板
+      this.hidePanel();
+      if (this.modelList && this.modelList.length > 0) {
+        const defaultModel = this.modelList[0];
+        this.selectedModel = defaultModel?.modelId || '';
+      }
+    },
+
+    async createConversationWithTitle(title) {
+      try {
+        if (!this.modelList || this.modelList.length === 0) {
+          this.$message.warning('模型列表加载中，请稍后重试');
+          return null;
+        }
+
+        // 使用用户选择的模型，如果没有选择则使用第一个模型
+        const selectedModelConfig = this.selectedModel
+          ? this.modelList.find(m => m.modelId === this.selectedModel)
+          : this.modelList[0];
+
+        const modelConfig = {
+          modelId: selectedModelConfig?.modelId || '',
+          model: selectedModelConfig?.model || '',
+          provider: selectedModelConfig?.provider || '',
+          displayName: selectedModelConfig?.modelName || '',
+          modelType: selectedModelConfig?.modelType || 'llm',
+          config: selectedModelConfig?.config || {},
+        };
+
+        const res = await createGeneralAgentConversation({
+          title: title || '新对话',
+          modelConfig,
+        });
+
+        if (res.code === 0) {
+          const threadId = res.data?.threadId;
+          if (threadId) {
+            this.currentThreadId = threadId;
+            this.isNewConversation = false;
+
+            const oldMessages = this.messagesMap[''] || [];
+            this.$set(this.messagesMap, threadId, oldMessages);
+            this.$delete(this.messagesMap, '');
+
+            this.selectedModel = modelConfig.modelId;
+            this.selectedTools = [];
+            this.conversationList.unshift({
+              threadId,
+              title: title || '新对话',
+              createdAt: new Date().toISOString(),
+            });
+            return threadId;
+          } else {
+            this.$message.error('创建对话失败：未返回对话ID');
+          }
+        } else {
+          this.$message.error(res.msg || '创建对话失败');
+        }
+        return null;
+      } catch (error) {
+        console.error('创建对话失败:', error);
+        this.$message.error('创建对话失败，请检查网络连接');
+        return null;
       }
     },
 
@@ -697,22 +796,20 @@ export default {
       // 切换会话时，只切换 currentThreadId，不中止 SSE 流
       // SSE 流会继续在后台运行，切换回来时能继续显示
       this.currentThreadId = threadId;
+      this.isNewConversation = false;
+      this.isLoadingHistory = true;
+      // 重置滚动状态
+      this.userHasScrolled = false;
+      this.showScrollToBottom = false;
+      // 关闭工作区面板
+      this.hidePanel();
+      // 清空当前会话的消息缓存，确保每次都重新请求
+      this.$set(this.messagesMap, threadId, []);
       this.fetchHistory();
     },
 
     async fetchHistory() {
       if (!this.currentThreadId) return;
-
-      // 如果当前会话正在流式传输，不清空消息
-      if (this.isStreaming) {
-        console.log('[fetchHistory] 当前会话正在流式传输，跳过获取历史');
-        return;
-      }
-
-      // 初始化当前会话的消息列表
-      if (!this.messagesMap[this.currentThreadId]) {
-        this.$set(this.messagesMap, this.currentThreadId, []);
-      }
 
       try {
         const res = await getGeneralAgentConversationDetail({
@@ -720,12 +817,10 @@ export default {
           pageNo: 1,
           pageSize: 100,
         });
-        console.log('fetchHistory response:', res);
 
         if (res.code === 0 && res.data?.list) {
           const allMessages = [];
           res.data.list.forEach(run => {
-            console.log('run data:', run);
             // 后端返回的是 events 字段，需要聚合为消息
             if (run.events && Array.isArray(run.events)) {
               const messages = this.aggregateEventsToMessages(run.events);
@@ -742,23 +837,47 @@ export default {
             }
             if (run.runId) this.currentRunId = run.runId;
           });
-          console.log('all messages:', allMessages);
           // 使用 $set 确保响应式
           this.$set(this.messagesMap, this.currentThreadId, allMessages);
-          this.$nextTick(() => this.scrollToBottom());
+          // 先关闭加载状态，让消息列表渲染
+          this.isLoadingHistory = false;
+          // 等待 DOM 渲染完成后滚动到底部
+          this.$nextTick(() => {
+            requestAnimationFrame(() => {
+              this.scrollToBottom(true);
+            });
+          });
+        } else {
+          this.isLoadingHistory = false;
         }
         this.loadConfig();
       } catch (error) {
         console.error('获取历史消息失败:', error);
+        this.isLoadingHistory = false;
       }
     },
 
-    // 将 AG-UI 事件聚合为消息 - 支持交错展示
+    // 将 AG-UI 事件聚合为消息 - 支持交错展示和 activity 嵌套
     aggregateEventsToMessages(events) {
       const messages = [];
-      const toolCallMap = new Map(); // 用于聚合工具调用参数
-      let currentReasoningStart = null;
-      let currentTextStart = null;
+      const toolCallMap = new Map();
+      const activityStack = []; // 用于跟踪嵌套的 activity
+      let currentActivity = null; // 当前的 activity
+
+      const getCurrentActivity = () => currentActivity;
+
+      const addFragment = fragment => {
+        if (currentActivity) {
+          currentActivity.fragments.push(fragment);
+        } else {
+          messages.push({
+            ...fragment,
+            id: fragment.id || this.generateId(),
+            role: 'assistant',
+            timestamp: Date.now(),
+          });
+        }
+      };
 
       for (const event of events) {
         const eventTimestamp = event.timestamp
@@ -766,9 +885,7 @@ export default {
           : Date.now();
 
         switch (event.type) {
-          // 开始新的对话
           case 'RUN_STARTED': {
-            // 提取用户消息
             if (event.input?.messages && Array.isArray(event.input.messages)) {
               event.input.messages.forEach(msg => {
                 if (msg.role === 'user') {
@@ -776,6 +893,7 @@ export default {
                     id: msg.id || this.generateId(),
                     role: 'user',
                     content: this.formatContent(msg.content),
+                    files: this.extractFilesFromContent(msg.content),
                     toolCalls: null,
                     toolResults: null,
                     toolCallId: null,
@@ -788,31 +906,108 @@ export default {
             break;
           }
 
-          // 思考片段
+          case 'ACTIVITY_SNAPSHOT': {
+            const activityContent = event.content || {};
+            if (event.activityType === 'sub_agent') {
+              if (activityContent.status === 'started') {
+                currentActivity = {
+                  type: 'activity',
+                  activityType: event.activityType,
+                  activityId: event.activityId || '',
+                  agentName: activityContent.agentName || '',
+                  fragments: [],
+                };
+                activityStack.push(currentActivity);
+              } else if (activityContent.status === 'finished') {
+                if (activityStack.length > 0) {
+                  const finishedActivity = activityStack.pop();
+                  if (activityStack.length > 0) {
+                    currentActivity = activityStack[activityStack.length - 1];
+                    currentActivity.fragments.push(finishedActivity);
+                  } else {
+                    messages.push({
+                      id: event.messageId || this.generateId(),
+                      role: 'assistant',
+                      ...finishedActivity,
+                      timestamp: eventTimestamp,
+                    });
+                    currentActivity = null;
+                  }
+                }
+              }
+            } else if (
+              event.activityType === 'workspace' &&
+              activityContent.runId
+            ) {
+              this.handleWorkspaceActivity({
+                runId: activityContent.runId,
+                threadId: activityContent.threadId || this.currentThreadId,
+                fileCount: activityContent.fileCount || 0,
+                totalSize: activityContent.totalSize || 0,
+                timestamp: activityContent.timestamp || eventTimestamp,
+              });
+
+              addFragment({
+                type: 'workspace',
+                workspaceInfo: {
+                  fileCount: activityContent.fileCount || 0,
+                  totalSize: activityContent.totalSize || 0,
+                },
+                runId: activityContent.runId,
+              });
+            }
+            break;
+          }
+
           case 'REASONING_MESSAGE_START': {
-            currentReasoningStart = eventTimestamp;
-            // 创建思考片段
-            messages.push({
-              id: event.messageId || this.generateId(),
-              role: 'assistant',
+            addFragment({
               type: 'reasoning',
               content: '',
-              reasoning: '',
-              toolCalls: null,
-              isReasoningBlock: true,
+              messageId: event.messageId || '',
               startTime: eventTimestamp,
-              duration: '',
             });
             break;
           }
 
           case 'REASONING_MESSAGE_CONTENT': {
-            // 追加到最后的思考片段
-            const lastMsg = messages[messages.length - 1];
-            if (lastMsg && lastMsg.isReasoningBlock) {
-              lastMsg.reasoning += event.delta || '';
-              if (lastMsg.startTime) {
-                lastMsg.duration = this.formatDuration(
+            const activity = getCurrentActivity();
+            if (activity) {
+              const lastFragment =
+                activity.fragments[activity.fragments.length - 1];
+              if (lastFragment && lastFragment.type === 'reasoning') {
+                lastFragment.content += event.delta || '';
+              }
+            } else {
+              const lastMsg = messages[messages.length - 1];
+              if (lastMsg && lastMsg.type === 'reasoning') {
+                lastMsg.content += event.delta || '';
+              }
+            }
+            break;
+          }
+
+          case 'REASONING_MESSAGE_END': {
+            const activity = getCurrentActivity();
+            if (activity) {
+              const lastFragment =
+                activity.fragments[activity.fragments.length - 1];
+              if (
+                lastFragment &&
+                lastFragment.type === 'reasoning' &&
+                lastFragment.startTime
+              ) {
+                lastFragment.duration = formatDuration(
+                  eventTimestamp - lastFragment.startTime,
+                );
+              }
+            } else {
+              const lastMsg = messages[messages.length - 1];
+              if (
+                lastMsg &&
+                lastMsg.type === 'reasoning' &&
+                lastMsg.startTime
+              ) {
+                lastMsg.duration = formatDuration(
                   eventTimestamp - lastMsg.startTime,
                 );
               }
@@ -820,55 +1015,36 @@ export default {
             break;
           }
 
-          case 'REASONING_MESSAGE_END': {
-            const lastMsg = messages[messages.length - 1];
-            if (lastMsg && lastMsg.isReasoningBlock && lastMsg.startTime) {
-              lastMsg.duration = this.formatDuration(
-                eventTimestamp - lastMsg.startTime,
-              );
-            }
-            currentReasoningStart = null;
-            break;
-          }
-
-          // 文字片段
           case 'TEXT_MESSAGE_START': {
-            currentTextStart = eventTimestamp;
-            // 创建文字片段
-            messages.push({
-              id: event.messageId || this.generateId(),
-              role: 'assistant',
+            addFragment({
               type: 'text',
               content: '',
-              reasoning: '',
-              toolCalls: null,
-              startTime: eventTimestamp,
+              messageId: event.messageId || '',
             });
             break;
           }
 
           case 'TEXT_MESSAGE_CONTENT': {
-            // 追加到最后的文字片段
-            const lastMsg = messages[messages.length - 1];
-            if (
-              lastMsg &&
-              lastMsg.role === 'assistant' &&
-              !lastMsg.isReasoningBlock &&
-              !lastMsg.isToolCall
-            ) {
-              lastMsg.content += event.delta || '';
+            const activity = getCurrentActivity();
+            if (activity) {
+              const lastFragment =
+                activity.fragments[activity.fragments.length - 1];
+              if (lastFragment && lastFragment.type === 'text') {
+                lastFragment.content += event.delta || '';
+              }
+            } else {
+              const lastMsg = messages[messages.length - 1];
+              if (lastMsg && lastMsg.type === 'text') {
+                lastMsg.content += event.delta || '';
+              }
             }
             break;
           }
 
-          case 'TEXT_MESSAGE_END': {
-            currentTextStart = null;
+          case 'TEXT_MESSAGE_END':
             break;
-          }
 
-          // 工具调用
           case 'TOOL_CALL_START': {
-            // 创建工具调用片段
             const toolCallData = {
               id: event.toolCallId,
               name: event.toolCallName,
@@ -879,15 +1055,10 @@ export default {
               executionTime: '',
             };
             toolCallMap.set(event.toolCallId, toolCallData);
-            messages.push({
-              id: event.toolCallId,
-              role: 'assistant',
+            addFragment({
               type: 'tool_call',
-              content: '',
-              reasoning: '',
-              toolCalls: [toolCallData],
-              isToolCall: true,
-              startTime: eventTimestamp,
+              toolCall: toolCallData,
+              messageId: event.messageId || '',
             });
             break;
           }
@@ -901,153 +1072,130 @@ export default {
           }
 
           case 'TOOL_CALL_END': {
-            if (toolCallMap.has(event.toolCallId)) {
-              const toolCall = toolCallMap.get(event.toolCallId);
-              if (toolCall.startTime) {
-                toolCall.executionTime = this.formatDuration(
-                  eventTimestamp - toolCall.startTime,
-                );
-              }
-            }
-            toolCallMap.delete(event.toolCallId);
+            // 不删除 toolCallMap，等 TOOL_CALL_RESULT 处理
             break;
           }
 
           case 'TOOL_CALL_RESULT': {
-            // 找到对应的工具调用片段并更新结果
-            const toolCallMsg = messages.find(m => m.id === event.toolCallId);
-            if (
-              toolCallMsg &&
-              toolCallMsg.toolCalls &&
-              toolCallMsg.toolCalls[0]
-            ) {
-              toolCallMsg.toolCalls[0].result = event.content || '';
-              if (toolCallMsg.toolCalls[0].startTime) {
-                toolCallMsg.toolCalls[0].executionTime = this.formatDuration(
-                  eventTimestamp - toolCallMsg.toolCalls[0].startTime,
+            let executionTime = '';
+            if (toolCallMap.has(event.toolCallId)) {
+              const toolCall = toolCallMap.get(event.toolCallId);
+              toolCall.result = event.content || '';
+              toolCall.status = 'completed';
+              if (toolCall.startTime && eventTimestamp) {
+                executionTime = formatDuration(
+                  eventTimestamp - toolCall.startTime,
                 );
+                toolCall.executionTime = executionTime;
               }
+              toolCallMap.delete(event.toolCallId);
             }
-            break;
-          }
-
-          // Workspace 活动快照
-          case 'ACTIVITY_SNAPSHOT': {
-            if (event.activityType === 'workspace' && event.content) {
-              // 更新 workspace store
-              this.handleWorkspaceActivity({
-                runId: event.content.runId,
-                threadId: event.content.threadId || this.currentThreadId,
-                fileCount: event.content.fileCount || 0,
-                totalSize: event.content.totalSize || 0,
-                timestamp: event.content.timestamp || eventTimestamp,
-              });
-
-              // 创建 workspace 片段消息
-              messages.push({
-                id: event.messageId || this.generateId(),
-                role: 'assistant',
-                type: 'workspace',
-                isWorkspaceActivity: true,
-                workspaceInfo: {
-                  fileCount: event.content.fileCount || 0,
-                  totalSize: event.content.totalSize || 0,
-                },
-                runId: event.content.runId,
-                toolCalls: null,
-              });
+            const activity = getCurrentActivity();
+            if (activity) {
+              const fragment = activity.fragments.find(
+                f =>
+                  f.type === 'tool_call' && f.toolCall?.id === event.toolCallId,
+              );
+              if (fragment && fragment.toolCall) {
+                fragment.toolCall.result = event.content || '';
+                fragment.toolCall.status = 'completed';
+                fragment.toolCall.executionTime = executionTime;
+              }
+            } else {
+              const toolCallMsg = messages.find(
+                m =>
+                  m.type === 'tool_call' && m.toolCall?.id === event.toolCallId,
+              );
+              if (toolCallMsg && toolCallMsg.toolCall) {
+                toolCallMsg.toolCall.result = event.content || '';
+                toolCallMsg.toolCall.status = 'completed';
+                toolCallMsg.toolCall.executionTime = executionTime;
+              }
             }
             break;
           }
         }
       }
 
-      // 过滤掉空的片段，合并相邻的同类型片段
-      return this.mergeAssistantFragments(messages);
+      // 处理未关闭的 activity
+      while (activityStack.length > 0) {
+        const activity = activityStack.pop();
+        if (activityStack.length > 0) {
+          activityStack[activityStack.length - 1].fragments.push(activity);
+        } else {
+          messages.push({
+            id: this.generateId(),
+            role: 'assistant',
+            ...activity,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      return this.mergeToFragments(messages);
     },
 
-    // 合并相邻的助手片段，保持展示简洁
-    mergeAssistantFragments(messages) {
+    // 将消息合并为带 fragments 的格式
+    mergeToFragments(messages) {
       const result = [];
       let currentAssistant = null;
 
       for (const msg of messages) {
         if (msg.role === 'user') {
-          // 用户消息直接添加
           if (currentAssistant) {
             result.push(currentAssistant);
             currentAssistant = null;
           }
           result.push(msg);
         } else if (msg.role === 'assistant') {
-          // 合并连续的文字片段到当前助手消息
           if (!currentAssistant) {
             currentAssistant = {
-              id: msg.id,
+              id: msg.id || this.generateId(),
               role: 'assistant',
-              content: msg.content || '',
-              reasoning: msg.reasoning || '',
-              toolCalls: msg.toolCalls ? [...msg.toolCalls] : [],
-              fragments: [], // 保存原始片段顺序
-              reasoningDuration: '',
-              toolDuration: '',
+              content: '',
+              reasoning: '',
+              toolCalls: [],
+              fragments: [],
             };
           }
 
-          // 记录片段（包含持续时间信息）
-          if (msg.isReasoningBlock) {
+          if (msg.type === 'activity') {
+            currentAssistant.fragments.push({
+              type: 'activity',
+              activityType: msg.activityType,
+              agentName: msg.agentName,
+              fragments: msg.fragments || [],
+            });
+          } else if (msg.type === 'reasoning') {
             currentAssistant.fragments.push({
               type: 'reasoning',
-              content: msg.reasoning,
+              content: msg.content,
               duration: msg.duration || '',
             });
-            currentAssistant.reasoning = msg.reasoning;
-            currentAssistant.reasoningDuration = msg.duration || '';
-          } else if (msg.isToolCall && msg.toolCalls && msg.toolCalls[0]) {
+            currentAssistant.reasoning = msg.content;
+          } else if (msg.type === 'tool_call' && msg.toolCall) {
             currentAssistant.fragments.push({
               type: 'tool_call',
-              toolCall: msg.toolCalls[0],
+              toolCall: msg.toolCall,
             });
-            if (!currentAssistant.toolCalls) {
-              currentAssistant.toolCalls = [];
-            }
-            currentAssistant.toolCalls.push(msg.toolCalls[0]);
-          } else if (msg.isWorkspaceActivity) {
-            // Workspace 活动片段
+            currentAssistant.toolCalls.push(msg.toolCall);
+          } else if (msg.type === 'workspace') {
             currentAssistant.fragments.push({
               type: 'workspace',
               workspaceInfo: msg.workspaceInfo,
               runId: msg.runId,
             });
-          } else if (msg.content) {
+          } else if (msg.type === 'text' && msg.content) {
             currentAssistant.fragments.push({
               type: 'text',
               content: msg.content,
             });
-            currentAssistant.content =
-              (currentAssistant.content || '') + msg.content;
+            currentAssistant.content += msg.content;
           }
         }
       }
 
-      // 添加最后的助手消息
       if (currentAssistant) {
-        // 计算工具总时间
-        if (
-          currentAssistant.toolCalls &&
-          currentAssistant.toolCalls.length > 0
-        ) {
-          let totalToolTime = 0;
-          currentAssistant.toolCalls.forEach(tc => {
-            if (tc.executionTime) {
-              const parsed = this.parseDuration(tc.executionTime);
-              totalToolTime += parsed;
-            }
-          });
-          if (totalToolTime > 0) {
-            currentAssistant.toolDuration = this.formatDuration(totalToolTime);
-          }
-        }
         result.push(currentAssistant);
       }
 
@@ -1156,14 +1304,10 @@ export default {
         const res = await getGeneralAgentConfig({
           threadId: this.currentThreadId,
         });
-        console.log('loadConfig response:', res);
         if (res.code === 0 && res.data) {
           if (res.data.modelConfig) {
             const modelConfig = res.data.modelConfig;
-            console.log('modelConfig:', modelConfig);
-            // 使用 model 或 modelId，取决于后端返回
             this.selectedModel = modelConfig.modelId || modelConfig.model || '';
-            console.log('selectedModel set to:', this.selectedModel);
           }
           if (res.data.toolList && Array.isArray(res.data.toolList)) {
             this.selectedTools = res.data.toolList.map(tool => ({
@@ -1187,9 +1331,6 @@ export default {
 
     async saveModelConfig(silent = false) {
       if (!this.currentThreadId) {
-        if (!silent) {
-          this.$message.warning('请先创建对话');
-        }
         return;
       }
       if (!this.selectedModel) {
@@ -1242,6 +1383,18 @@ export default {
       return '';
     },
 
+    extractFilesFromContent(content) {
+      if (!Array.isArray(content)) return null;
+      const files = content.filter(item => item.type === 'binary');
+      if (files.length === 0) return null;
+      return files.map(file => ({
+        name: file.fileName || 'unknown',
+        type: file.mimeType || 'application/octet-stream',
+        url: file.url,
+        displayUrl: file.url,
+      }));
+    },
+
     handleKeyDown(e) {
       if (e.shiftKey) return;
       e.preventDefault();
@@ -1290,6 +1443,7 @@ export default {
               name: file.name,
               type: file.raw.type,
               url: res.data.files[0].filePath, // 原始 minio URL，用于发送给后端
+              fileName: res.data.files[0].fileName, // 服务器返回的文件名
               displayUrl: this.convertToExternalUrl(res.data.files[0].filePath), // 转换后的 URL，用于前端显示
               uploading: false,
               uploadProgress: 100,
@@ -1328,11 +1482,6 @@ export default {
       this.saveModelConfig();
     },
 
-    // 模型搜索过滤
-    filterModel(keyword) {
-      this.modelSearchKeyword = keyword || '';
-    },
-
     isToolSelected(toolId) {
       return this.selectedTools.some(t => t.toolId === toolId);
     },
@@ -1352,24 +1501,6 @@ export default {
       await this.saveModelConfig(true);
     },
 
-    getConditionLabel(condition) {
-      const labels = {
-        none: '可选',
-        optional: '推荐',
-        required: '必选',
-      };
-      return labels[condition] || condition;
-    },
-
-    getConditionType(condition) {
-      const types = {
-        none: 'info',
-        optional: 'warning',
-        required: 'danger',
-      };
-      return types[condition] || 'info';
-    },
-
     async sendMessage() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
@@ -1385,9 +1516,10 @@ export default {
         return;
       }
 
-      if (!this.currentThreadId) {
-        const created = await this.createConversation();
-        if (!created) {
+      if (this.isNewConversation || !this.currentThreadId) {
+        const title = content.slice(0, 50);
+        const threadId = await this.createConversationWithTitle(title);
+        if (!threadId) {
           this.$message.error('创建对话失败，请重试');
           return;
         }
@@ -1439,6 +1571,7 @@ export default {
           type: 'binary',
           mimeType: file.type || 'application/octet-stream',
           url: file.url, // 使用服务器返回的 HTTP URL
+          fileName: file.fileName, // 服务器返回的文件名
         });
       });
 
@@ -1465,12 +1598,6 @@ export default {
         toolResults: [],
         fragments: [],
         isStreaming: true,
-        stageTimers: {
-          thinking: { start: null, duration: '' },
-          tool: { start: null, duration: '' },
-        },
-        reasoningDuration: '',
-        toolDuration: '',
         threadId: streamingThreadId,
       };
 
@@ -1479,6 +1606,10 @@ export default {
         isStreaming: true,
         abortController: abortController,
         streamingMessage: assistantMessage,
+        activityStack: [],
+        currentActivity: null,
+        currentFragment: null,
+        toolCallMap: new Map(),
       });
 
       // 确保该会话的消息列表存在
@@ -1491,6 +1622,10 @@ export default {
       messages.push(assistantMessage);
 
       this.currentStage = 'understanding';
+
+      // 重置滚动状态
+      this.userHasScrolled = false;
+      this.showScrollToBottom = false;
 
       const parser = new SSEEventParser();
 
@@ -1541,12 +1676,35 @@ export default {
         }
         assistantMessage.isStreaming = false;
         this.currentStage = '';
+        // 流式结束后滚动到底部
+        if (this.currentThreadId === streamingThreadId) {
+          this.userHasScrolled = false;
+          this.showScrollToBottom = false;
+          this.$nextTick(() => this.scrollToBottom(true));
+        }
       }
     },
 
     handleSSEEvent(event, assistantMessage, parser, streamingThreadId) {
       const parsed = parser.parse(event);
       if (!parsed) return;
+
+      const streamState = this.streamingMap[streamingThreadId];
+      if (!streamState) return;
+
+      const getCurrentFragments = () => {
+        if (streamState.currentActivity) {
+          return streamState.currentActivity.fragments;
+        }
+        return assistantMessage.fragments;
+      };
+
+      const addFragment = fragment => {
+        const fragments = getCurrentFragments();
+        if (fragments) {
+          fragments.push(fragment);
+        }
+      };
 
       switch (parsed.type) {
         case 'RUN_STARTED':
@@ -1556,265 +1714,248 @@ export default {
           }
           break;
 
-        case 'TEXT_MESSAGE_START':
-          assistantMessage.id = parsed.messageId;
-          break;
-
-        case 'TEXT_MESSAGE_CONTENT':
-          if (
-            !assistantMessage.content &&
-            this.currentThreadId === streamingThreadId &&
-            this.currentStage !== 'generating'
+        case 'ACTIVITY_SNAPSHOT': {
+          const activityContent = parsed.content || {};
+          if (parsed.activityType === ActivityType.SUB_AGENT) {
+            if (activityContent.status === ActivityStatus.STARTED) {
+              const activity = {
+                type: 'activity',
+                activityType: parsed.activityType,
+                activityId: parsed.activityId || '',
+                agentName: activityContent.agentName || '',
+                fragments: [],
+                isStreaming: true,
+                startTime: Date.now(),
+                duration: '',
+              };
+              // 先添加到父级 fragments，再设置 currentActivity
+              const parentFragments = getCurrentFragments();
+              if (parentFragments) {
+                parentFragments.push(activity);
+              }
+              streamState.currentActivity = activity;
+              streamState.activityStack.push(activity);
+            } else if (activityContent.status === ActivityStatus.FINISHED) {
+              if (streamState.activityStack.length > 0) {
+                const finishedActivity = streamState.activityStack.pop();
+                finishedActivity.isStreaming = false;
+                if (finishedActivity.startTime) {
+                  finishedActivity.duration = formatDuration(
+                    Date.now() - finishedActivity.startTime,
+                  );
+                }
+                if (streamState.activityStack.length > 0) {
+                  streamState.currentActivity =
+                    streamState.activityStack[
+                      streamState.activityStack.length - 1
+                    ];
+                } else {
+                  streamState.currentActivity = null;
+                }
+              }
+            }
+          } else if (
+            parsed.activityType === ActivityType.WORKSPACE &&
+            activityContent.runId
           ) {
-            this.currentStage = 'generating';
-          }
-          if (
-            parsed.messageId === assistantMessage.id ||
-            !assistantMessage.id
-          ) {
-            assistantMessage.id = parsed.messageId;
-            assistantMessage.content += parsed.delta || '';
+            this.handleWorkspaceActivity({
+              runId: activityContent.runId,
+              threadId: activityContent.threadId || this.currentThreadId,
+              fileCount: activityContent.fileCount || 0,
+              totalSize: activityContent.totalSize || 0,
+              timestamp: activityContent.timestamp || Date.now(),
+            });
+            addFragment({
+              type: 'workspace',
+              workspaceInfo: {
+                fileCount: activityContent.fileCount || 0,
+                totalSize: activityContent.totalSize || 0,
+              },
+              runId: activityContent.runId,
+            });
+            if (this.currentThreadId === streamingThreadId) {
+              this.$notify({
+                type: 'success',
+                title: '工作空间已更新',
+                message: `生成了 ${activityContent.fileCount || 0} 个文件`,
+                duration: 3000,
+                onClick: () => {
+                  this.showPanel();
+                },
+              });
+            }
           }
           break;
+        }
 
-        case 'REASONING_START':
         case 'REASONING_MESSAGE_START':
-          if (
-            this.currentThreadId === streamingThreadId &&
-            this.currentStage !== 'thinking'
-          ) {
+          streamState.currentFragment = {
+            type: 'reasoning',
+            content: '',
+            messageId: parsed.messageId || '',
+            startTime: Date.now(),
+            isStreaming: true,
+          };
+          addFragment(streamState.currentFragment);
+          if (this.currentThreadId === streamingThreadId) {
             this.currentStage = 'thinking';
-          }
-          if (!assistantMessage.stageTimers.thinking.start) {
-            assistantMessage.stageTimers.thinking.start = Date.now();
           }
           break;
 
         case 'REASONING_MESSAGE_CONTENT':
-          if (!assistantMessage.stageTimers.thinking.start) {
-            assistantMessage.stageTimers.thinking.start = Date.now();
-          }
-          assistantMessage.reasoning += parsed.delta || '';
-          const thinkingElapsed =
-            Date.now() - assistantMessage.stageTimers.thinking.start;
-          assistantMessage.reasoningDuration =
-            this.formatDuration(thinkingElapsed);
-          break;
-
-        case 'REASONING_END':
-        case 'REASONING_MESSAGE_END':
-          if (assistantMessage.stageTimers.thinking.start) {
-            const elapsed =
-              Date.now() - assistantMessage.stageTimers.thinking.start;
-            assistantMessage.reasoningDuration = this.formatDuration(elapsed);
-          }
-          break;
-
-        case 'TOOL_CALL_START':
           if (
-            this.currentThreadId === streamingThreadId &&
-            this.currentStage !== 'tool_calling'
+            streamState.currentFragment &&
+            streamState.currentFragment.type === 'reasoning'
           ) {
-            this.currentStage = 'tool_calling';
+            streamState.currentFragment.content += parsed.delta || '';
+            if (!streamState.currentActivity) {
+              assistantMessage.reasoning += parsed.delta || '';
+            }
           }
-          if (!assistantMessage.stageTimers.tool.start) {
-            assistantMessage.stageTimers.tool.start = Date.now();
+          break;
+
+        case 'REASONING_MESSAGE_END':
+          if (
+            streamState.currentFragment &&
+            streamState.currentFragment.type === 'reasoning'
+          ) {
+            if (streamState.currentFragment.startTime) {
+              streamState.currentFragment.duration = formatDuration(
+                Date.now() - streamState.currentFragment.startTime,
+              );
+            }
+            streamState.currentFragment.isStreaming = false;
           }
-          assistantMessage.toolCalls.push({
+          streamState.currentFragment = null;
+          break;
+
+        case 'TEXT_MESSAGE_START':
+          streamState.currentFragment = {
+            type: 'text',
+            content: '',
+            messageId: parsed.messageId || '',
+            isStreaming: true,
+          };
+          addFragment(streamState.currentFragment);
+          assistantMessage.id = parsed.messageId || assistantMessage.id;
+          if (this.currentThreadId === streamingThreadId) {
+            this.currentStage = 'generating';
+          }
+          break;
+
+        case 'TEXT_MESSAGE_CONTENT':
+          if (
+            streamState.currentFragment &&
+            streamState.currentFragment.type === 'text'
+          ) {
+            streamState.currentFragment.content += parsed.delta || '';
+            if (!streamState.currentActivity) {
+              assistantMessage.content += parsed.delta || '';
+            }
+          }
+          break;
+
+        case 'TEXT_MESSAGE_END':
+          if (
+            streamState.currentFragment &&
+            streamState.currentFragment.type === 'text'
+          ) {
+            streamState.currentFragment.isStreaming = false;
+          }
+          streamState.currentFragment = null;
+          break;
+
+        case 'TOOL_CALL_START': {
+          const toolCallData = {
             id: parsed.toolCallId,
             name: parsed.toolCallName,
             arguments: '',
             status: 'running',
+            result: '',
             startTime: Date.now(),
-          });
+            executionTime: '',
+          };
+          streamState.toolCallMap.set(parsed.toolCallId, toolCallData);
+          assistantMessage.toolCalls.push(toolCallData);
+          streamState.currentFragment = {
+            type: 'tool_call',
+            toolCall: toolCallData,
+            messageId: parsed.messageId || '',
+          };
+          addFragment(streamState.currentFragment);
+          if (this.currentThreadId === streamingThreadId) {
+            this.currentStage = 'tool_calling';
+          }
           break;
+        }
 
         case 'TOOL_CALL_ARGS':
-          const tool = assistantMessage.toolCalls.find(
-            t => t.id === parsed.toolCallId,
-          );
-          if (tool) tool.arguments += parsed.delta || '';
+          if (streamState.toolCallMap.has(parsed.toolCallId)) {
+            const toolCall = streamState.toolCallMap.get(parsed.toolCallId);
+            toolCall.arguments += parsed.delta || '';
+          }
           break;
 
         case 'TOOL_CALL_END':
-          const toolToEnd = assistantMessage.toolCalls.find(
+          // 不设置 completed，不计算时间，等 TOOL_CALL_RESULT
+          streamState.currentFragment = null;
+          break;
+
+        case 'TOOL_CALL_RESULT':
+          if (streamState.toolCallMap.has(parsed.toolCallId)) {
+            const toolCall = streamState.toolCallMap.get(parsed.toolCallId);
+            toolCall.result = parsed.content || '';
+            toolCall.status = 'completed';
+            if (toolCall.startTime) {
+              toolCall.executionTime = formatDuration(
+                Date.now() - toolCall.startTime,
+              );
+            }
+            streamState.toolCallMap.delete(parsed.toolCallId);
+          }
+          const tc = assistantMessage.toolCalls.find(
             t => t.id === parsed.toolCallId,
           );
-          if (toolToEnd) {
-            toolToEnd.status = 'completed';
-            if (toolToEnd.startTime) {
-              toolToEnd.executionTime = this.formatDuration(
-                Date.now() - toolToEnd.startTime,
+          if (tc) {
+            tc.result = parsed.content || '';
+            tc.status = 'completed';
+            if (tc.startTime) {
+              tc.executionTime = formatDuration(Date.now() - tc.startTime);
+            }
+          }
+          const fragments = getCurrentFragments();
+          const toolCallFragment = fragments.find(
+            f => f.type === 'tool_call' && f.toolCall?.id === parsed.toolCallId,
+          );
+          if (toolCallFragment && toolCallFragment.toolCall) {
+            toolCallFragment.toolCall.result = parsed.content || '';
+            toolCallFragment.toolCall.status = 'completed';
+            if (toolCallFragment.toolCall.startTime) {
+              toolCallFragment.toolCall.executionTime = formatDuration(
+                Date.now() - toolCallFragment.toolCall.startTime,
               );
             }
           }
           break;
 
-        case 'TOOL_CALL_RESULT':
-          if (!assistantMessage.toolResults) {
-            assistantMessage.toolResults = [];
-          }
-          assistantMessage.toolResults.push({
-            toolCallId: parsed.toolCallId,
-            content: parsed.content,
-          });
-          if (assistantMessage.stageTimers.tool.start) {
-            const toolElapsed =
-              Date.now() - assistantMessage.stageTimers.tool.start;
-            assistantMessage.toolDuration = this.formatDuration(toolElapsed);
-          }
-          break;
-
         case 'RUN_FINISHED':
-          // SSE 结束时规范化 fragments，确保所有内容都被正确添加
-          this.normalizeFragments(assistantMessage);
-          break;
-
-        case 'ACTIVITY_SNAPSHOT':
-          console.log('[ACTIVITY_SNAPSHOT] Received:', parsed);
-          this.handleActivitySnapshot(
-            parsed,
-            assistantMessage,
-            streamingThreadId,
-          );
+          while (streamState.activityStack.length > 0) {
+            const activity = streamState.activityStack.pop();
+            if (streamState.activityStack.length > 0) {
+              streamState.activityStack[
+                streamState.activityStack.length - 1
+              ].fragments.push(activity);
+            } else {
+              assistantMessage.fragments.push(activity);
+            }
+          }
+          streamState.currentActivity = null;
+          streamState.currentFragment = null;
           break;
       }
-      // 只有当前会话才滚动到底部
+
       if (this.currentThreadId === streamingThreadId) {
         this.$nextTick(() => this.scrollToBottom());
-      }
-    },
-
-    handleActivitySnapshot(event, assistantMessage, streamingThreadId) {
-      console.log('[handleActivitySnapshot] event:', event);
-      console.log('[handleActivitySnapshot] activityType:', event.activityType);
-      console.log(
-        '[handleActivitySnapshot] ActivityType.WORKSPACE:',
-        ActivityType.WORKSPACE,
-      );
-      console.log('[handleActivitySnapshot] content:', event.content);
-      console.log(
-        '[handleActivitySnapshot] assistantMessage.fragments:',
-        assistantMessage?.fragments,
-      );
-
-      const { activityType, content } = event;
-
-      if (activityType === ActivityType.WORKSPACE) {
-        console.log(
-          '[handleActivitySnapshot] MATCH! Processing workspace activity',
-        );
-
-        // 处理 Workspace 活动
-        const result = this.handleWorkspaceActivity({
-          runId: content.runId || this.currentRunId,
-          threadId: content.threadId || this.currentThreadId,
-          fileCount: content.fileCount || 0,
-          totalSize: content.totalSize || 0,
-          timestamp: content.timestamp || Date.now(),
-        });
-
-        // 添加 workspace 片段到消息
-        if (assistantMessage.fragments) {
-          console.log('[handleActivitySnapshot] Adding fragment to message');
-          assistantMessage.fragments.push({
-            type: 'workspace',
-            workspaceInfo: {
-              fileCount: content.fileCount || 0,
-              totalSize: content.totalSize || 0,
-            },
-            runId: content.runId || this.currentRunId,
-          });
-          console.log(
-            '[handleActivitySnapshot] fragments after push:',
-            assistantMessage.fragments,
-          );
-        } else {
-          console.log(
-            '[handleActivitySnapshot] WARNING: fragments is not initialized',
-          );
-        }
-
-        // 只有当前会话时才显示通知
-        if (this.currentThreadId === streamingThreadId) {
-          this.$notify({
-            type: 'success',
-            title: '工作空间已更新',
-            message: `生成了 ${content.fileCount || 0} 个文件`,
-            duration: 3000,
-            onClick: () => {
-              this.showPanel();
-            },
-          });
-        }
-
-        // 如果面板已打开，刷新文件列表
-        if (result && result.shouldRefresh) {
-          this.loadWorkspaceFiles();
-        }
-      } else {
-        console.log(
-          '[handleActivitySnapshot] NOT MATCHED, activityType:',
-          activityType,
-        );
-      }
-    },
-
-    // 规范化 fragments，确保所有内容都被正确添加
-    normalizeFragments(assistantMessage) {
-      if (!assistantMessage) return;
-
-      const fragments = [];
-      let hasReasoning =
-        assistantMessage.reasoning && assistantMessage.reasoning.length > 0;
-      let hasToolCalls =
-        assistantMessage.toolCalls && assistantMessage.toolCalls.length > 0;
-      let hasContent =
-        assistantMessage.content && assistantMessage.content.length > 0;
-      let hasWorkspace =
-        assistantMessage.fragments &&
-        assistantMessage.fragments.some(f => f.type === 'workspace');
-
-      // 如果已经有 fragments 且包含 workspace，需要重新组织
-      const existingWorkspaceFragments = (
-        assistantMessage.fragments || []
-      ).filter(f => f.type === 'workspace');
-
-      // 添加思考片段
-      if (hasReasoning) {
-        fragments.push({
-          type: 'reasoning',
-          content: assistantMessage.reasoning,
-          duration: assistantMessage.reasoningDuration || '',
-        });
-      }
-
-      // 添加工具调用片段
-      if (hasToolCalls) {
-        assistantMessage.toolCalls.forEach(tc => {
-          fragments.push({
-            type: 'tool_call',
-            toolCall: tc,
-          });
-        });
-      }
-
-      // 添加文本片段
-      if (hasContent) {
-        fragments.push({
-          type: 'text',
-          content: assistantMessage.content,
-        });
-      }
-
-      // 添加工作空间片段
-      existingWorkspaceFragments.forEach(ws => {
-        fragments.push(ws);
-      });
-
-      // 只有当有内容时才更新 fragments
-      if (fragments.length > 0) {
-        assistantMessage.fragments = fragments;
       }
     },
 
@@ -1853,17 +1994,6 @@ export default {
     },
 
     handleViewWorkspace(data) {
-      console.log('[handleViewWorkspace] data:', data);
-      console.log(
-        '[handleViewWorkspace] currentThreadId:',
-        this.currentThreadId,
-      );
-      console.log(
-        '[handleViewWorkspace] activeWorkspace before:',
-        this.activeWorkspace,
-      );
-
-      // 设置 activeWorkspace
       this.setActiveWorkspace({
         runId: data.runId,
         threadId: data.threadId || this.currentThreadId,
@@ -1871,33 +2001,7 @@ export default {
         totalSize: data.totalSize || 0,
         timestamp: Date.now(),
       });
-
-      console.log(
-        '[handleViewWorkspace] activeWorkspace after:',
-        this.activeWorkspace,
-      );
-
-      // 收起会话列表
-      if (!this.sidebarCollapsed) {
-        this.sidebarCollapsed = true;
-      }
-      // 打开工作空间面板
       this.showPanel();
-
-      console.log('[handleViewWorkspace] panelVisible:', this.panelVisible);
-    },
-
-    formatDuration(ms) {
-      if (ms < 1000) {
-        return `${ms}ms`;
-      }
-      const seconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      if (minutes > 0) {
-        return `${minutes}m ${secs}s`;
-      }
-      return `${secs}s`;
     },
 
     stopStreaming() {
@@ -1911,9 +2015,46 @@ export default {
       }
     },
 
-    scrollToBottom() {
-      const anchor = this.$refs.scrollAnchor;
-      if (anchor) anchor.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom(force = false) {
+      if (!force && this.userHasScrolled) {
+        this.showScrollToBottom = true;
+        return;
+      }
+      this.isAutoScrolling = true;
+      const container = this.$refs.messageArea;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+      setTimeout(() => {
+        this.isAutoScrolling = false;
+      }, 100);
+    },
+
+    handleMessageAreaScroll() {
+      if (this.isAutoScrolling) return;
+
+      const container = this.$refs.messageArea;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const threshold = 150;
+
+      const isNearBottom = distanceFromBottom < threshold;
+
+      if (isNearBottom) {
+        this.userHasScrolled = false;
+        this.showScrollToBottom = false;
+      } else {
+        this.userHasScrolled = true;
+        this.showScrollToBottom = true;
+      }
+    },
+
+    handleScrollToBottomClick() {
+      this.userHasScrolled = false;
+      this.showScrollToBottom = false;
+      this.scrollToBottom(true);
     },
 
     generateId() {
@@ -1927,6 +2068,179 @@ export default {
         return message.toolResults;
       }
       return [];
+    },
+
+    getPreviewType(file) {
+      if (!file || !file.name) return 'unsupported';
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      const typeMap = {
+        image: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'],
+        video: ['mp4', 'webm', 'ogg', 'mov', 'm4v', 'avi', 'mkv'],
+        audio: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'wma'],
+        pdf: ['pdf'],
+        ppt: ['ppt', 'pptx'],
+        excel: ['xls', 'xlsx'],
+        office: ['doc', 'docx'],
+        html: ['html', 'htm'],
+        markdown: ['md'],
+        text: [
+          'txt',
+          'json',
+          'js',
+          'ts',
+          'jsx',
+          'tsx',
+          'vue',
+          'py',
+          'java',
+          'go',
+          'rs',
+          'c',
+          'cpp',
+          'h',
+          'hpp',
+          'cs',
+          'rb',
+          'php',
+          'swift',
+          'kt',
+          'scala',
+          'css',
+          'scss',
+          'sass',
+          'less',
+          'xml',
+          'yaml',
+          'yml',
+          'toml',
+          'ini',
+          'conf',
+          'cfg',
+          'sh',
+          'bash',
+          'zsh',
+          'bat',
+          'sql',
+          'dockerfile',
+          'makefile',
+          'r',
+          'm',
+          'lua',
+          'pl',
+          'pm',
+        ],
+      };
+
+      for (const [type, exts] of Object.entries(typeMap)) {
+        if (exts.includes(ext)) {
+          return type;
+        }
+      }
+
+      return 'unsupported';
+    },
+
+    async handlePreviewFile(data) {
+      const { file, filePath, threadId, runId } = data;
+
+      this.previewFile = file;
+      this.previewLoading = true;
+      this.previewVisible = true;
+      this.previewUrl = '';
+      this.previewContent = '';
+      this.previewType = '';
+      this.previewBlobUrl = '';
+      this.previewExcelData = null;
+
+      try {
+        this.previewFilePath = filePath;
+        this.previewFileExt = file.name.split('.').pop().toLowerCase();
+        const blob = await previewGeneralAgentWorkspace({
+          threadId,
+          runId,
+          path: filePath,
+        });
+
+        this.previewType = this.getPreviewType(file);
+
+        if (
+          ['image', 'video', 'audio', 'pdf', 'html'].includes(this.previewType)
+        ) {
+          this.previewBlobUrl = URL.createObjectURL(blob);
+          this.previewUrl = this.previewBlobUrl;
+        } else if (this.previewType === 'ppt') {
+          this.previewUrl = blob;
+          this.previewBlobUrl = blob;
+        } else if (['markdown', 'text'].includes(this.previewType)) {
+          this.previewContent = await blob.text();
+        } else if (this.previewType === 'excel') {
+          const arrayBuffer = await blob.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          const excelData = workbook.SheetNames.map(sheetName => {
+            const sheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(sheet, {
+              header: 1,
+              defval: '',
+            });
+            const merges = sheet['!merges'] || [];
+            return {
+              name: sheetName,
+              data: jsonData,
+              merges: merges.map(m => ({
+                sr: m.s.r,
+                sc: m.s.c,
+                er: m.e.r,
+                ec: m.e.c,
+              })),
+              colCount: Math.max(
+                1,
+                sheet['!ref']
+                  ? XLSX.utils.decode_range(sheet['!ref']).e.c + 1
+                  : 1,
+              ),
+            };
+          });
+          this.previewExcelData = excelData;
+        }
+      } catch (error) {
+        console.error('预览文件失败:', error);
+        this.$message.error('预览文件失败');
+        this.previewType = 'unsupported';
+      } finally {
+        this.previewLoading = false;
+      }
+    },
+
+    closePreview() {
+      if (this.previewBlobUrl) {
+        URL.revokeObjectURL(this.previewBlobUrl);
+        this.previewBlobUrl = '';
+      }
+    },
+
+    async downloadPreviewFile(file) {
+      if (!file || !this.previewFilePath) return;
+
+      try {
+        const blob = await downloadGeneralAgentWorkspace({
+          threadId: this.activeWorkspace?.threadId || this.currentThreadId,
+          runId: this.activeWorkspace?.runId || this.currentRunId,
+          path: this.previewFilePath,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.$message.success('下载成功');
+      } catch (error) {
+        console.error('下载文件失败:', error);
+        this.$message.error('下载文件失败');
+      }
     },
 
     // 重新生成 - 找到上一条用户消息并重新发送
@@ -1948,23 +2262,48 @@ export default {
 
       if (!userMessage) return;
 
-      // 删除当前助手消息及之后的消息
-      this.messageList = this.messageList.slice(0, messageIndex);
+      // 删除当前助手消息（保留用户消息和之前的消息）
+      this.messageList.splice(messageIndex, 1);
 
-      // 重新构建用户消息
-      const userContent = userMessage.content;
-      const userFiles = userMessage.files || [];
+      // 构建请求消息
+      const requestMessage = this.buildRequestMessage(userMessage);
 
-      // 设置输入内容并触发发送
-      this.inputMessage = typeof userContent === 'string' ? userContent : '';
-      this.uploadedFiles = userFiles.length > 0 ? [...userFiles] : [];
+      // 直接调用 startStreaming，不再添加用户消息
+      this.$nextTick(() => {
+        this.startStreaming(requestMessage);
+      });
+    },
 
-      // 如果有内容，直接发送
-      if (this.inputMessage.trim() || this.uploadedFiles.length > 0) {
-        this.$nextTick(() => {
-          this.sendMessage();
-        });
+    // 根据已存在的用户消息构建请求消息
+    buildRequestMessage(userMessage) {
+      const message = { id: this.generateId(), role: 'user' };
+
+      // 如果没有文件，直接返回文本
+      if (!userMessage.files || userMessage.files.length === 0) {
+        message.content = userMessage.content;
+        return message;
       }
+
+      // 有文件时，构建多部分内容
+      const contentArray = [];
+
+      // 添加文本内容（如果有）
+      if (userMessage.content && userMessage.content.trim()) {
+        contentArray.push({ type: 'text', text: userMessage.content.trim() });
+      }
+
+      // 添加文件内容
+      userMessage.files.forEach(file => {
+        contentArray.push({
+          type: 'binary',
+          mimeType: file.type || 'application/octet-stream',
+          url: file.url,
+          fileName: file.name,
+        });
+      });
+
+      message.content = contentArray;
+      return message;
     },
 
     async handleCommand(command, item) {
@@ -1980,7 +2319,9 @@ export default {
             this.$message.success('删除成功');
             if (this.currentThreadId === item.threadId) {
               this.currentThreadId = '';
+              this.isNewConversation = true;
               this.messageList = [];
+              this.hidePanel();
             }
             this.fetchConversationList();
           }
@@ -2012,8 +2353,10 @@ $message-max-width: 900px;
   left: 0;
   right: 0;
   bottom: 0;
-  background: $claude-bg;
+  background: #f5f7fa;
   overflow: hidden;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .sidebar {
@@ -2022,66 +2365,39 @@ $message-max-width: 900px;
   flex-shrink: 0;
   width: 240px;
   height: 100%;
-  background: $claude-bg-secondary;
-  border-right: 1px solid $claude-border;
-  transition: all 0.3s ease;
+  background: #fff;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition:
+    width 0.3s ease,
+    margin-right 0.3s ease;
+  margin-right: 16px;
 
   &.collapsed {
-    width: 56px;
-    min-width: 56px;
-
-    .sidebar-collapsed-bar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px 0;
-      gap: 12px;
-    }
-
-    .sidebar-header,
-    .sidebar-divider,
-    .conversation-list {
-      display: none;
-    }
+    width: 0;
+    margin-right: 0;
+    box-shadow: none;
   }
 
-  .sidebar-collapsed-bar {
-    display: none;
-  }
-
-  .expand-btn {
-    width: 40px;
-    height: 40px;
+  .sidebar-content {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    cursor: pointer;
-    color: $claude-text-muted;
-    transition: all 0.2s;
-
-    &:hover {
-      background: rgba($claude-primary, 0.1);
-      color: $claude-primary;
-    }
-
-    i {
-      font-size: 18px;
-    }
+    flex-direction: column;
+    width: 240px;
+    height: 100%;
+    flex-shrink: 0;
   }
 
   .sidebar-header {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 16px;
-    border-bottom: 1px solid $claude-border;
+    border-bottom: 1px solid #f0f0f0;
 
     .new-chat-btn {
-      flex: 1;
-      margin-right: 12px;
+      width: 100%;
       border-radius: 12px;
       background: $claude-primary;
       border-color: $claude-primary;
@@ -2092,33 +2408,11 @@ $message-max-width: 900px;
         border-color: $claude-primary-dark;
       }
     }
-
-    .sidebar-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      cursor: pointer;
-      color: $claude-text-muted;
-      transition: all 0.2s;
-      flex-shrink: 0;
-
-      &:hover {
-        color: $claude-primary;
-        background: rgba($claude-primary, 0.1);
-      }
-
-      i {
-        font-size: 18px;
-      }
-    }
   }
 
   .sidebar-divider {
     height: 1px;
-    background: $claude-border;
+    background: #f0f0f0;
     flex-shrink: 0;
   }
 
@@ -2202,6 +2496,9 @@ $message-max-width: 900px;
   min-height: 0;
   position: relative;
   overflow: hidden;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
   &.has-workspace {
     .main-content-body {
@@ -2228,10 +2525,17 @@ $message-max-width: 900px;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: $claude-bg;
-  border-bottom: 1px solid $claude-border;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 12px 12px 0 0;
 
   .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-right {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -2273,34 +2577,14 @@ $message-max-width: 900px;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: $claude-bg;
+  background: #fff;
+  position: relative;
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: $claude-text-muted;
-    padding: 24px;
-
-    .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-      color: #d1d5db;
-    }
-
-    .empty-title {
-      font-size: 20px;
-      color: $claude-text;
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-
-    .empty-tips {
-      font-size: 14px;
-      color: $claude-text-secondary;
-    }
+  &.empty {
+    flex: none;
+    min-height: 0;
+    height: 0;
+    overflow: hidden;
   }
 
   .message-list {
@@ -2309,156 +2593,155 @@ $message-max-width: 900px;
     padding: 24px;
     min-height: 100%;
   }
+
+  .history-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #909399;
+    font-size: 14px;
+    gap: 12px;
+    background: #fff;
+    z-index: 10;
+
+    i {
+      font-size: 32px;
+      color: #10a37f;
+    }
+  }
 }
 
-.typing-indicator {
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 24px;
+  justify-content: center;
+  background: #fff;
+  color: #10a37f;
+  border: 1px solid #10a37f;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  z-index: 100;
 
-  span:not(.typing-text) {
-    width: 8px;
-    height: 8px;
-    background: $claude-primary;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite ease-in-out;
-
-    &:nth-child(1) {
-      animation-delay: 0s;
-    }
-    &:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    &:nth-child(3) {
-      animation-delay: 0.4s;
-    }
+  &:hover {
+    background: #10a37f;
+    color: #fff;
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 163, 127, 0.4);
   }
 
-  .typing-text {
-    margin-left: 8px;
-    color: $claude-text-muted;
-    font-size: 14px;
+  svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
-@keyframes bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.6;
-  }
-  30% {
-    transform: translateY(-6px);
-    opacity: 1;
-  }
+.scroll-btn-fade-enter-active,
+.scroll-btn-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.scroll-btn-fade-enter,
+.scroll-btn-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
 }
 
 .input-area {
   flex: none;
-  background: $claude-bg;
-  border-top: 1px solid $claude-border;
+  background: #fff;
   padding: 16px 24px 24px;
+  border-radius: 0 0 12px 12px;
+
+  &.is-centered {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-top: none;
+    padding: 0 24px;
+
+    .input-container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .welcome-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 32px;
+
+      .welcome-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        background: #fff;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+
+        img {
+          width: 100%;
+          height: 100%;
+          border-radius: 20px;
+          object-fit: cover;
+        }
+
+        i {
+          font-size: 32px;
+          color: #10a37f;
+        }
+      }
+
+      .welcome-title {
+        font-size: 28px;
+        color: $claude-text;
+        font-weight: 600;
+      }
+    }
+
+    .input-footer {
+      display: none;
+    }
+  }
+
+  &:not(.is-centered) {
+    border-top: none;
+  }
 
   .input-container {
     max-width: $message-max-width;
     margin: 0 auto;
-    background: $claude-bg-secondary;
+    background: #fff;
     border-radius: 16px;
-    border: 1px solid $claude-border;
-    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition:
       border-color 0.2s,
       box-shadow 0.2s;
 
     &:focus-within {
       border-color: $claude-primary;
-      box-shadow: 0 0 0 2px rgba($claude-primary, 0.1);
-    }
-  }
-
-  .model-config-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid $claude-border;
-  }
-
-  .model-selector {
-    display: flex;
-    align-items: center;
-
-    ::v-deep .el-select {
-      width: 200px;
-
-      .el-input__inner {
-        background: transparent;
-        border: none;
-        padding-left: 0;
-        font-size: 13px;
-        color: $claude-text;
-      }
-    }
-  }
-
-  .model-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-
-    .model-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .model-provider {
-      flex-shrink: 0;
-      margin-left: 8px;
-      padding: 2px 6px;
-      font-size: 11px;
-      color: #666;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-  }
-
-  .config-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: $claude-text-secondary;
-    background: transparent;
-    border: 1px solid $claude-border;
-    transition: all 0.2s;
-
-    &:hover {
-      background: rgba($claude-primary, 0.08);
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
-    }
-
-    &.has-selection {
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
-      background: rgba($claude-primary, 0.05);
-    }
-
-    i {
-      font-size: 16px;
-    }
-
-    .el-badge {
-      margin-left: 4px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -2574,71 +2857,168 @@ $message-max-width: 900px;
   }
 
   .input-wrapper {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-
     ::v-deep .el-textarea {
-      flex: 1;
-
       .el-textarea__inner {
         background: transparent;
         border: none;
         padding: 0;
         resize: none;
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.6;
         color: $claude-text;
 
         &::placeholder {
-          color: $claude-text-muted;
+          color: #9ca3af;
+        }
+      }
+    }
+  }
+
+  .input-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .model-select-inline {
+        min-width: 200px;
+
+        ::v-deep .el-input__inner {
+          background: transparent;
+          border: none;
+          padding-left: 32px;
+          font-size: 13px;
+          color: $claude-text;
+        }
+
+        ::v-deep .el-input__prefix {
+          left: 8px;
         }
       }
     }
 
-    .input-actions {
+    .toolbar-right {
       display: flex;
       align-items: center;
       gap: 8px;
 
       .action-icon {
-        font-size: 20px;
+        font-size: 18px;
         color: $claude-text-muted;
         cursor: pointer;
-        padding: 4px;
-        border-radius: 6px;
+        padding: 8px;
+        border-radius: 8px;
         transition: all 0.2s;
 
         &:hover {
           color: $claude-primary;
-          background: rgba($claude-primary, 0.1);
+          background: rgba($claude-primary, 0.08);
         }
       }
 
-      .el-button--primary {
-        background: $claude-primary;
-        border-color: $claude-primary;
+      .send-btn {
+        padding: 10px;
+        border: none;
+        color: #5147ff;
+        line-height: 0;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
 
         &:hover {
-          background: $claude-primary-dark;
-          border-color: $claude-primary-dark;
+          background-color: rgba(87, 104, 161, 0.08);
         }
 
-        &:disabled {
-          background: #d1d5db;
-          border-color: #d1d5db;
+        .send-icon {
+          width: 18px;
+          height: 18px;
+          fill: currentColor;
         }
-      }
 
-      .el-button--danger {
-        background: #ef4444;
-        border-color: #ef4444;
-
-        &:hover {
-          background: #dc2626;
-          border-color: #dc2626;
+        .stop-icon {
+          width: 16px;
+          height: 16px;
+          fill: currentColor;
         }
       }
+
+      .stop-btn {
+        background: #fff !important;
+        border: 1px solid #333 !important;
+        color: #333 !important;
+
+        &:hover,
+        &:focus {
+          background: #333 !important;
+          border-color: #333 !important;
+          color: #fff !important;
+        }
+      }
+    }
+  }
+
+  .config-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: $claude-text-secondary;
+    background: transparent;
+    border: 1px solid $claude-border;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba($claude-primary, 0.08);
+      color: $claude-primary;
+      border-color: rgba($claude-primary, 0.3);
+    }
+
+    &.has-selection {
+      color: $claude-primary;
+      border-color: rgba($claude-primary, 0.3);
+      background: rgba($claude-primary, 0.05);
+    }
+
+    i {
+      font-size: 16px;
+    }
+
+    .el-badge {
+      margin-left: 4px;
+    }
+  }
+
+  .model-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+
+    .model-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .model-provider {
+      flex-shrink: 0;
+      margin-left: 8px;
+      padding: 2px 6px;
+      font-size: 11px;
+      color: #666;
+      background: #f5f5f5;
+      border-radius: 4px;
     }
   }
 
@@ -2666,227 +3046,5 @@ $message-max-width: 900px;
 .workspace-panel {
   width: 320px;
   flex-shrink: 0;
-}
-</style>
-
-<style lang="scss">
-// 配置抽屉样式 - 需要非 scoped 才能覆盖 Element UI
-.config-drawer {
-  .drawer-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .drawer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e5e5e5;
-
-    h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 500;
-      color: #1a1a1a;
-    }
-
-    .el-icon-close {
-      font-size: 18px;
-      color: #999;
-      cursor: pointer;
-      transition: color 0.2s;
-
-      &:hover {
-        color: #10a37f;
-      }
-    }
-  }
-
-  .drawer-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 20px;
-  }
-
-  .drawer-section {
-    margin-bottom: 24px;
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #1a1a1a;
-
-      i {
-        font-size: 16px;
-        color: #10a37f;
-      }
-    }
-  }
-
-  .config-loading {
-    text-align: center;
-    color: #999;
-    padding: 24px;
-  }
-
-  .tool-categories {
-    .tool-category {
-      margin-bottom: 16px;
-
-      .category-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #f0f0f0;
-
-        .category-name {
-          font-size: 13px;
-          font-weight: 500;
-          color: #1a1a1a;
-        }
-      }
-    }
-  }
-
-  .tool-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .tool-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid transparent;
-
-    &:hover {
-      background: #f5f7fa;
-      border-color: #e4e7ed;
-    }
-
-    &.selected {
-      background: rgba(16, 163, 127, 0.08);
-      border-color: rgba(16, 163, 127, 0.2);
-    }
-
-    .tool-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      margin-right: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f0f0f0;
-      overflow: hidden;
-      flex-shrink: 0;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      i {
-        font-size: 18px;
-        color: #999;
-      }
-    }
-
-    .tool-info {
-      flex: 1;
-      min-width: 0;
-
-      .tool-name {
-        font-size: 14px;
-        font-weight: 500;
-        color: #1a1a1a;
-        margin-bottom: 2px;
-      }
-
-      .tool-desc {
-        font-size: 12px;
-        color: #666;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    }
-
-    .el-checkbox {
-      margin-left: 8px;
-    }
-  }
-
-  .tool-search {
-    margin-bottom: 16px;
-
-    .el-input {
-      .el-input__inner {
-        border-radius: 8px;
-      }
-    }
-  }
-
-  .config-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px;
-    color: #999;
-
-    i {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    span {
-      font-size: 14px;
-    }
-  }
-}
-
-// 工具详情 tooltip
-.tool-tooltip-popper {
-  max-width: 360px !important;
-  padding: 0 !important;
-  border: 1px solid #e4e7ed !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-  border-radius: 8px !important;
-}
-
-.tool-detail-tooltip {
-  padding: 12px 14px;
-
-  .tooltip-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .tooltip-desc {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
-  }
 }
 </style>
