@@ -600,9 +600,6 @@ export default {
         this.getModelData();
       }
     },
-    handleClearHistory() {
-      this.$emit('clearHistory');
-    },
   },
 };
 </script>
