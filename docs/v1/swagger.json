@@ -5819,7 +5819,7 @@
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.GetGeneralAgentAssistantSelectResp"
+                                                                "$ref": "#/definitions/response.ExplorationAppInfo"
                                                             }
                                                         }
                                                     }
@@ -25877,55 +25877,6 @@
                 },
                 "totalSize": {
                     "type": "integer"
-                }
-            }
-        },
-        "response.GetGeneralAgentAssistantSelectResp": {
-            "type": "object",
-            "properties": {
-                "appId": {
-                    "description": "应用id",
-                    "type": "string"
-                },
-                "appType": {
-                    "description": "应用类型",
-                    "type": "string"
-                },
-                "avatar": {
-                    "description": "应用图标",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "category": {
-                    "description": "智能体分类(1:单智能体,2:多智能体)",
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "description": "应用创建时间",
-                    "type": "string"
-                },
-                "desc": {
-                    "description": "应用描述",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "应用名称",
-                    "type": "string"
-                },
-                "publishType": {
-                    "description": "发布类型(public:公开发布,private:私密发布)",
-                    "type": "string"
-                },
-                "uniqueId": {
-                    "description": "随机unique id(每次动态生成)",
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "description": "应用更新时间(用于历史记录排序)",
-                    "type": "string"
                 }
             }
         },

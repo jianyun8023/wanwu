@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	net_url "net/url"
 	"os"
 	"path/filepath"
 
@@ -30,32 +29,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetGeneralAgentAssistantSelect(ctx *gin.Context, userId, orgId string, name string) ([]response.GetGeneralAgentAssistantSelectResp, error) {
-	resp, err := assistant.GetAssistantListMyAll(ctx.Request.Context(), &assistant_service.GetAssistantListMyAllReq{
+func GetGeneralAgentAssistantSelect(ctx *gin.Context, userId, orgId string, name string) (*response.ListResult, error) {
+	// 复用 GetAssistantSelect 的逻辑
+	resp, err := GetAssistantSelect(ctx, userId, orgId, request.GetExplorationAppListRequest{
 		Name: name,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	var result []response.GetGeneralAgentAssistantSelectResp
-	for _, assistantInfo := range resp.AssistantInfos {
-		// 只展示单智能体
-		if assistantInfo.Category != constant.AgentCategorySingle {
-			continue
+
+	// 过滤只返回单智能体
+	var result []response.ExplorationAppInfo
+	if appList, ok := resp.List.([]*response.ExplorationAppInfo); ok {
+		for _, appInfo := range appList {
+			if appInfo.Category == constant.AgentCategorySingle {
+				result = append(result, *appInfo)
+			}
 		}
-		appBriefInfo := appBriefProto2Model(ctx, assistantInfo.Info, assistantInfo.Category)
-		if appBriefInfo.Avatar.Path != "" {
-			appBriefInfo.Avatar.Path, _ = net_url.JoinPath(config.Cfg().Server.ApiBaseUrl, appBriefInfo.Avatar.Path)
-		}
-		result = append(result, response.GetGeneralAgentAssistantSelectResp{
-			AppBriefInfo: appBriefInfo,
-		})
 	}
-	return result, nil
+
+	return &response.ListResult{
+		List:  result,
+		Total: int64(len(result)),
+	}, nil
 }
 
 func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]response.GetGeneralAgentToolSelectResp, error) {

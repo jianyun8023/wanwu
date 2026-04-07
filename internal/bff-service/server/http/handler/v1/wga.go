@@ -23,7 +23,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"智能体名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.GetGeneralAgentAssistantSelectResp}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.ExplorationAppInfo}}
 //	@Router			/general/agent/assistant/select [get]
 func GetGeneralAgentAssistantSelect(ctx *gin.Context) {
 	resp, err := service.GetGeneralAgentAssistantSelect(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
