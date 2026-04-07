@@ -37,10 +37,7 @@
             <i class="el-icon-loading"></i>
             加载中...
           </div>
-          <div
-            v-else-if="filteredToolList.length === 0"
-            class="config-empty"
-          >
+          <div v-else-if="filteredToolList.length === 0" class="config-empty">
             <i class="el-icon-search"></i>
             <span>未找到匹配的工具</span>
           </div>
@@ -83,7 +80,10 @@
                     @click="handleToggleTool(tool)"
                   >
                     <div class="tool-avatar">
-                      <img v-if="tool.avatar?.path" :src="tool.avatar.path" />
+                      <img
+                        v-if="tool.avatar?.path"
+                        :src="avatarSrc(tool.avatar.path)"
+                      />
                       <i v-else class="el-icon-setting"></i>
                     </div>
                     <div class="tool-info">
@@ -107,6 +107,8 @@
 </template>
 
 <script>
+import { avatarSrc } from '@/utils/util';
+
 export default {
   name: 'ConfigDrawer',
   props: {
@@ -160,6 +162,7 @@ export default {
     },
   },
   methods: {
+    avatarSrc,
     handleClose() {
       this.$emit('update:visible', false);
       this.$emit('close');
