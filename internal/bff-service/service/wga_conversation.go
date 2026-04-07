@@ -198,10 +198,11 @@ func filterWgaHistoryMessages(ctx *gin.Context, userId, orgId, threadId string) 
 				switch aguievents.EventType(eventType) {
 				case aguievents.EventTypeRunStarted:
 					if input := event["input"].(map[string]interface{}); input != nil {
-						if msgs, ok := input["messages"].([]map[string]interface{}); ok {
-							for _, msg := range msgs {
-								message = convertWgaMessage(nil, msg["role"].(string), msg["content"])
-								messages = append(messages, message)
+						if msgs, ok := input["messages"].([]interface{}); ok {
+							for _, msg := range msgs { // messages中只有一个用户消息
+								if m, ok := msg.(map[string]interface{}); ok {
+									message = convertWgaMessage(m["role"].(string), m["content"])
+								}
 							}
 						}
 					}
@@ -353,7 +354,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, threadID, runID string,
 	if err != nil {
 		return nil, err
 	}
-	messages = append(messages, convertWgaMessage(ctx, userInputMessage.Role, userInputMessage.Content))
+	messages = append(messages, convertWgaMessage(userInputMessage.Role, userInputMessage.Content))
 	opts = append(opts, wga_option.WithMessages(messages))
 
 	return opts, nil
@@ -481,7 +482,7 @@ func getWgaWorkspaceInfo(rootDir, currentDir string) (int64, int, error) {
 	return totalSize, fileCount, nil
 }
 
-func convertWgaMessage(ctx *gin.Context, role string, content interface{}) *schema.Message {
+func convertWgaMessage(role string, content interface{}) *schema.Message {
 	switch v := content.(type) {
 	case string:
 		return &schema.Message{
@@ -489,14 +490,11 @@ func convertWgaMessage(ctx *gin.Context, role string, content interface{}) *sche
 			Content: v,
 		}
 	case []interface{}:
-		parts := make([]schema.MessageInputPart, 0, len(v))
-		for _, item := range v {
-			if m, ok := item.(map[string]interface{}); ok {
-				parts = append(parts, convertWgaMessageInputPart(ctx, m))
+		var parts []schema.MessageInputPart
+		for _, msg := range v {
+			if m, ok := msg.(map[string]interface{}); ok {
+				parts = append(parts, convertWgaMessageInputPart(m))
 			}
-		}
-		if len(parts) == 0 {
-			return &schema.Message{Role: schema.RoleType(role)}
 		}
 		return &schema.Message{
 			Role:                  schema.RoleType(role),
@@ -507,7 +505,7 @@ func convertWgaMessage(ctx *gin.Context, role string, content interface{}) *sche
 	}
 }
 
-func convertWgaMessageInputPart(ctx *gin.Context, m map[string]interface{}) schema.MessageInputPart {
+func convertWgaMessageInputPart(m map[string]interface{}) schema.MessageInputPart {
 	part := schema.MessageInputPart{}
 
 	typ, _ := m["type"].(string)
@@ -546,12 +544,20 @@ func convertWgaMessageInputPart(ctx *gin.Context, m map[string]interface{}) sche
 				},
 			}
 		default:
-			part.Type = schema.ChatMessagePartTypeFileURL
-			part.File = &schema.MessageInputFile{
-				MessagePartCommon: schema.MessagePartCommon{
-					URL:      &url,
-					MIMEType: mimeType,
-				},
+			// github.com/cloudwego/eino-ext/libs/acl/openai/chat_model.go:485 v0.1.1
+			// 该版本暂未支持 schema.ChatMessagePartTypeFileURL 处理，暂用 schema.ChatMessagePartTypeText 替代
+			// part.Type = schema.ChatMessagePartTypeFileURL
+			// part.File = &schema.MessageInputFile{
+			// 	MessagePartCommon: schema.MessagePartCommon{
+			// 		URL:      &url,
+			// 		MIMEType: mimeType,
+			// 	},
+			// }
+			part.Type = schema.ChatMessagePartTypeText
+			if fileName, _ := m["fileName"].(string); fileName != "" {
+				part.Text = fmt.Sprintf("[%s](%s)", fileName, url)
+			} else {
+				part.Text = url
 			}
 		}
 	default:
