@@ -22,7 +22,7 @@
               />
               <div v-else class="file-card">
                 <i class="el-icon-document"></i>
-                <span class="file-name">{{ file.name }}</span>
+                <span class="file-name">{{ file.fileName }}</span>
               </div>
             </div>
           </div>

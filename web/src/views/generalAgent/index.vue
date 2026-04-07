@@ -145,45 +145,44 @@
           <div class="input-container">
             <!-- 文件预览 -->
             <div v-if="uploadedFiles.length > 0" class="file-preview">
+              <!-- 图片文件 -->
               <div
                 v-for="(file, index) in uploadedFiles"
                 :key="index"
-                class="file-item"
+                class="echo-img-box"
                 :class="{ 'is-uploading': file.uploading }"
               >
-                <img
-                  v-if="file.type.startsWith('image/')"
-                  :src="file.displayUrl || file.url"
-                  class="file-thumb"
-                />
-                <div v-else class="file-icon">
-                  <i class="el-icon-document"></i>
-                </div>
-                <!-- 上传进度遮罩 -->
-                <div v-if="file.uploading" class="upload-overlay">
-                  <div class="upload-progress-bar">
-                    <svg viewBox="0 0 36 36" width="36" height="36">
-                      <circle class="progress-bg" cx="18" cy="18" r="15" />
-                      <circle
-                        class="progress-fill"
-                        cx="18"
-                        cy="18"
-                        r="15"
-                        :stroke-dasharray="94.2"
-                        :stroke-dashoffset="
-                          94.2 - (94.2 * (file.uploadProgress || 0)) / 100
-                        "
-                      />
-                    </svg>
-                    <span class="progress-text">
-                      {{ file.uploadProgress || 0 }}
-                    </span>
+                <div class="echo-img-item">
+                  <!-- 图片类型 -->
+                  <el-image
+                    v-if="file.type && file.type.startsWith('image/')"
+                    class="echo-img"
+                    :src="file.displayUrl || file.url"
+                    :preview-src-list="[file.displayUrl || file.url]"
+                  ></el-image>
+                  <!-- 文档类型 -->
+                  <div v-else class="echo-doc-box">
+                    <img
+                      :src="require('@/assets/imgs/fileicon.png')"
+                      class="docIcon"
+                    />
+                    <div class="docInfo">
+                      <p class="docInfo_name">文件名：{{ file.fileName }}</p>
+                      <p class="docInfo_size">
+                        文件大小：{{
+                          file.size > 1024
+                            ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+                            : (file.size || 0) + ' bytes'
+                        }}
+                      </p>
+                    </div>
                   </div>
+                  <!-- 删除按钮 -->
+                  <i
+                    class="el-icon-close echo-close"
+                    @click="removeFile(index)"
+                  ></i>
                 </div>
-                <i
-                  class="el-icon-close file-remove"
-                  @click="removeFile(index)"
-                ></i>
               </div>
             </div>
 
@@ -227,17 +226,21 @@
                 </div>
               </div>
               <div class="toolbar-right">
-                <el-upload
-                  action="#"
-                  :auto-upload="false"
-                  :show-file-list="false"
-                  :on-change="handleFileChange"
-                  multiple
+                <StreamUploadField
+                  :fileTypeArr="['doc/*', 'image/*']"
+                  type="agentChat"
+                  @setFileId="handleSetFileId"
+                  @setFile="handleSetFile"
                 >
-                  <el-tooltip content="上传文件" placement="top">
-                    <i class="action-icon el-icon-paperclip"></i>
-                  </el-tooltip>
-                </el-upload>
+                  <template #default="{ openDialog }">
+                    <el-tooltip content="上传文件" placement="top">
+                      <i
+                        class="action-icon el-icon-paperclip"
+                        @click="openDialog"
+                      ></i>
+                    </el-tooltip>
+                  </template>
+                </StreamUploadField>
                 <el-button
                   v-if="isStreaming"
                   class="send-btn stop-btn"
@@ -330,6 +333,7 @@ import WorkspacePanel from './components/WorkspacePanel.vue';
 import FilePreviewDrawer from './components/FilePreviewDrawer.vue';
 import ConfigDrawer from './components/ConfigDrawer.vue';
 import ModelSelect from '@/components/modelSelect.vue';
+import StreamUploadField from '@/components/stream/streamUploadField.vue';
 import {
   getGeneralAgentConversationList,
   createGeneralAgentConversation,
@@ -339,12 +343,12 @@ import {
   updateGeneralAgentConfig,
   chatGeneralAgentConversation,
   getGeneralAgentToolSelect,
-  getLlmModelSelect,
   getGeneralAgentWorkspace,
   uploadGeneralAgentFile,
   previewGeneralAgentWorkspace,
   downloadGeneralAgentWorkspace,
 } from '@/api/generalAgent';
+import { selectModelList } from '@/api/modelAccess';
 import {
   SSEEventParser,
   EventType,
@@ -364,6 +368,7 @@ export default {
     FilePreviewDrawer,
     ConfigDrawer,
     ModelSelect,
+    StreamUploadField,
   },
   data() {
     return {
@@ -615,7 +620,7 @@ export default {
     async fetchModelList() {
       this.modelLoading = true;
       try {
-        const res = await getLlmModelSelect();
+        const res = await selectModelList();
         if (res.code === 0 && res.data?.list) {
           this.modelList = res.data.list.map(model => ({
             modelId: model.modelId || model.model,
@@ -837,6 +842,7 @@ export default {
             }
             if (run.runId) this.currentRunId = run.runId;
           });
+          console.log('allMessages', allMessages);
           // 使用 $set 确保响应式
           this.$set(this.messagesMap, this.currentThreadId, allMessages);
           // 先关闭加载状态，让消息列表渲染
@@ -1388,7 +1394,7 @@ export default {
       const files = content.filter(item => item.type === 'binary');
       if (files.length === 0) return null;
       return files.map(file => ({
-        name: file.fileName || 'unknown',
+        fileName: file.fileName || 'unknown',
         type: file.mimeType || 'application/octet-stream',
         url: file.url,
         displayUrl: file.url,
@@ -1401,77 +1407,37 @@ export default {
       this.sendMessage();
     },
 
-    // 将内部服务地址转换为外部可访问地址
-    convertToExternalUrl(url) {
-      if (!url) return url;
-      // 替换 minio 内部服务名为外部地址
-      return url.replace(/minio-wanwu:9000/g, '192.168.0.21:9000');
+    handleSetFileId(fileInfo) {
+      // 处理文件ID，将文件信息添加到 uploadedFiles
+      if (fileInfo && fileInfo.length > 0) {
+        console.log('fileInfo:', fileInfo);
+        fileInfo.forEach(file => {
+          this.uploadedFiles.push({
+            name: file.fileName,
+            fileName: file.oldFileName,
+            url: file.fileUrl,
+            displayUrl: file.imgUrl,
+            type: this.getFileTypeFromName(file.fileName),
+            size: file.fileSize || 0,
+            uploading: false,
+            uploadProgress: 100,
+          });
+        });
+      }
     },
 
-    async handleFileChange(file) {
-      // 先显示本地预览
-      const localUrl = URL.createObjectURL(file.raw);
-      const tempFile = {
-        name: file.name,
-        type: file.raw.type,
-        url: localUrl,
-        localUrl: localUrl,
-        uploading: true,
-        uploadProgress: 0,
-      };
-      this.uploadedFiles.push(tempFile);
+    handleSetFile(fileList) {
+      // 处理文件列表（如果需要）
+      console.log('Selected files:', fileList);
+    },
 
-      // 上传文件到服务器
-      try {
-        const res = await uploadGeneralAgentFile(file.raw, percent => {
-          // 更新进度
-          const index = this.uploadedFiles.findIndex(
-            f => f.localUrl === localUrl,
-          );
-          if (index !== -1) {
-            this.$set(this.uploadedFiles[index], 'uploadProgress', percent);
-          }
-        });
-        if (res.code === 0 && res.data?.files?.[0]?.filePath) {
-          // 更新为服务器 URL（转换为外部可访问地址）
-          const index = this.uploadedFiles.findIndex(
-            f => f.localUrl === localUrl,
-          );
-          if (index !== -1) {
-            // 使用 Vue.set 确保响应式更新
-            this.$set(this.uploadedFiles, index, {
-              name: file.name,
-              type: file.raw.type,
-              url: res.data.files[0].filePath, // 原始 minio URL，用于发送给后端
-              fileName: res.data.files[0].fileName, // 服务器返回的文件名
-              displayUrl: this.convertToExternalUrl(res.data.files[0].filePath), // 转换后的 URL，用于前端显示
-              uploading: false,
-              uploadProgress: 100,
-            });
-          }
-          URL.revokeObjectURL(localUrl);
-        } else {
-          // 上传失败，移除文件
-          const index = this.uploadedFiles.findIndex(
-            f => f.localUrl === localUrl,
-          );
-          if (index !== -1) {
-            this.uploadedFiles.splice(index, 1);
-          }
-          this.$message.error(res.msg || '文件上传失败');
-          URL.revokeObjectURL(localUrl);
-        }
-      } catch (error) {
-        console.error('文件上传失败:', error);
-        const index = this.uploadedFiles.findIndex(
-          f => f.localUrl === localUrl,
-        );
-        if (index !== -1) {
-          this.uploadedFiles.splice(index, 1);
-        }
-        this.$message.error('文件上传失败');
-        URL.revokeObjectURL(localUrl);
+    getFileTypeFromName(fileName) {
+      const ext = fileName.split('.').pop().toLowerCase();
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+      if (imageExts.includes(ext)) {
+        return 'image/' + ext;
       }
+      return 'application/octet-stream';
     },
 
     removeFile(index) {
@@ -2751,106 +2717,152 @@ $message-max-width: 900px;
     gap: 8px;
     margin-bottom: 12px;
 
-    .file-item {
+    .echo-img-box {
       position: relative;
-      width: 48px;
-      height: 48px;
 
-      .file-thumb {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 8px;
-      }
+      .echo-img-item {
+        position: relative;
+        display: inline-block;
 
-      .file-icon {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e5e7eb;
-        border-radius: 8px;
-        color: $claude-text-secondary;
-      }
-
-      .file-remove {
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        width: 18px;
-        height: 18px;
-        background: #ef4444;
-        color: #fff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 10px;
-        transition: transform 0.2s;
-        z-index: 10;
-
-        &:hover {
-          transform: scale(1.1);
+        // 图片样式
+        .echo-img {
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          cursor: pointer;
         }
-      }
 
-      .upload-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 5;
+        // 文档样式
+        .echo-doc-box {
+          background: #fff;
+          min-width: 200px;
+          max-width: 300px;
+          border: 1px solid #dcdfe6;
+          border-radius: 5px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 50px 10px 5px;
 
-        .upload-progress-bar {
-          width: 32px;
-          height: 32px;
-          position: relative;
+          .docIcon {
+            width: 30px;
+            height: 30px;
+            flex-shrink: 0;
+          }
+
+          .docInfo {
+            flex: 1;
+            margin-left: 8px;
+            overflow: hidden;
+
+            .docInfo_name {
+              color: #333;
+              font-size: 13px;
+              margin: 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            .docInfo_size {
+              color: #bbbbbb;
+              font-size: 12px;
+              margin: 4px 0 0 0;
+            }
+          }
+        }
+
+        // 关闭按钮
+        .echo-close {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          width: 18px;
+          height: 18px;
+          background: #ef4444;
+          color: #fff;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
+          font-size: 12px;
+          transition: transform 0.2s;
+          z-index: 10;
 
-          svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform: rotate(-90deg);
-
-            circle {
-              fill: none;
-              stroke-width: 3;
-            }
-
-            .progress-bg {
-              stroke: rgba(255, 255, 255, 0.3);
-            }
-
-            .progress-fill {
-              stroke: #fff;
-              stroke-linecap: round;
-              transition: stroke-dashoffset 0.3s ease;
-            }
-          }
-
-          .progress-text {
-            color: #fff;
-            font-size: 9px;
-            font-weight: 600;
-            z-index: 1;
+          &:hover {
+            transform: scale(1.1);
           }
         }
-      }
 
-      &.is-uploading {
-        .file-remove {
-          display: none;
+        // 加载图标
+        .loading-icon {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 20px;
+          color: #409eff;
+          z-index: 5;
+        }
+
+        // 上传遮罩层
+        .upload-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 5;
+
+          .upload-progress-bar {
+            width: 36px;
+            height: 36px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            svg {
+              position: absolute;
+              top: 0;
+              left: 0;
+              transform: rotate(-90deg);
+
+              circle {
+                fill: none;
+                stroke-width: 3;
+              }
+
+              .progress-bg {
+                stroke: rgba(255, 255, 255, 0.3);
+              }
+
+              .progress-fill {
+                stroke: #fff;
+                stroke-linecap: round;
+                transition: stroke-dashoffset 0.3s ease;
+              }
+            }
+
+            .progress-text {
+              color: #fff;
+              font-size: 9px;
+              font-weight: 600;
+              z-index: 1;
+            }
+          }
+        }
+
+        &.is-uploading {
+          .echo-close {
+            display: none;
+          }
         }
       }
     }
