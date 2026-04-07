@@ -438,6 +438,41 @@ export default {
     }
   }
 
+  ::v-deep .tool-result-box {
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    max-height: 300px;
+    overflow-y: auto;
+    resize: vertical;
+
+    &.tool-result-json {
+      background: #f6f8ff;
+      border: 1px solid #c8d5f5;
+      border-left: 3px solid #5b8dee;
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #3a4a6b;
+        font-family:
+          'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      }
+    }
+
+    &.tool-result-text {
+      background: #f6fdf0;
+      border: 1px solid #c5e8a3;
+      border-left: 3px solid #67c23a;
+      color: #3a5a1e;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+
   .sub-conversion-footer {
     background: #f2f3f8;
     text-align: left;
