@@ -25,10 +25,6 @@ type GeneralAgentConversationInfo struct {
 	CreatedAt string `json:"createdAt"` // 创建时间
 }
 
-type GetGeneralAgentAssistantSelectResp struct {
-	AppBriefInfo
-}
-
 type GetGeneralAgentToolSelectResp struct {
 	Category  string     `json:"category"`  // 类型
 	Condition string     `json:"condition"` // 条件 none | optional | required
