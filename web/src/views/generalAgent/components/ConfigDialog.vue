@@ -1,136 +1,178 @@
 <template>
-  <el-dialog
-    :visible.sync="dialogVisible"
-    width="50%"
-    min-width="400px"
-    custom-class="config-dialog"
-    :close-on-click-modal="false"
-    @close="handleClose"
-  >
-    <div slot="title" class="dialog-title">
-      <h3>配置</h3>
-    </div>
+  <div>
+    <el-dialog
+      :visible.sync="dialogVisible"
+      width="50%"
+      min-width="400px"
+      custom-class="config-dialog"
+      :close-on-click-modal="false"
+      @close="handleClose"
+    >
+      <div slot="title" class="dialog-title">
+        <h3>配置</h3>
+      </div>
 
-    <div class="dialog-body">
-      <div class="drawer-section">
-        <!-- 切换按钮组 -->
-        <div class="tab-buttons">
-          <div
-            v-if="hasTools"
-            :class="['tab-btn', { active: activeTab === 'tools' }]"
-            @click="activeTab = 'tools'"
-          >
-            工具
-          </div>
-          <!-- 智能体选择 -->
-          <div
-            v-if="hasAgents"
-            :class="['tab-btn', { active: activeTab === 'assistants' }]"
-            @click="activeTab = 'assistants'"
-          >
-            智能体
-          </div>
-        </div>
-
-        <div class="config-content">
-          <!-- 工具列表 - 按分类展示 -->
-          <div v-if="activeTab === 'tools'" class="tool-categories">
+      <div class="dialog-body">
+        <div class="drawer-section">
+          <!-- 切换按钮组 -->
+          <div class="tab-buttons">
             <div
-              v-for="(category, categoryIndex) in toolList"
-              :key="category.category"
-              class="tool-category"
-              :class="{
-                'validation-error': validationErrors.has(categoryIndex),
-              }"
+              v-if="hasTools"
+              :class="['tab-btn', { active: activeTab === 'tools' }]"
+              @click="activeTab = 'tools'"
             >
-              <div class="category-header">
-                <span class="category-name">{{ category.category }}</span>
-                <el-tag
-                  size="mini"
-                  :type="getConditionType(category.condition)"
-                >
-                  {{ getConditionLabel(category.condition) }}
-                </el-tag>
-                <span
-                  v-if="validationErrors.has(categoryIndex)"
-                  class="error-tip"
-                >
-                  ⚠️ 不满足选择条件
-                </span>
-              </div>
-              <div class="tool-list">
-                <div
-                  v-for="tool in category.toolList"
-                  :key="tool.toolId"
-                  :class="[
-                    'tool-item',
-                    {
-                      selected: isItemSelected(tool.toolId),
-                    },
-                  ]"
-                  @click="handleToggleItem(tool)"
-                >
-                  <div class="tool-avatar">
-                    <img
-                      v-if="tool.avatar?.path"
-                      :src="avatarSrc(tool.avatar.path)"
-                    />
-                    <i v-else class="el-icon-setting"></i>
-                  </div>
-                  <div class="tool-info">
-                    <div class="tool-name">{{ tool.toolName }}</div>
-                    <div class="tool-desc">{{ tool.desc }}</div>
-                  </div>
-                  <el-checkbox
-                    :value="isItemSelected(tool.toolId)"
-                    @click.native.stop
-                    @change="handleToggleItem(tool)"
-                  />
-                </div>
-              </div>
+              工具
+            </div>
+            <!-- 智能体选择 -->
+            <div
+              v-if="hasAgents"
+              :class="['tab-btn', { active: activeTab === 'assistants' }]"
+              @click="activeTab = 'assistants'"
+            >
+              智能体
             </div>
           </div>
 
-          <!-- 智能体列表 - 扁平展示 -->
-          <div v-else-if="activeTab === 'assistants'" class="assistant-list">
-            <div
-              v-for="assistant in assistantList"
-              :key="assistant.appId"
-              :class="[
-                'tool-item',
-                {
-                  selected: isItemSelected(assistant.appId),
-                },
-              ]"
-              @click="handleToggleItem(assistant)"
-            >
-              <div class="tool-avatar">
-                <img
-                  v-if="assistant.avatar?.path"
-                  :src="avatarSrc(assistant.avatar.path)"
+          <div class="config-content">
+            <!-- 工具列表 - 按分类展示 -->
+            <div v-if="activeTab === 'tools'" class="tool-categories">
+              <div
+                v-for="(category, categoryIndex) in toolList"
+                :key="category.category"
+                class="tool-category"
+                :class="{
+                  'validation-error': validationErrors.has(categoryIndex),
+                }"
+              >
+                <div class="category-header">
+                  <span class="category-name">{{ category.category }}</span>
+                  <el-tag
+                    size="mini"
+                    :type="getConditionType(category.condition)"
+                  >
+                    {{ getConditionLabel(category.condition) }}
+                  </el-tag>
+                  <span
+                    v-if="validationErrors.has(categoryIndex)"
+                    class="error-tip"
+                  >
+                    ⚠️ 不满足选择条件
+                  </span>
+                </div>
+                <div class="tool-list">
+                  <div
+                    v-for="tool in category.toolList"
+                    :key="tool.toolId"
+                    :class="[
+                      'tool-item',
+                      {
+                        selected: isItemSelected(tool.toolId),
+                      },
+                    ]"
+                    @click="handleToggleItem(tool)"
+                  >
+                    <div class="tool-avatar">
+                      <img
+                        v-if="tool.avatar?.path"
+                        :src="avatarSrc(tool.avatar.path)"
+                      />
+                      <i v-else class="el-icon-setting"></i>
+                    </div>
+                    <div class="tool-info">
+                      <div class="tool-name">{{ tool.toolName }}</div>
+                      <div class="tool-desc">{{ tool.desc }}</div>
+                      <!-- API Key 提示 -->
+                      <div
+                        v-if="
+                          tool.needApiKeyInput &&
+                          (!tool.apiKey || tool.apiKey === '')
+                        "
+                        class="api-key-tip"
+                      >
+                        <i class="el-icon-warning"></i>
+                        需要配置 API Key
+                      </div>
+                    </div>
+                    <el-checkbox
+                      :value="isItemSelected(tool.toolId)"
+                      @click.native.stop
+                      @change="handleToggleItem(tool)"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 智能体列表 - 扁平展示 -->
+            <div v-else-if="activeTab === 'assistants'" class="assistant-list">
+              <div
+                v-for="assistant in assistantList"
+                :key="assistant.appId"
+                :class="[
+                  'tool-item',
+                  {
+                    selected: isItemSelected(assistant.appId),
+                  },
+                ]"
+                @click="handleToggleItem(assistant)"
+              >
+                <div class="tool-avatar">
+                  <img
+                    v-if="assistant.avatar?.path"
+                    :src="avatarSrc(assistant.avatar.path)"
+                  />
+                  <i v-else class="el-icon-user"></i>
+                </div>
+                <div class="tool-info">
+                  <div class="tool-name">{{ assistant.name }}</div>
+                  <div class="tool-desc">{{ assistant.desc }}</div>
+                </div>
+                <el-checkbox
+                  :value="isItemSelected(assistant.appId)"
+                  @click.native.stop
+                  @change="handleToggleItem(assistant)"
                 />
-                <i v-else class="el-icon-user"></i>
               </div>
-              <div class="tool-info">
-                <div class="tool-name">{{ assistant.name }}</div>
-                <div class="tool-desc">{{ assistant.desc }}</div>
-              </div>
-              <el-checkbox
-                :value="isItemSelected(assistant.appId)"
-                @click.native.stop
-                @change="handleToggleItem(assistant)"
-              />
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div slot="footer" class="dialog-footer">
-      <el-button @click="handleCancel">取消</el-button>
-      <el-button type="primary" @click="handleConfirm">确定</el-button>
-    </div>
-  </el-dialog>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="handleCancel">取消</el-button>
+        <el-button type="primary" @click="handleConfirm">确定</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- API Key 输入弹窗 -->
+    <el-dialog
+      :visible.sync="apiKeyModalVisible"
+      width="500px"
+      custom-class="api-key-dialog"
+      :close-on-click-modal="false"
+      title="请输入 API Key"
+      @close="handleApiKeyModalClose"
+    >
+      <div class="api-key-input-container">
+        <el-input
+          v-model="apiKeyValue"
+          placeholder="请输入 API Key"
+          size="large"
+          @keyup.enter.native="handleApiKeySubmit"
+        />
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="handleApiKeyModalClose">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="submitting"
+          @click="handleApiKeySubmit"
+        >
+          确定
+        </el-button>
+      </div>
+    </el-dialog>
+  </div>
 </template>
 
 <script>
@@ -141,6 +183,7 @@ import {
   updateGeneralAgentGlobalConfig,
   getGeneralAgentGlobalConfig,
 } from '@/api/generalAgent';
+import { changeApiKey } from '@/api/mcp';
 
 export default {
   name: 'ConfigDialog',
@@ -159,6 +202,11 @@ export default {
       selectedTools: [],
       selectedAssistants: [],
       validationErrors: new Set(),
+      // API Key 弹窗相关状态
+      apiKeyModalVisible: false,
+      currentTool: null,
+      apiKeyValue: '',
+      submitting: false,
     };
   },
   mounted() {
@@ -223,7 +271,6 @@ export default {
         this.selectedAssistants = (res.data.assistantList || []).map(
           assistant => ({
             assistantId: assistant.assistantId,
-            assistantType: assistant.assistantType,
           }),
         );
       }
@@ -276,16 +323,31 @@ export default {
 
       // 收集所有选中的工具（遍历所有分类）
       const allSelectedTools = [];
+      const toolsWithoutApiKey = []; // 记录没有 API Key 的工具
+
       this.toolList.forEach(category => {
         category.toolList.forEach(tool => {
           if (this.isItemSelected(tool.toolId, 'tools')) {
-            allSelectedTools.push({
-              toolId: tool.toolId,
-              toolType: tool.toolType,
-            });
+            // 检查需要 API Key 的工具是否已配置
+            if (tool.needApiKeyInput && (!tool.apiKey || tool.apiKey === '')) {
+              toolsWithoutApiKey.push(tool.toolName);
+            } else {
+              allSelectedTools.push({
+                toolId: tool.toolId,
+                toolType: tool.toolType,
+              });
+            }
           }
         });
       });
+
+      // 如果有工具缺少 API Key，提醒用户
+      if (toolsWithoutApiKey.length > 0) {
+        this.$message.warning(
+          `以下工具未配置 API Key，无法选中：${toolsWithoutApiKey.join('、')}`,
+        );
+        return;
+      }
 
       // 收集所有选中的智能体
       const allSelectedAssistants = [];
@@ -294,7 +356,6 @@ export default {
         if (this.isItemSelected(assistantId, 'assistants')) {
           allSelectedAssistants.push({
             assistantId: assistantId,
-            assistantType: assistant.appType,
           });
         }
       });
@@ -335,6 +396,14 @@ export default {
     },
 
     handleToggleTool(tool) {
+      // 如果需要 API Key（apiKey 为空），则弹出输入框
+      if (tool.needApiKeyInput && (!tool.apiKey || tool.apiKey === '')) {
+        this.currentTool = tool;
+        this.apiKeyModalVisible = true;
+        this.apiKeyValue = '';
+        return;
+      }
+
       // 在选中状态中切换
       const index = this.selectedTools.findIndex(t => t.toolId === tool.toolId);
       if (index > -1) {
@@ -349,8 +418,52 @@ export default {
       }
     },
 
+    // 处理 API Key 提交
+    async handleApiKeySubmit() {
+      if (!this.currentTool) return;
+
+      if (!this.apiKeyValue.trim()) {
+        this.$message.warning('API Key 不能为空');
+        return;
+      }
+
+      const toolId = this.currentTool.toolId;
+      const toolType = this.currentTool.toolType;
+
+      this.submitting = true;
+      try {
+        // 调用更新 API Key 的接口
+        await changeApiKey({
+          apiKey: this.apiKeyValue,
+          toolSquareId: toolId,
+        });
+
+        // 更新工具列表中的 apiKey
+        this.updateToolApiKeyInList(toolId, this.apiKeyValue);
+
+        this.$message.success('API Key 保存成功');
+        this.apiKeyModalVisible = false;
+        this.currentTool = null;
+        this.apiKeyValue = '';
+
+        // API Key 设置成功后，自动选中该工具
+        const index = this.selectedTools.findIndex(t => t.toolId === toolId);
+        if (index === -1) {
+          this.selectedTools.push({
+            toolId: toolId,
+            toolType: toolType,
+          });
+        }
+      } catch (error) {
+        console.error('保存 API Key 失败:', error);
+        this.$message.error(error.msg || '保存失败，请重试');
+      } finally {
+        this.submitting = false;
+      }
+    },
+
     handleToggleAssistant(assistant) {
-      // 智能体使用 appId 或 uniqueId 作为标识
+      // 智能体使用 appId 作为标识
       const assistantId = assistant.appId;
       // 在选中状态中切换
       const index = this.selectedAssistants.findIndex(
@@ -363,7 +476,6 @@ export default {
         // 未选中，添加选中
         this.selectedAssistants.push({
           assistantId: assistantId,
-          assistantType: assistant.appType,
         });
       }
     },
@@ -384,6 +496,29 @@ export default {
         required: 'danger',
       };
       return types[condition] || 'info';
+    },
+
+    // 更新工具列表中的 API Key
+    updateToolApiKeyInList(toolId, apiKey) {
+      this.toolList.forEach(category => {
+        category.toolList.forEach(tool => {
+          if (tool.toolId === toolId) {
+            tool.apiKey = apiKey;
+          }
+        });
+      });
+    },
+
+    // 处理 API Key 弹窗关闭
+    handleApiKeyModalClose() {
+      this.apiKeyModalVisible = false;
+      this.currentTool = null;
+      this.apiKeyValue = '';
+    },
+
+    // 检查工具是否需要 API Key 提醒
+    needsApiKeyReminder(tool) {
+      return tool.needApiKeyInput && (!tool.apiKey || tool.apiKey === '');
     },
   },
 };
@@ -573,6 +708,22 @@ export default {
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+
+      .api-key-tip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+        padding: 4px 8px;
+        font-size: 12px;
+        color: #e6a23c;
+        background-color: #fdf6ec;
+        border-radius: 4px;
+
+        i {
+          font-size: 14px;
+        }
+      }
     }
 
     .el-checkbox {
@@ -615,5 +766,16 @@ export default {
   text-align: right;
   padding: 16px 20px;
   border-top: 1px solid #e5e5e5;
+}
+
+// API Key 弹窗样式
+.api-key-dialog {
+  .el-dialog__body {
+    padding: 20px;
+  }
+
+  .api-key-input-container {
+    padding: 10px 0;
+  }
 }
 </style>
