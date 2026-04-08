@@ -3,11 +3,13 @@ package middleware
 import (
 	mid "github.com/UnicomAI/wanwu/pkg/gin-util/mid-wrap"
 	"github.com/UnicomAI/wanwu/pkg/gin-util/route"
+	"github.com/gin-gonic/gin"
 )
 
-func Init() {
+func Init(r *gin.Engine) {
 
 	mid.InitWrapper(Record)
+	r.Use(CacheAvatar())
 
 	// --- openapi ---
 	mid.NewSub("openapi", "对外提供原子能力", route.PermNone, false, false)

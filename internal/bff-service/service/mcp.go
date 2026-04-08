@@ -240,6 +240,12 @@ func GetMCPActionList(ctx *gin.Context, userID, orgID string, req request.MCPAct
 	}, nil
 }
 
+func GetMCPAvatar(ctx *gin.Context, avatarPath string) (*mcp_service.MCPAvatar, error) {
+	return mcp.GetMCPAvatar(ctx.Request.Context(), &mcp_service.GetMCPAvatarReq{
+		AvatarPath: avatarPath,
+	})
+}
+
 // --- internal ---
 
 func toMCPCustomDetail(ctx *gin.Context, mcpDetail *mcp_service.CustomMCPDetail) *response.MCPDetail {
