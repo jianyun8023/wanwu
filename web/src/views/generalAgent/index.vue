@@ -609,24 +609,18 @@ export default {
           if (!this.selectedModel)
             this.selectedModel = this.modelList[0].modelId;
         }
-      } catch (error) {
-        console.error('获取模型列表失败:', error);
       } finally {
         this.modelLoading = false;
       }
     },
 
     async fetchConversationList() {
-      try {
-        const res = await getGeneralAgentConversationList({
-          pageNo: this.pageNo,
-          pageSize: this.pageSize,
-        });
-        if (res.code === 0) {
-          this.conversationList = res.data?.list || [];
-        }
-      } catch (error) {
-        console.error('获取对话列表失败:', error);
+      const res = await getGeneralAgentConversationList({
+        pageNo: this.pageNo,
+        pageSize: this.pageSize,
+      });
+      if (res.code === 0) {
+        this.conversationList = res.data?.list || [];
       }
     },
 
@@ -648,60 +642,54 @@ export default {
     },
 
     async createConversationWithTitle(title) {
-      try {
-        if (!this.modelList || this.modelList.length === 0) {
-          this.$message.warning('模型列表加载中，请稍后重试');
-          return null;
-        }
-
-        // 使用用户选择的模型，如果没有选择则使用第一个模型
-        const selectedModelConfig = this.selectedModel
-          ? this.modelList.find(m => m.modelId === this.selectedModel)
-          : this.modelList[0];
-
-        const modelConfig = {
-          modelId: selectedModelConfig?.modelId,
-          model: selectedModelConfig?.model,
-          provider: selectedModelConfig?.provider,
-          displayName: selectedModelConfig?.displayName,
-          modelType: selectedModelConfig?.modelType,
-          config: selectedModelConfig?.config,
-        };
-
-        const res = await createGeneralAgentConversation({
-          title: title || '新对话',
-          modelConfig,
-        });
-
-        if (res.code === 0) {
-          const threadId = res.data?.threadId;
-          if (threadId) {
-            this.currentThreadId = threadId;
-            this.isNewConversation = false;
-
-            const oldMessages = this.messagesMap[''] || [];
-            this.$set(this.messagesMap, threadId, oldMessages);
-            this.$delete(this.messagesMap, '');
-
-            this.selectedModel = modelConfig.modelId;
-            this.conversationList.unshift({
-              threadId,
-              title: title || '新对话',
-              createdAt: new Date().toISOString(),
-            });
-            return threadId;
-          } else {
-            this.$message.error('创建对话失败：未返回对话ID');
-          }
-        } else {
-          this.$message.error(res.msg || '创建对话失败');
-        }
-        return null;
-      } catch (error) {
-        console.error('创建对话失败:', error);
-        this.$message.error('创建对话失败，请检查网络连接');
+      if (!this.modelList || this.modelList.length === 0) {
+        this.$message.warning('模型列表加载中，请稍后重试');
         return null;
       }
+
+      // 使用用户选择的模型，如果没有选择则使用第一个模型
+      const selectedModelConfig = this.selectedModel
+        ? this.modelList.find(m => m.modelId === this.selectedModel)
+        : this.modelList[0];
+
+      const modelConfig = {
+        modelId: selectedModelConfig?.modelId,
+        model: selectedModelConfig?.model,
+        provider: selectedModelConfig?.provider,
+        displayName: selectedModelConfig?.displayName,
+        modelType: selectedModelConfig?.modelType,
+        config: selectedModelConfig?.config,
+      };
+
+      const res = await createGeneralAgentConversation({
+        title: title || '新对话',
+        modelConfig,
+      });
+
+      if (res.code === 0) {
+        const threadId = res.data?.threadId;
+        if (threadId) {
+          this.currentThreadId = threadId;
+          this.isNewConversation = false;
+
+          const oldMessages = this.messagesMap[''] || [];
+          this.$set(this.messagesMap, threadId, oldMessages);
+          this.$delete(this.messagesMap, '');
+
+          this.selectedModel = modelConfig.modelId;
+          this.conversationList.unshift({
+            threadId,
+            title: title || '新对话',
+            createdAt: new Date().toISOString(),
+          });
+          return threadId;
+        } else {
+          this.$message.error('创建对话失败：未返回对话ID');
+        }
+      } else {
+        this.$message.error(res.msg || '创建对话失败');
+      }
+      return null;
     },
 
     selectConversation(threadId) {
@@ -711,13 +699,9 @@ export default {
       this.currentThreadId = threadId;
       this.isNewConversation = false;
       this.isLoadingHistory = true;
-      // 重置滚动状态
       this.userHasScrolled = false;
       this.showScrollToBottom = false;
-      // 关闭工作区面板
       this.hidePanel();
-      // 清空当前会话的消息缓存，确保每次都重新请求
-      this.$set(this.messagesMap, threadId, []);
       this.fetchHistory();
     },
 
@@ -751,6 +735,40 @@ export default {
             if (run.runId) this.currentRunId = run.runId;
           });
           console.log('allMessages', allMessages);
+
+          // 检查是否有正在进行的流式传输
+          const streaming = this.streamingMap[this.currentThreadId];
+          const hasStreamingMessage =
+            streaming && streaming.isStreaming && streaming.streamingMessage;
+
+          // 如果有正在进行的流式消息，保留它
+          if (hasStreamingMessage) {
+            // 将历史消息和流式消息合并
+            const streamingMsg = streaming.streamingMessage;
+            // 检查流式消息是否已经在历史消息中（通过 messageId 或内容匹配）
+            const isDuplicate = allMessages.some(
+              msg =>
+                msg.id === streamingMsg.id ||
+                (msg.role === 'assistant' &&
+                  msg.content === streamingMsg.content),
+            );
+
+            if (!isDuplicate) {
+              allMessages.push(streamingMsg);
+            } else {
+              // 如果已存在，用流式消息替换历史消息（保留最新的流式内容）
+              const index = allMessages.findIndex(
+                msg =>
+                  msg.id === streamingMsg.id ||
+                  (msg.role === 'assistant' &&
+                    msg.content === streamingMsg.content),
+              );
+              if (index !== -1) {
+                allMessages[index] = streamingMsg;
+              }
+            }
+          }
+
           // 使用 $set 确保响应式
           this.$set(this.messagesMap, this.currentThreadId, allMessages);
           // 先关闭加载状态，让消息列表渲染
@@ -765,8 +783,7 @@ export default {
           this.isLoadingHistory = false;
         }
         this.loadConfig();
-      } catch (error) {
-        console.error('获取历史消息失败:', error);
+      } finally {
         this.isLoadingHistory = false;
       }
     },
@@ -1214,18 +1231,14 @@ export default {
 
     async loadConfig() {
       if (!this.currentThreadId) return;
-      try {
-        const res = await getGeneralAgentConversationConfig({
-          threadId: this.currentThreadId,
-        });
-        if (res.code === 0 && res.data) {
-          if (res.data.modelConfig) {
-            const modelConfig = res.data.modelConfig;
-            this.selectedModel = modelConfig.modelId || modelConfig.model;
-          }
+      const res = await getGeneralAgentConversationConfig({
+        threadId: this.currentThreadId,
+      });
+      if (res.code === 0 && res.data) {
+        if (res.data.modelConfig) {
+          const modelConfig = res.data.modelConfig;
+          this.selectedModel = modelConfig.modelId || modelConfig.model;
         }
-      } catch (error) {
-        console.error('加载配置失败:', error);
       }
     },
 
@@ -1779,8 +1792,6 @@ export default {
             data: res.data,
           });
         }
-      } catch (error) {
-        console.error('加载工作空间文件失败:', error);
       } finally {
         this.workspaceLoading = false;
       }
@@ -2101,25 +2112,21 @@ export default {
 
     async handleCommand(command, item) {
       if (command === 'delete') {
-        try {
-          await this.$confirm('确定要删除这个对话吗？', '提示', {
-            type: 'warning',
-          });
-          const res = await deleteGeneralAgentConversation({
-            threadId: item.threadId,
-          });
-          if (res.code === 0) {
-            this.$message.success('删除成功');
-            if (this.currentThreadId === item.threadId) {
-              this.currentThreadId = '';
-              this.isNewConversation = true;
-              this.messageList = [];
-              this.hidePanel();
-            }
-            this.fetchConversationList();
+        await this.$confirm('确定要删除这个对话吗？', '提示', {
+          type: 'warning',
+        });
+        const res = await deleteGeneralAgentConversation({
+          threadId: item.threadId,
+        });
+        if (res.code === 0) {
+          this.$message.success('删除成功');
+          if (this.currentThreadId === item.threadId) {
+            this.currentThreadId = '';
+            this.isNewConversation = true;
+            this.messageList = [];
+            this.hidePanel();
           }
-        } catch (error) {
-          if (error !== 'cancel') console.error('删除对话失败:', error);
+          this.fetchConversationList();
         }
       }
     },
