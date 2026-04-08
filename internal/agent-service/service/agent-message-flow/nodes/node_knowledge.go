@@ -40,10 +40,9 @@ func (k *KnowledgeRetriever) Retrieve(ctx context.Context, reqContext *request.A
 	}
 	req.KnowledgeParams.AttachmentFiles = make([]*request.RagKnowledgeAttachment, 0)
 	toolId := uuid.New().String()
-	newStyle := reqContext.AgentChatReq.NewStyle
-	sendKnowledgeMessage(reqContext.Generator, false, nil, toolId, newStyle)
+	sendKnowledgeMessage(reqContext.Generator, false, nil, toolId)
 	defer func() {
-		sendKnowledgeMessage(reqContext.Generator, true, reqContext.KnowledgeHitData, toolId, newStyle)
+		sendKnowledgeMessage(reqContext.Generator, true, reqContext.KnowledgeHitData, toolId)
 	}()
 	fileList := reqContext.AgentChatReq.UploadFile
 	if len(fileList) > 0 {
@@ -109,8 +108,8 @@ func ragKnowledgeHit(ctx context.Context, knowledgeHitParams *request.KnowledgeP
 }
 
 // sendKnowledgeMessage 发送知识库消息
-func sendKnowledgeMessage(generator *adk.AsyncGenerator[*adk.AgentEvent], finish bool, hitData *model.KnowledgeHitData, toolId string, newStyle bool) {
-	if generator != nil && newStyle {
+func sendKnowledgeMessage(generator *adk.AsyncGenerator[*adk.AgentEvent], finish bool, hitData *model.KnowledgeHitData, toolId string) {
+	if generator != nil {
 		message := buildKnowledgeMessage(finish, hitData, toolId)
 		generator.Send(&adk.AgentEvent{
 			Output: &adk.AgentOutput{

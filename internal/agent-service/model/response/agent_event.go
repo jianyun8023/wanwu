@@ -49,6 +49,19 @@ type SubEventData struct {
 	Order     int            `json:"order"`
 }
 
+func (s *SubEventData) Copy() *SubEventData {
+	return &SubEventData{
+		Status:    s.Status,
+		Id:        s.Id,
+		ParentId:  s.ParentId,
+		Name:      s.Name,
+		Profile:   s.Profile,
+		TimeCost:  s.TimeCost,
+		Order:     s.Order,
+		EventType: s.EventType,
+	}
+}
+
 func BuildEventTypeByTool(agentTool *AgentTool) int {
 	var eventType int
 	if agentTool.ToolName == agent_util.AgentSearchKnowledgeName {
@@ -62,7 +75,7 @@ func BuildEventTypeByTool(agentTool *AgentTool) int {
 }
 
 func BuildStartSubAgent(respContext *AgentChatRespContext) *SubEventData {
-	subAgent := StartSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, 0)
+	subAgent := StartSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, SubAgentEventType)
 	parent := respContext.MultiAgentContext.PeekParentAgent()
 	if parent != nil {
 		subAgent.ParentId = parent.Id
@@ -71,11 +84,11 @@ func BuildStartSubAgent(respContext *AgentChatRespContext) *SubEventData {
 }
 
 func BuildProcessSubAgent(respContext *AgentChatRespContext) *SubEventData {
-	return ProcessSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, 0)
+	return ProcessSubAgent(respContext.MultiAgentContext.PeekAgent(), respContext.Order, SubAgentEventType)
 }
 
 func BuildEndSubAgent(respContext *AgentChatRespContext, timeCost string) *SubEventData {
-	return EndSubAgent(respContext.MultiAgentContext.PeekAgent(), timeCost, respContext.Order, 0)
+	return EndSubAgent(respContext.MultiAgentContext.PeekAgent(), timeCost, respContext.Order, SubAgentEventType)
 }
 
 func BuildStartTool(agentTool *AgentTool) *SubEventData {

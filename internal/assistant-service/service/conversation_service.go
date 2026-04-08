@@ -199,7 +199,6 @@ func buildSubConversationDetailList(conversationResp *conversation.ConversationR
 }
 
 func buildConversationType(eventType int) model.ConversationType {
-	log.Infof("buildConversationType eventType: %d", eventType)
 	switch eventType {
 	case conversation.SubAgentEventType:
 		return model.SubAgent
@@ -211,8 +210,8 @@ func buildConversationType(eventType int) model.ConversationType {
 		return model.AgentThink
 	case conversation.SkillEventType:
 		return model.AgentSkill
-	case conversation.SkillTextEventType:
-		return model.AgentSkillText
+	case conversation.SubTextEventType:
+		return model.AgentSubText
 
 	default:
 		return model.SubAgent
