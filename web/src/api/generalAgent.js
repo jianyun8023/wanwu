@@ -46,6 +46,26 @@ export const getGeneralAgentToolInfo = params => {
 };
 
 /**
+ * 获取 MCP 选择列表
+ */
+export const getGeneralAgentMcpSelect = () => {
+  return service({
+    url: `${BASE_URL}/mcp/select`,
+    method: 'get',
+  });
+};
+
+/**
+ * 获取工作流选择列表
+ */
+export const getGeneralAgentWorkflowSelect = () => {
+  return service({
+    url: `${BASE_URL}/workflow/select`,
+    method: 'get',
+  });
+};
+
+/**
  * 更新全局配置
  * @param {Array} toolList - 工具列表 [{ toolId, toolType }]
  * @param {Array} assistantList - 智能体列表 [{ assistantId, assistantType }]

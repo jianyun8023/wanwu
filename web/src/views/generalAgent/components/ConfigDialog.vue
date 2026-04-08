@@ -23,6 +23,22 @@
             >
               工具
             </div>
+            <!-- MCP 选择 -->
+            <div
+              v-if="hasMcp"
+              :class="['tab-btn', { active: activeTab === 'mcp' }]"
+              @click="activeTab = 'mcp'"
+            >
+              MCP
+            </div>
+            <!-- 工作流选择 -->
+            <div
+              v-if="hasWorkflows"
+              :class="['tab-btn', { active: activeTab === 'workflows' }]"
+              @click="activeTab = 'workflows'"
+            >
+              工作流
+            </div>
             <!-- 智能体选择 -->
             <div
               v-if="hasAgents"
@@ -103,34 +119,41 @@
               </div>
             </div>
 
-            <!-- 智能体列表 - 扁平展示 -->
-            <div v-else-if="activeTab === 'assistants'" class="assistant-list">
+            <!-- MCP/工作流/智能体列表 - 统一渲染 -->
+            <div
+              v-else-if="activeTab !== 'tools'"
+              :class="currentListConfig.className"
+            >
               <div
-                v-for="assistant in assistantList"
-                :key="assistant.appId"
+                v-for="item in currentListConfig.list"
+                :key="item[currentListConfig.idField]"
                 :class="[
                   'tool-item',
                   {
-                    selected: isItemSelected(assistant.appId),
+                    selected: isItemSelected(item[currentListConfig.idField]),
                   },
                 ]"
-                @click="handleToggleItem(assistant)"
+                @click="handleToggleItem(item)"
               >
                 <div class="tool-avatar">
                   <img
-                    v-if="assistant.avatar?.path"
-                    :src="avatarSrc(assistant.avatar.path)"
+                    v-if="item.avatar?.path"
+                    :src="avatarSrc(item.avatar.path)"
                   />
-                  <i v-else class="el-icon-user"></i>
+                  <i v-else :class="currentListConfig.iconClass"></i>
                 </div>
                 <div class="tool-info">
-                  <div class="tool-name">{{ assistant.name }}</div>
-                  <div class="tool-desc">{{ assistant.desc }}</div>
+                  <div class="tool-name">
+                    {{ item[currentListConfig.nameField] }}
+                  </div>
+                  <div class="tool-desc">
+                    {{ item[currentListConfig.descField] }}
+                  </div>
                 </div>
                 <el-checkbox
-                  :value="isItemSelected(assistant.appId)"
+                  :value="isItemSelected(item[currentListConfig.idField])"
                   @click.native.stop
-                  @change="handleToggleItem(assistant)"
+                  @change="handleToggleItem(item)"
                 />
               </div>
             </div>
@@ -180,6 +203,8 @@ import { avatarSrc } from '@/utils/util';
 import {
   getGeneralAgentToolSelect,
   getGeneralAgentAssistantSelect,
+  getGeneralAgentMcpSelect,
+  getGeneralAgentWorkflowSelect,
   updateGeneralAgentGlobalConfig,
   getGeneralAgentGlobalConfig,
 } from '@/api/generalAgent';
@@ -196,10 +221,14 @@ export default {
   data() {
     return {
       dialogVisible: this.visible,
-      activeTab: 'tools', // 当前激活的tab: tools | assistants
+      activeTab: 'tools', // 当前激活的tab: tools | mcp | workflows | assistants
       toolList: [],
+      mcpList: [],
+      workflowList: [],
       assistantList: [],
       selectedTools: [],
+      selectedMcps: [],
+      selectedWorkflows: [],
       selectedAssistants: [],
       validationErrors: new Set(),
       // API Key 弹窗相关状态
@@ -225,9 +254,47 @@ export default {
     hasTools() {
       return this.toolList.length > 0;
     },
+    // 判断是否有 MCP 数据
+    hasMcp() {
+      return this.mcpList.length > 0;
+    },
+    // 判断是否有工作流数据
+    hasWorkflows() {
+      return this.workflowList.length > 0;
+    },
     // 判断是否有智能体数据
     hasAgents() {
       return this.assistantList.length > 0;
+    },
+    // 当前列表配置（根据 activeTab 动态返回）
+    currentListConfig() {
+      const configs = {
+        mcp: {
+          list: this.mcpList,
+          idField: 'mcpId',
+          nameField: 'name',
+          descField: 'description',
+          iconClass: 'el-icon-connection',
+          className: 'mcp-list',
+        },
+        workflows: {
+          list: this.workflowList,
+          idField: 'appId',
+          nameField: 'name',
+          descField: 'desc',
+          iconClass: 'el-icon-share',
+          className: 'workflow-list',
+        },
+        assistants: {
+          list: this.assistantList,
+          idField: 'appId',
+          nameField: 'name',
+          descField: 'desc',
+          iconClass: 'el-icon-user',
+          className: 'assistant-list',
+        },
+      };
+      return configs[this.activeTab] || {};
     },
   },
   methods: {
@@ -235,6 +302,8 @@ export default {
     async fetchAllData() {
       await Promise.allSettled([
         this.fetchToolList(),
+        this.fetchMcpList(),
+        this.fetchWorkflowList(),
         this.fetchAssistantList(),
         this.fetchGlobalConfig(),
       ]);
@@ -243,7 +312,7 @@ export default {
     },
     // 自动选择第一个有数据的tab
     selectFirstAvailableTab() {
-      const tabs = ['tools', 'assistants'];
+      const tabs = ['tools', 'mcp', 'workflows', 'assistants'];
       for (const tab of tabs) {
         if (this[`has${tab.charAt(0).toUpperCase() + tab.slice(1)}`]) {
           this.activeTab = tab;
@@ -254,6 +323,14 @@ export default {
     async fetchToolList() {
       const res = await getGeneralAgentToolSelect();
       this.toolList = res?.data?.list || [];
+    },
+    async fetchMcpList() {
+      const res = await getGeneralAgentMcpSelect();
+      this.mcpList = res?.data?.list || [];
+    },
+    async fetchWorkflowList() {
+      const res = await getGeneralAgentWorkflowSelect();
+      this.workflowList = res?.data?.list || [];
     },
     async fetchAssistantList() {
       const res = await getGeneralAgentAssistantSelect();
@@ -267,6 +344,17 @@ export default {
           toolId: tool.toolId,
           toolType: tool.toolType,
         }));
+        // 初始化已选中的 MCP
+        this.selectedMcps = (res.data.mcpList || []).map(mcp => ({
+          mcpId: mcp.mcpId,
+          mcpType: mcp.toolType,
+        }));
+        // 初始化已选中的工作流
+        this.selectedWorkflows = (res.data.workflowList || []).map(
+          workflow => ({
+            workflowId: workflow.workflowId,
+          }),
+        );
         // 初始化已选中的智能体
         this.selectedAssistants = (res.data.assistantList || []).map(
           assistant => ({
@@ -349,6 +437,27 @@ export default {
         return;
       }
 
+      // 收集所有选中的 MCP
+      const allSelectedMcps = [];
+      this.mcpList.forEach(mcp => {
+        if (this.isItemSelected(mcp.mcpId, 'mcp')) {
+          allSelectedMcps.push({
+            mcpId: mcp.mcpId,
+            mcpType: mcp.toolType,
+          });
+        }
+      });
+
+      // 收集所有选中的工作流
+      const allSelectedWorkflows = [];
+      this.workflowList.forEach(workflow => {
+        if (this.isItemSelected(workflow.appId, 'workflows')) {
+          allSelectedWorkflows.push({
+            workflowId: workflow.appId,
+          });
+        }
+      });
+
       // 收集所有选中的智能体
       const allSelectedAssistants = [];
       this.assistantList.forEach(assistant => {
@@ -362,6 +471,8 @@ export default {
 
       const res = await updateGeneralAgentGlobalConfig({
         toolList: allSelectedTools,
+        mcpList: allSelectedMcps,
+        workflowList: allSelectedWorkflows,
         assistantList: allSelectedAssistants,
       });
 
@@ -370,6 +481,8 @@ export default {
         // 触发确认事件,传递选中的工具和智能体列表
         this.$emit('confirm', {
           tools: allSelectedTools,
+          mcps: allSelectedMcps,
+          workflows: allSelectedWorkflows,
           assistants: allSelectedAssistants,
         });
         this.handleClose();
@@ -383,6 +496,12 @@ export default {
       if (itemType === 'tools') {
         return this.selectedTools.some(t => t.toolId === itemId);
       }
+      if (itemType === 'mcp') {
+        return this.selectedMcps.some(m => m.mcpId === itemId);
+      }
+      if (itemType === 'workflows') {
+        return this.selectedWorkflows.some(w => w.workflowId === itemId);
+      }
       // 智能体的选中状态判断
       return this.selectedAssistants.some(a => a.assistantId === itemId);
     },
@@ -390,6 +509,10 @@ export default {
     handleToggleItem(item) {
       if (this.activeTab === 'tools') {
         this.handleToggleTool(item);
+      } else if (this.activeTab === 'mcp') {
+        this.handleToggleMcp(item);
+      } else if (this.activeTab === 'workflows') {
+        this.handleToggleWorkflow(item);
       } else {
         this.handleToggleAssistant(item);
       }
@@ -480,6 +603,39 @@ export default {
       }
     },
 
+    handleToggleMcp(mcp) {
+      // 在选中状态中切换
+      const index = this.selectedMcps.findIndex(m => m.mcpId === mcp.mcpId);
+      if (index > -1) {
+        // 已选中，取消选中
+        this.selectedMcps.splice(index, 1);
+      } else {
+        // 未选中，添加选中
+        this.selectedMcps.push({
+          mcpId: mcp.mcpId,
+          mcpType: mcp.toolType,
+        });
+      }
+    },
+
+    handleToggleWorkflow(workflow) {
+      // 工作流使用 appId 作为标识
+      const workflowId = workflow.appId;
+      // 在选中状态中切换
+      const index = this.selectedWorkflows.findIndex(
+        w => w.workflowId === workflowId,
+      );
+      if (index > -1) {
+        // 已选中，取消选中
+        this.selectedWorkflows.splice(index, 1);
+      } else {
+        // 未选中，添加选中
+        this.selectedWorkflows.push({
+          workflowId: workflowId,
+        });
+      }
+    },
+
     getConditionLabel(condition) {
       const labels = {
         none: '无要求',
@@ -549,6 +705,12 @@ export default {
     overflow-y: auto;
     padding: 16px 20px;
     max-height: calc(80vh - 60px);
+  }
+
+  .dialog-footer {
+    text-align: right;
+    padding: 16px 20px;
+    border-top: 1px solid #e5e5e5;
   }
 
   .drawer-section {
@@ -635,13 +797,11 @@ export default {
     }
   }
 
+  // 合并所有列表样式（工具、MCP、工作流、智能体）
+  .tool-list,
+  .mcp-list,
+  .workflow-list,
   .assistant-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .tool-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -762,12 +922,6 @@ export default {
   }
 }
 
-.dialog-footer {
-  text-align: right;
-  padding: 16px 20px;
-  border-top: 1px solid #e5e5e5;
-}
-
 // API Key 弹窗样式
 .api-key-dialog {
   .el-dialog__body {
@@ -776,6 +930,12 @@ export default {
 
   .api-key-input-container {
     padding: 10px 0;
+  }
+
+  .dialog-footer {
+    text-align: right;
+    padding: 16px 20px;
+    border-top: 1px solid #e5e5e5;
   }
 }
 </style>
