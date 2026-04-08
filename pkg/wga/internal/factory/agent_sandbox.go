@@ -132,6 +132,19 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 			})
 		}
 	}
+	for _, extraTool := range a.options.ExtraTools {
+		var auth *openapi3_util.Auth
+		if extraTool.APIAuth != nil {
+			if converted, err := extraTool.APIAuth.ToOpenapiAuth(); err == nil {
+				auth = converted
+			}
+		}
+		tools = append(tools, wga_sandbox_option.Tool{
+			OpenAPI3Schema: extraTool.OpenAPI3Schema,
+			OperationIDs:   nil,
+			APIAuth:        auth,
+		})
+	}
 	if len(tools) > 0 {
 		opts = append(opts, wga_sandbox_option.WithTools(tools))
 	}
