@@ -27,15 +27,11 @@
             @click="selectConversation(item.threadId)"
           >
             <i class="el-icon-chat-dot-round"></i>
-            <span class="conversation-title">{{ item.title || '新对话' }}</span>
-            <el-dropdown trigger="click" @command="handleCommand($event, item)">
-              <i class="el-icon-more" @click.stop></i>
-              <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item command="delete">
-                  <span style="color: #f56c6c">删除</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </el-dropdown>
+            <span class="conversation-title">{{ item.title }}</span>
+            <i
+              class="el-icon-delete conversation-delete"
+              @click.stop="handleDeleteConversation(item)"
+            ></i>
           </div>
         </div>
       </div>
@@ -51,12 +47,15 @@
         <!-- 顶部标题栏 -->
         <div class="header">
           <div class="header-left">
-            <button class="sidebar-toggle-btn" @click="toggleSidebar">
+            <button class="header-icon-btn" @click="toggleSidebar">
               <i
                 :class="
                   sidebarCollapsed ? 'el-icon-s-unfold' : 'el-icon-s-fold'
                 "
               ></i>
+            </button>
+            <button class="header-icon-btn" @click="initNewConversation">
+              <i class="el-icon-plus"></i>
             </button>
             <div class="header-title">{{ currentTitle }}</div>
           </div>
@@ -2110,24 +2109,22 @@ export default {
       return message;
     },
 
-    async handleCommand(command, item) {
-      if (command === 'delete') {
-        await this.$confirm('确定要删除这个对话吗？', '提示', {
-          type: 'warning',
-        });
-        const res = await deleteGeneralAgentConversation({
-          threadId: item.threadId,
-        });
-        if (res.code === 0) {
-          this.$message.success('删除成功');
-          if (this.currentThreadId === item.threadId) {
-            this.currentThreadId = '';
-            this.isNewConversation = true;
-            this.messageList = [];
-            this.hidePanel();
-          }
-          this.fetchConversationList();
+    async handleDeleteConversation(item) {
+      await this.$confirm('确定要删除这个对话吗？', '提示', {
+        type: 'warning',
+      });
+      const res = await deleteGeneralAgentConversation({
+        threadId: item.threadId,
+      });
+      if (res.code === 0) {
+        this.$message.success('删除成功');
+        if (this.currentThreadId === item.threadId) {
+          this.currentThreadId = '';
+          this.isNewConversation = true;
+          this.messageList = [];
+          this.hidePanel();
         }
+        this.fetchConversationList();
       }
     },
   },
@@ -2248,7 +2245,7 @@ $message-max-width: 900px;
     &:hover {
       background: rgba($claude-primary, 0.08);
 
-      .el-icon-more {
+      .conversation-delete {
         opacity: 1;
       }
     }
@@ -2276,14 +2273,16 @@ $message-max-width: 900px;
       white-space: nowrap;
     }
 
-    .el-icon-more {
+    .conversation-delete {
       opacity: 0;
       color: $claude-text-muted;
       padding: 4px;
-      transition: opacity 0.2s;
+      font-size: 16px;
+      transition: all 0.2s;
+      cursor: pointer;
 
       &:hover {
-        color: $claude-primary;
+        color: #f56c6c;
       }
     }
   }
@@ -2347,7 +2346,7 @@ $message-max-width: 900px;
     color: $claude-text;
   }
 
-  .sidebar-toggle-btn {
+  .header-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
