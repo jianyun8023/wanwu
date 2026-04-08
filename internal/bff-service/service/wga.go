@@ -126,7 +126,7 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	for _, a := range req.AssistantList {
 		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
 			AssistantId:   a.AssistantID,
-			AssistantType: a.AssistantType,
+			AssistantType: "1", // 默认单智能体
 		})
 	}
 	if err := checkWgaAssistantConfig(ctx, userId, orgId, assistantList); err != nil {
@@ -222,8 +222,7 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 	for _, a := range resp.Config.AssistantList {
 		if validAssistantIds[a.AssistantId] {
 			result.AssistantList = append(result.AssistantList, request.AssistantSelected{
-				AssistantID:   a.AssistantId,
-				AssistantType: a.AssistantType,
+				AssistantID: a.AssistantId,
 			})
 		}
 	}
@@ -959,26 +958,10 @@ func checkWgaAssistantConfig(ctx *gin.Context, userId, orgId string, assistantLi
 			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("assistant not published: %s", a.AssistantId))
 		}
 
-		// 校验智能体类型
+		// 校验智能体类型：通用智能体只支持单智能体
 		info := assistantInfos[a.AssistantId]
-		if info != nil {
-			// 通用智能体只支持单智能体
-			if info.Category != constant.AgentCategorySingle {
-				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("assistant must be single agent: %s", a.AssistantId))
-			}
-
-			var expectedCategory int32
-			switch a.AssistantType {
-			case "1":
-				expectedCategory = constant.AgentCategorySingle
-			case "2":
-				expectedCategory = constant.AgentCategoryMulti
-			default:
-				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("invalid assistant type: %s", a.AssistantType))
-			}
-			if info.Category != expectedCategory {
-				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("assistant category mismatch: %s (expected %d, got %d)", a.AssistantId, expectedCategory, info.Category))
-			}
+		if info != nil && info.Category != constant.AgentCategorySingle {
+			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("assistant must be single agent: %s", a.AssistantId))
 		}
 	}
 	return nil
