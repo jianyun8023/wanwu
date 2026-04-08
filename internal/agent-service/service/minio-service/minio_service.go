@@ -160,6 +160,8 @@ func DownloadFileToLocal(ctx context.Context, minioFilePath string, localPath st
 	if urlType == URLTypeMinioPresigned {
 		return DownloadFileToLocalDirect(ctx, minioFilePath, localPath)
 	}
+	//替换掉对外的url
+	minioFilePath = strings.ReplaceAll(minioFilePath, "/minio/download/api", "")
 	sourceBucketName, objectName, _ := SplitFilePath(minioFilePath)
 	object, err := minio_client.Agent().Cli().GetObject(ctx, sourceBucketName, objectName, minio.GetObjectOptions{})
 	if err != nil {

@@ -228,16 +228,19 @@ func (s *SkillExecutor) runStream(runnerType wga_sandbox_option.RunnerType) (*sc
 	return sr, nil
 }
 
+// downloadInputFile 下载输入文件
 func downloadInputFile(inputDir string, skillParams *SkillParams) {
 	if len(skillParams.UploadFileUrl) > 0 {
 		for _, file := range skillParams.UploadFileUrl {
-			err := minio_service.DownloadFileToLocal(context.Background(), file, inputDir+filepath.Base(file))
+			localFilePath := filepath.Join(inputDir, filepath.Base(file))
+			err := minio_service.DownloadFileToLocal(context.Background(), file, localFilePath)
 			if err != nil {
 				log.Errorf("skillTool downloadInputFile error: %v", err)
 			}
 		}
 	}
 }
+
 func skillOutputProcessor(outputDir string) (string, map[string]any, error) {
 	var builder = &strings.Builder{}
 	//结果文件处理
@@ -248,7 +251,7 @@ func skillOutputProcessor(outputDir string) (string, map[string]any, error) {
 	}
 	var extra = map[string]any{}
 	if len(fileList) > 0 {
-		builder.WriteString("生成文件结果如下:")
+		builder.WriteString("\n 生成文件结果如下-ReplaceLocalFile:")
 		for _, file := range fileList {
 			builder.WriteString(util.MdImageFile(file.FileName, file.FilePath))
 		}

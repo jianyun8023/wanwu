@@ -1,4 +1,4 @@
-﻿import { fetchEventSource } from '../sse/index.js';
+import { fetchEventSource } from '../sse/index.js';
 import { store } from '@/store/index';
 import Print from '../utils/printPlus2.js';
 import {

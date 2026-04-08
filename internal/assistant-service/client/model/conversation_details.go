@@ -9,7 +9,7 @@ const (
 	AgentThink        ConversationType = "agentThink"        //主智能体思考
 	SubAgent          ConversationType = "subAgent"          //子智能体
 	AgentSkill        ConversationType = "agentSkill"        //子智能体
-	AgentSkillText    ConversationType = "agentSkillText"    //智能体skill内容
+	AgentSubText      ConversationType = "subText"           //智能体skill内容,或者子智能体内容
 	SubAgentTool      ConversationType = "subAgentTool"      //子智能体工具
 	SubAgentKnowledge ConversationType = "subAgentKnowledge" //子智能体只是库
 
@@ -26,13 +26,14 @@ type FileInfo struct {
 }
 
 type SubEventData struct {
-	Status   SubEventStatus `json:"status"`
-	Id       string         `json:"id"`
-	ParentId string         `json:"parentId"`
-	Name     string         `json:"name"`
-	Profile  string         `json:"profile"`
-	TimeCost string         `json:"timeCost"`
-	Order    int            `json:"order"`
+	Status      SubEventStatus `json:"status"`
+	Id          string         `json:"id"`
+	ParentId    string         `json:"parentId"`
+	Name        string         `json:"name"`
+	Profile     string         `json:"profile"`
+	TimeCost    string         `json:"timeCost"`
+	Order       int            `json:"order"`
+	DisplayMode int            `json:"displayMode"`
 }
 
 func (s *SubEventData) Copy() *SubEventData {

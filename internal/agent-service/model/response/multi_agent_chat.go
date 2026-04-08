@@ -71,6 +71,14 @@ func (m *MultiAgentContext) PeekAgent() *AgentInfo {
 	return peek
 }
 
+func (m *MultiAgentContext) CurrentAgentId() string {
+	agent := m.PeekAgent()
+	if agent == nil {
+		return ""
+	}
+	return agent.Id
+}
+
 func (m *MultiAgentContext) CreateAgent(subAgentMap map[string]*request.AgentConfig) {
 	agentName := buildAgentName(m.AgentTempMessage.String())
 	if m.CurrentAgent == nil {

@@ -49,8 +49,6 @@ func BuildAgentParams(req *request.AgentChatReq, assistantDetail *assistant_serv
 		Input:               req.Input,
 		Stream:              req.Stream,
 		UploadFile:          req.UploadFile,
-		NewStyle:            newStyle,
-		OriginNewStyle:      newStyle,
 	}
 }
 

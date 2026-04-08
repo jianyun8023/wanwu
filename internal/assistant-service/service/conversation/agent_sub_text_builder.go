@@ -10,7 +10,7 @@ func init() {
 }
 
 func (*AgentSkillText) EventType() int {
-	return SkillTextEventType
+	return SubTextEventType
 }
 func (*AgentSkillText) Build(conversationResp *ConversationResp, conversation, searchResult string, agentChatResp *AgentChatResp) error {
 	eventData := agentChatResp.EventData
@@ -21,7 +21,7 @@ func (*AgentSkillText) Build(conversationResp *ConversationResp, conversation, s
 	if resp == nil {
 		resp = CreateConversationResp()
 		resp.Order = eventData.Order
-		resp.EventType = SkillTextEventType
+		resp.EventType = SubTextEventType
 		conversationResp.ConversationEventMap[eventData.Id] = resp
 	}
 	if len(conversation) > 0 {

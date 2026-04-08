@@ -8,6 +8,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/cloudwego/eino/schema"
 	"strconv"
+	"strings"
 )
 
 type SkillMessageBuilder struct {
@@ -28,7 +29,7 @@ func (*SkillMessageBuilder) FilterMessage(respContext *response.AgentChatRespCon
 	return !skillChatStep.SkillNeedProcess()
 }
 
-func (*SkillMessageBuilder) BuildContent(req *request.AgentChatContext, respContext *response.AgentChatRespContext, chatMessage *schema.Message, changeStyle *bool) ([]*response.AgentMessageContent, error) {
+func (*SkillMessageBuilder) BuildContent(req *request.AgentChatContext, respContext *response.AgentChatRespContext, chatMessage *schema.Message) ([]*response.AgentMessageContent, error) {
 	skillChatStep := response.CreateSkillChatStep(respContext, chatMessage)
 	//到这里说明都是需要处理的skill消息
 	step := skillChatStep.BuildSkillStep()
@@ -38,8 +39,7 @@ func (*SkillMessageBuilder) BuildContent(req *request.AgentChatContext, respCont
 	}
 	marshal, _ := json.Marshal(message)
 	log.Infof("buildDataContent, %s", string(marshal))
-	var style = true
-	content, err := NewMultiBuilder().BuildContent(req, respContext, message, &style)
+	content, err := NewMultiBuilder().BuildContent(req, respContext, message)
 	bytes, _ := json.Marshal(content)
 	log.Infof("buildDataContent, %s", string(bytes))
 	buildSkillEvent(content, respContext.Order)
@@ -83,6 +83,9 @@ func rebuildSkillMessage(respContext *response.AgentChatRespContext, chatMessage
 					respContext.DownloadContext.AddDownloadFile(respContext.SkillChatContext.SkillId, fileList)
 				}
 			}
+		}
+		if len(message.Content) > 0 {
+			message.Content = strings.ReplaceAll(message.Content, "-ReplaceLocalFile", "")
 		}
 		return message
 	}
