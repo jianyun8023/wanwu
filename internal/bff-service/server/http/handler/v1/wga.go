@@ -1,14 +1,10 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
-	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/internal/bff-service/service"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	"github.com/gin-gonic/gin"
@@ -368,108 +364,5 @@ func GeneralAgentConversationChat(ctx *gin.Context) {
 	err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), req)
 	if err != nil {
 		gin_util.Response(ctx, nil, err)
-	}
-}
-
-// GeneralAgentCopilotRuntime
-//
-//	@Tags			wga
-//	@Summary		通用智能体CopilotRuntime协议端点
-//	@Description	通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info,agent/connect,agent/run,agent/stop
-//	@Security		JWT
-//	@Accept			json
-//	@Produce		json
-//	@Param			data	body		request.GeneralAgentCopilotRuntimeReq		true	"CopilotRuntime请求参数"
-//	@Success		200		{object}	response.GeneralAgentCopilotRuntimeInfoResp	"CopilotRuntime信息"
-//	@Router			/general/agent/copilotkit [post]
-func GeneralAgentCopilotRuntime(ctx *gin.Context) {
-	var req request.GeneralAgentCopilotRuntimeReq
-	if !gin_util.Bind(ctx, &req) {
-		return
-	}
-
-	switch req.Method {
-	case "info":
-		resp := service.GeneralAgentCopilotRuntimeInfo(ctx)
-		ctx.JSON(http.StatusOK, resp)
-
-	case "agent/connect":
-		resp, err := service.GetGeneralAgentConversationDetail(ctx, getUserID(ctx), getOrgID(ctx), req.GetThreadID())
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "internal_error",
-				"message": err.Error(),
-			})
-		}
-
-		ctx.Header("Content-Type", "text/event-stream")
-		ctx.Header("Cache-Control", "no-cache")
-		ctx.Header("Connection", "keep-alive")
-		if resp.List == nil {
-			return
-		}
-
-		// FIXME 目前一条条重现，并且delay=5ms；而非一次性全部重现所有sse
-		// var builder strings.Builder
-		for _, run := range resp.List.([]response.GeneralAgentConversationDetailInfo) {
-			for _, event := range run.Events {
-				b, _ := json.Marshal(event)
-				_, _ = fmt.Fprintf(ctx.Writer, "data: %v\n\n", string(b))
-				ctx.Writer.Flush()
-				time.Sleep(time.Millisecond * 5)
-				// if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {
-				// 	log.Errorf("[wga] agent/connect write string err: %v", err)
-				// 	continue
-				// }
-			}
-		}
-		// if _, err := ctx.Writer.Write([]byte(builder.String())); err != nil {
-		// 	log.Errorf("[wga] agent/connect write sse err: %v", err)
-		// }
-		// ctx.Writer.Flush()
-
-	case "agent/run":
-		threadID := req.GetThreadID()
-		if threadID == "" {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "invalid_request",
-				"message": "threadId is required",
-			})
-			return
-		}
-
-		messages := req.GetMessages()
-		if len(messages) == 0 {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error":   "invalid_request",
-				"message": "messages is required and cannot be empty",
-			})
-			return
-		}
-
-		chatReq := request.GeneralAgentConversationChatReq{
-			ThreadID: threadID,
-			Messages: messages,
-		}
-
-		err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), chatReq)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "internal_error",
-				"message": err.Error(),
-			})
-		}
-
-	case "agent/stop":
-		ctx.JSON(http.StatusOK, gin.H{
-			"stopped": false,
-			"message": "Unimplemented",
-		})
-
-	default:
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": "Unknown method: " + req.Method,
-		})
 	}
 }

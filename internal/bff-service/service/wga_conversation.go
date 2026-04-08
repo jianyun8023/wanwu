@@ -14,7 +14,6 @@ import (
 	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
-	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
@@ -33,22 +32,6 @@ import (
 const (
 	wgaConversationHistoryEventESIndexName = "wga_chat_history_event" // 通用智能体聊天历史ES索引
 )
-
-func GeneralAgentCopilotRuntimeInfo(_ *gin.Context) *response.GeneralAgentCopilotRuntimeInfoResp {
-	return &response.GeneralAgentCopilotRuntimeInfoResp{
-		Version: "0.0.1",
-		Agents: map[string]response.GeneralAgentCopilotRuntimeInfoAgent{
-			"default": {
-				Name:        "万悟通用智能体",
-				Description: "万悟通用智能体",
-				ClassName:   "WGA",
-			},
-		},
-		Mode:                          "sse",
-		AudioFileTranscriptionEnabled: false,
-		A2UIEnabled:                   false,
-	}
-}
 
 func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
 	// 过滤出当前用户消息（最后一条 User 消息）

@@ -33,6 +33,5 @@ func registerWGA(apiV1 *gin.RouterGroup) {
 
 	// 通用智能体对话相关接口
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/chat", http.MethodPost, v1.GeneralAgentConversationChat, "通用智能体流式问答")
-	mid.Sub("wga").Reg(apiV1, "/general/agent/copilotkit", http.MethodPost, v1.GeneralAgentCopilotRuntime, "CopilotRuntime协议端点")
 
 }
