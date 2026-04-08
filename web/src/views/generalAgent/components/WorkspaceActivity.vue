@@ -30,12 +30,7 @@
       </div>
 
       <div class="activity-actions">
-        <el-button
-          size="mini"
-          type="primary"
-          plain
-          @click="handleViewWorkspace"
-        >
+        <el-button size="mini" plain @click="handleViewWorkspace">
           <i class="el-icon-folder-opened"></i>
           查看工作空间
         </el-button>
@@ -49,7 +44,7 @@
 </template>
 
 <script>
-import { formatFileSize } from '../utils/helpers';
+import { formatFileSize } from '@/utils/util';
 
 export default {
   name: 'WorkspaceActivity',
@@ -106,7 +101,11 @@ export default {
 .workspace-activity {
   margin: 16px 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba($workspace-color, 0.08) 0%, #fafafa 100%);
+  background: linear-gradient(
+    135deg,
+    rgba($workspace-color, 0.08) 0%,
+    #fafafa 100%
+  );
   border: 1px solid rgba($workspace-color, 0.2);
   overflow: hidden;
   transition: all 0.3s ease;

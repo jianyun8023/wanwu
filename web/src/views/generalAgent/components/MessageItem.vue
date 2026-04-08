@@ -80,7 +80,7 @@
                 :thread-id="threadId"
                 :run-id="fragment.runId"
                 @view-workspace="$emit('view-workspace', $event)"
-                @download-all="$emit('download-all', $event)"
+                @download-all="$emit('download-all')"
               />
               <!-- Activity 片段（子智能体） -->
               <activity-block
@@ -191,14 +191,10 @@
             v-if="!message.isStreaming && hasContent"
             class="message-actions"
           >
-            <el-tooltip content="复制内容" placement="top">
-              <CopyIcon :text="fullContent" type="icon" />
-            </el-tooltip>
-            <el-tooltip v-if="isLastMessage" content="重新生成" placement="top">
-              <button class="action-btn" @click="regenerate">
-                <i class="el-icon-refresh-right"></i>
-              </button>
-            </el-tooltip>
+            <CopyIcon class="action-btn" :text="fullContent" type="button" />
+            <button class="action-btn" @click="regenerate">
+              <i class="el-icon-refresh-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -208,8 +204,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
-import { avatarSrc } from '@/utils/util';
-import { isImageFile } from '../utils/helpers';
+import { avatarSrc, isImageFile } from '@/utils/util';
 import MessageHeader from './MessageHeader.vue';
 import ThinkingBlock from './ThinkingBlock.vue';
 import ToolCallBlock from './ToolCallBlock.vue';

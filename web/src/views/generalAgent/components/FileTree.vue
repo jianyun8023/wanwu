@@ -53,7 +53,7 @@
         :class="['file-item', { 'is-directory': isDirectory(file) }]"
       >
         <div class="file-item-main" @click="handleFileClick(file)">
-          <i :class="getFileIcon(file)"></i>
+          <i :class="getFileIconClass(file)"></i>
           <span class="file-name">{{ file.name }}</span>
           <span v-if="!isDirectory(file)" class="file-size">
             {{ formatSize(file.size) }}
@@ -74,7 +74,7 @@
 </template>
 
 <script>
-import { formatFileSize, getFileIcon } from '../utils/helpers';
+import { formatFileSize, getFileIconClass } from '@/utils/util';
 
 export default {
   name: 'FileTree',
@@ -104,7 +104,7 @@ export default {
       return file.type === 'directory' || file.type === 'dir' || file.isDir;
     },
 
-    getFileIcon,
+    getFileIconClass,
 
     formatSize: formatFileSize,
 
@@ -248,6 +248,7 @@ export default {
 }
 
 .file-download-btn {
+  margin-left: 4px;
   padding: 4px 8px;
   background: transparent;
   border: 1px solid #dcdfe6;

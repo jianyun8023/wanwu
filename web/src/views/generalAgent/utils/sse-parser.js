@@ -236,5 +236,5 @@ export function formatToolResult(content, maxLength = 500) {
   return content;
 }
 
-// 从 helpers.js 重新导出 formatDuration
-export { formatDuration } from './helpers';
+// 从 @/utils/util 重新导出 formatDuration
+export { formatDuration } from '@/utils/util';

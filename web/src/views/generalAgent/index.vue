@@ -90,6 +90,7 @@
               :thread-id="currentThreadId"
               @regenerate="handleRegenerate"
               @view-workspace="handleViewWorkspace"
+              @download-all="handleDownloadAll"
             />
           </div>
 
@@ -336,9 +337,8 @@ import {
   ActivityType,
   ActivityStatus,
 } from './utils/sse-parser';
-import { formatDuration } from './utils/helpers';
+import { formatDuration, avatarSrc, resDownloadFile } from '@/utils/util';
 import { mapState, mapActions, mapGetters } from 'vuex';
-import { avatarSrc } from '@/utils/util';
 import * as XLSX from 'xlsx';
 
 export default {
@@ -2022,27 +2022,37 @@ export default {
       }
     },
 
+    // 预览抽屉中下载单个文件
     async downloadPreviewFile(file) {
       if (!file || !this.previewFilePath) return;
 
       try {
         const blob = await downloadGeneralAgentWorkspace({
-          threadId: this.activeWorkspace?.threadId || this.currentThreadId,
-          runId: this.activeWorkspace?.runId || this.currentRunId,
+          threadId: this.currentThreadId,
+          runId: this.currentRunId,
           path: this.previewFilePath,
         });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        resDownloadFile(blob, file.name);
         this.$message.success('下载成功');
       } catch (error) {
         console.error('下载文件失败:', error);
         this.$message.error('下载文件失败');
+      }
+    },
+
+    // 下载整个工作空间
+    async handleDownloadAll() {
+      try {
+        const blob = await downloadGeneralAgentWorkspace({
+          threadId: this.currentThreadId,
+          runId: this.currentRunId,
+          path: '',
+        });
+        resDownloadFile(blob, '工作空间.zip');
+        this.$message.success('下载成功');
+      } catch (error) {
+        console.error('下载工作空间失败:', error);
+        this.$message.error('下载失败');
       }
     },
 

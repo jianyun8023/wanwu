@@ -69,7 +69,6 @@
         @download="downloadFile"
       />
     </div>
-
   </div>
 </template>
 
@@ -79,6 +78,7 @@ import {
   downloadGeneralAgentWorkspace,
 } from '@/api/generalAgent';
 import FileTree from './FileTree.vue';
+import { resDownloadFile } from '@/utils/util';
 
 export default {
   name: 'WorkspacePanel',
@@ -293,14 +293,7 @@ export default {
           runId: this.runId,
           path: filePath,
         });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        resDownloadFile(blob, file.name);
         this.$message.success('下载成功');
       } catch (error) {
         console.error('下载文件失败:', error);
