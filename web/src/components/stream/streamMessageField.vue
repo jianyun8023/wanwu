@@ -1419,7 +1419,9 @@ export default {
         if (this.copyTimerMap.has(btn)) {
           clearTimeout(this.copyTimerMap.get(btn));
         }
-        let innerText = btn.parentNode.nextElementSibling.innerText;
+        let innerText = btn.dataset.clipboardText
+          ? decodeURIComponent(btn.dataset.clipboardText)
+          : btn.parentNode.nextElementSibling.innerText;
         this.copy(innerText);
         this.$message.success(this.$t('agent.copyTips'));
         btn.innerText = this.$t('agent.copySuccess');

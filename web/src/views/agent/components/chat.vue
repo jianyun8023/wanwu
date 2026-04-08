@@ -91,6 +91,7 @@ import {
   convertLatexSyntax,
   parseSubConversation,
 } from '@/utils/util.js';
+import { processToolResultBlocks } from '@/utils/toolResultProcessor.js';
 import {
   delConversation,
   createConversation,
@@ -605,7 +606,12 @@ export default {
                   type: 'main',
                   order: item.order,
                   renderedContent: md.render(
-                    parseSub(convertLatexSyntax(item.response), index),
+                    parseSub(
+                      processToolResultBlocks(
+                        convertLatexSyntax(item.response || ''),
+                      ),
+                      index,
+                    ),
                   ),
                 });
               });
@@ -631,7 +637,9 @@ export default {
                       // 此处预渲染 Markdown 供子组件展示
                       renderedContent: md.render(
                         parseSubConversation(
-                          convertLatexSyntax(m.response || ''),
+                          processToolResultBlocks(
+                            convertLatexSyntax(m.response || ''),
+                          ),
                           index,
                           typeof m.searchList === 'string'
                             ? JSON.parse(m.searchList || '[]')
@@ -652,7 +660,9 @@ export default {
                         : m.searchList || [],
                     response: md.render(
                       parseSubConversation(
-                        convertLatexSyntax(m.response || ''),
+                        processToolResultBlocks(
+                          convertLatexSyntax(m.response || ''),
+                        ),
                         index,
                         m.searchList,
                         m.id,
@@ -721,7 +731,12 @@ export default {
               query: n.prompt,
               finish: 1, //兼容流式问答
               response: md.render(
-                parseSub(convertLatexSyntax(fullResponse), index),
+                parseSub(
+                  processToolResultBlocks(
+                    convertLatexSyntax(fullResponse || ''),
+                  ),
+                  index,
+                ),
               ),
               oriResponse: fullResponse,
               searchList:
