@@ -30,7 +30,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]response.GetGeneralAgentToolSelectResp, error) {
+func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) (*response.ListResult, error) {
 	toolResp, err := mcp.GetToolSelect(ctx.Request.Context(), &mcp_service.GetToolSelectReq{
 		Identity: &mcp_service.Identity{
 			UserId: userId,
@@ -80,7 +80,10 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 		result = append(result, categoryResp)
 	}
 
-	return result, nil
+	return &response.ListResult{
+		List:  result,
+		Total: int64(len(result)),
+	}, nil
 
 }
 
