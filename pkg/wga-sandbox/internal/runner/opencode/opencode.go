@@ -81,7 +81,7 @@ const (
 
 ## 历史信息
 
-{{range .Messages}}### {{.Role}}
+{{range .Messages}}### role: {{.Role}}
 
 {{.ReasoningContent}}{{.Content}}
 
