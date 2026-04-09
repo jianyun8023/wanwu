@@ -29,11 +29,14 @@ import (
 )
 
 var (
-	AvatarCachePrefix = "v1/cache/avatar"
-
-	workflowAvatarCachePrefix = "v1/cache/avatar/workflow"
-	mcpAvatarCachePrefix      = "v1/cache/avatar/mcp"
-	customAvatarCachePrefix   = "v1/cache/avatar/custom"
+	// AvatarCachePrefix 前端访问avatar的URL前缀
+	AvatarCachePrefix = "/v1/cache/avatar"
+	// workflowAvatarCachePrefix 工作流avatar缓存路径前缀
+	workflowAvatarCachePrefix = "/v1/cache/avatar/workflow"
+	// mcpAvatarCachePrefix MCP服务avatar缓存路径前缀
+	mcpAvatarCachePrefix = "/v1/cache/avatar/mcp"
+	// customAvatarCachePrefix 系统自定义avatar缓存路径前缀
+	customAvatarCachePrefix = "/v1/cache/avatar/custom"
 )
 
 func GetUserPermission(ctx *gin.Context, userID, orgID string) (*response.UserPermission, error) {
@@ -68,7 +71,12 @@ func GetOrgSelect(ctx *gin.Context, userID string) (*response.Select, error) {
 	}, nil
 }
 
-// UploadAvatar 返回avatar在minio的objectPath
+// UploadAvatar 上传用户头像到MinIO
+// 1. 校验文件类型（仅支持jpg/jpeg/png）
+// 2. 读取文件内容到内存
+// 3. 生成UUID文件名，构造存储路径 avatar/{前两位字母}/{文件名}
+// 4. 上传到MinIO的custom-upload桶
+// 返回MinIO中的objectPath，格式：custom-upload/avatar/xx/xxx.jpg
 func UploadAvatar(ctx *gin.Context, fileHeader *multipart.FileHeader) (string, error) {
 	// 校验文件类型
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
@@ -101,7 +109,9 @@ func UploadAvatar(ctx *gin.Context, fileHeader *multipart.FileHeader) (string, e
 	return objectPath, nil
 }
 
-// CacheAvatar 返回avatar的缓存路径
+// CacheAvatar 将MinIO中的avatar objectPath转为前端可访问的缓存URL
+// 输入：avatarObjectPath = "custom-upload/avatar/xx/xxx.jpg"
+// 输出：avatar.Path = "/v1/cache/avatar/custom-upload/avatar/xx/xxx.jpg"
 func CacheAvatar(avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -112,6 +122,10 @@ func CacheAvatar(avatarObjectPath string) request.Avatar {
 	avatar.Path = path.Join(AvatarCachePrefix, avatarObjectPath)
 	return avatar
 }
+
+// cacheCustomAvatar 将自定义avatar objectPath转为前端可访问的缓存URL
+// 输入：avatarObjectPath = "custom-upload/avatar/xx/xxx.jpg"
+// 输出：avatar.Path = "/v1/cache/avatar/custom/custom-upload/avatar/xx/xxx.jpg"
 func cacheCustomAvatar(avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -123,6 +137,10 @@ func cacheCustomAvatar(avatarObjectPath string) request.Avatar {
 	return avatar
 }
 
+// cacheAppAvatar 根据应用类型获取应用avatar的缓存URL
+// 1. Rag类型空avatar返回默认Rag图标
+// 2. Agent类型空avatar返回默认Agent图标
+// 3. 其他类型调用CacheAvatar
 func cacheAppAvatar(ctx *gin.Context, avatarObjectPath, appType string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" && appType == constant.AppTypeRag {
@@ -136,6 +154,9 @@ func cacheAppAvatar(ctx *gin.Context, avatarObjectPath, appType string) request.
 	return CacheAvatar(avatarObjectPath)
 }
 
+// cacheUserAvatar 获取用户头像的缓存URL
+// 1. 空avatar返回默认用户图标
+// 2. 否则调用CacheAvatar转换
 func cacheUserAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -145,7 +166,9 @@ func cacheUserAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	return CacheAvatar(avatarObjectPath)
 }
 
-// tool builtin & custom
+// cacheToolAvatar 根据工具类型获取工具avatar的缓存URL
+// 1. Custom类型：空avatar返回默认工具图标，否则调用CacheAvatar
+// 2. BuiltIn类型：调用cacheMCPServiceAvatar
 func cacheToolAvatar(ctx *gin.Context, toolType string, avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	switch toolType {
@@ -161,7 +184,9 @@ func cacheToolAvatar(ctx *gin.Context, toolType string, avatarObjectPath string)
 	return avatar
 }
 
-// skill custom
+// cacheSkillAvatar 获取技能avatar的缓存URL
+// 1. 空avatar返回默认技能图标
+// 2. 否则调用CacheAvatar转换
 func cacheSkillAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	if avatarObjectPath == "" {
 		return request.Avatar{Path: config.Cfg().DefaultIcon.CustomSkillIcon}
@@ -169,7 +194,9 @@ func cacheSkillAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar 
 	return CacheAvatar(avatarObjectPath)
 }
 
-// mcp square & custom
+// cacheMCPAvatar 获取MCP广场或自定义MCP的avatar缓存URL
+// 1. squareObjectPath为空时：customObjectPath为空则返回MCP自定义默认图标，否则用customAvatarPrefix缓存
+// 2. squareObjectPath非空时：调用cacheMCPServiceAvatar缓存
 func cacheMCPAvatar(ctx *gin.Context, squareObjectPath, customObjectPath string) request.Avatar {
 	if squareObjectPath == "" {
 		avatar := request.Avatar{}
@@ -182,7 +209,9 @@ func cacheMCPAvatar(ctx *gin.Context, squareObjectPath, customObjectPath string)
 	return cacheMCPServiceAvatar(squareObjectPath)
 }
 
-// mcp server
+// cacheMCPServerAvatar 获取自定义MCP的avatar缓存URL
+// 1. 空avatar返回默认自定义MCP图标
+// 2. 否则调用CacheAvatar转换
 func cacheMCPServerAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -192,6 +221,9 @@ func cacheMCPServerAvatar(ctx *gin.Context, avatarObjectPath string) request.Ava
 	return CacheAvatar(avatarObjectPath)
 }
 
+// cacheMCPServiceAvatar 获取MCP服务的avatar缓存URL
+// 输入：avatarPath = "custom-upload/avatar/xx/xxx.jpg"
+// 输出：avatar.Path = "/v1/cache/avatar/mcp/custom-upload/avatar/xx/xxx.jpg"
 func cacheMCPServiceAvatar(avatarPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarPath == "" {
@@ -258,6 +290,9 @@ func cacheWorkflowAvatar(avatarURL, appType string) request.Avatar {
 	return avatar
 }
 
+// cachePromptAvatar 获取Prompt的avatar缓存URL
+// 1. 空avatar返回默认Prompt图标
+// 2. 否则调用CacheAvatar转换
 func cachePromptAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -267,7 +302,9 @@ func cachePromptAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar
 	return CacheAvatar(avatarObjectPath)
 }
 
-// knowledge custom
+// cacheKnowledgeAvatar 获取知识库的avatar缓存URL
+// 1. 空avatar根据knowledgeType返回对应默认图标（知识库/QA）
+// 2. 否则调用CacheAvatar转换
 func cacheKnowledgeAvatar(ctx *gin.Context, avatarObjectPath string, knowledgeType int32) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
@@ -284,6 +321,9 @@ func cacheKnowledgeAvatar(ctx *gin.Context, avatarObjectPath string, knowledgeTy
 	return CacheAvatar(avatarObjectPath)
 }
 
+// cacheModelAvatar 获取模型的avatar缓存URL
+// 1. 空avatar返回默认模型图标
+// 2. 否则调用CacheAvatar转换
 func cacheModelAvatar(ctx *gin.Context, avatarObjectPath string) request.Avatar {
 	avatar := request.Avatar{}
 	if avatarObjectPath == "" {
