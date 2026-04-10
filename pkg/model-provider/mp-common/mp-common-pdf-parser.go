@@ -74,6 +74,7 @@ func (req *pdfParserReq) Data() *PdfParserReq {
 type IPdfParserResp interface {
 	String() string
 	Data() (interface{}, bool)
+	ConvertRespWithErr() (*PdfParserResp, error)
 	ConvertResp() (*PdfParserResp, bool)
 }
 
@@ -99,15 +100,27 @@ func (resp *pdfParserResp) Data() (interface{}, bool) {
 	return ret, true
 }
 
-func (resp *pdfParserResp) ConvertResp() (*PdfParserResp, bool) {
+func (resp *pdfParserResp) ConvertRespWithErr() (*PdfParserResp, error) {
 	var ret *PdfParserResp
 	if err := json.Unmarshal([]byte(resp.raw), &ret); err != nil {
-		log.Errorf("pdfParser resp (%v) convert to data err: %v", resp.raw, err)
-		return nil, false
+		return nil, fmt.Errorf("unmarshal resp failed: %v, raw: %.500s", err, resp.raw)
 	}
-
+	if ret == nil {
+		return nil, fmt.Errorf("empty resp, raw: %.500s", resp.raw)
+	}
+	if ret.Code != "" && ret.Code != "200" && ret.Code != "0" {
+		return nil, fmt.Errorf("remote service error: code=%v, message=%v", ret.Code, ret.Message)
+	}
 	if err := util.Validate(ret); err != nil {
-		log.Errorf("pdfParser resp (%v) validate err: %v", resp.raw, err)
+		return nil, fmt.Errorf("validate resp failed: %v, raw: %.500s", err, resp.raw)
+	}
+	return ret, nil
+}
+
+func (resp *pdfParserResp) ConvertResp() (*PdfParserResp, bool) {
+	ret, err := resp.ConvertRespWithErr()
+	if err != nil {
+		log.Errorf("pdfParser resp (%v) convert err: %v", resp.raw, err)
 		return nil, false
 	}
 	return ret, true

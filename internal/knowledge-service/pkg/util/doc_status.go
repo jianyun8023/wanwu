@@ -77,9 +77,8 @@ func BuildDocErrMessage(status int) string {
 	case 62:
 		return KnowledgeDocFileUnUsableErr
 	default:
-		break
+		return KnowledgeDocParsingServiceErr
 	}
-	return ""
 }
 
 func BuildAnalyzingStatus() []int {

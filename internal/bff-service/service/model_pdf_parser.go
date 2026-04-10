@@ -29,27 +29,29 @@ func ModelPdfParser(ctx *gin.Context, modelID string, req *mp_common.PdfParserRe
 	// pdfParser config
 	pdfParser, err := mp.ToModelConfig(modelInfo.Provider, modelInfo.ModelType, modelInfo.ProviderConfig)
 	if err != nil {
-		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v pdfParser err: %v", modelInfo.ModelId, err)))
+		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, modelPdfParserErrMsg(modelInfo, fmt.Sprintf("pdfParser err: %v", err))))
 		return
 	}
 	iPdfParser, ok := pdfParser.(mp.IPdfParser)
 	if !ok {
-		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v pdfParser err: invalid provider", modelInfo.ModelId)))
+		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, modelPdfParserErrMsg(modelInfo, "pdfParser err: invalid provider")))
 		return
 	}
 
 	pdfParserReq, err := iPdfParser.NewReq(req)
 	if err != nil {
-		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v pdfParser NewReq err: %v", modelInfo.ModelId, err)))
+		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, modelPdfParserErrMsg(modelInfo, fmt.Sprintf("pdfParser NewReq err: %v", err))))
 		return
 	}
 	startTime := time.Now()
 	resp, err := iPdfParser.PdfParser(ctx, pdfParserReq)
 	if err != nil {
-		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v pdfParser err: %v", modelInfo.ModelId, err)))
+		recordModelStatistic(ctx, modelInfo, false, 0, 0, 0, 0, 0, false)
+		gin_util.ResponseErrWithStatus(ctx, http.StatusBadGateway, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, modelPdfParserErrMsg(modelInfo, fmt.Sprintf("pdfParser err: %v", err))))
 		return
 	}
-	if data, ok := resp.ConvertResp(); ok {
+	data, err := resp.ConvertRespWithErr()
+	if err == nil {
 		status := http.StatusOK
 		ctx.Set(gin_util.STATUS, status)
 		//ctx.Set(config.RESULT, resp.String())
@@ -59,5 +61,13 @@ func ModelPdfParser(ctx *gin.Context, modelID string, req *mp_common.PdfParserRe
 		return
 	}
 	recordModelStatistic(ctx, modelInfo, false, 0, 0, 0, 0, 0, false)
-	gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v pdfParser err: invalid resp", modelInfo.ModelId)))
+	gin_util.ResponseErrWithStatus(ctx, http.StatusBadGateway, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, modelPdfParserErrMsg(modelInfo, fmt.Sprintf("pdfParser err: %v", err))))
+}
+
+func modelPdfParserErrMsg(modelInfo *model_service.ModelInfo, detail string) string {
+	displayName := modelInfo.DisplayName
+	if displayName == "" {
+		displayName = modelInfo.Model
+	}
+	return fmt.Sprintf("modelId=%v model=%v displayName=%v provider=%v %v", modelInfo.ModelId, modelInfo.Model, displayName, modelInfo.Provider, detail)
 }
