@@ -33,6 +33,10 @@ const (
 	wgaConversationHistoryEventESIndexName = "wga_chat_history_event" // 通用智能体聊天历史ES索引
 )
 
+func wgaConversationHistoryEventESIndexNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "index_not_found_exception") && strings.Contains(err.Error(), wgaConversationHistoryEventESIndexName)
+}
+
 func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
 	// 过滤出当前用户消息（最后一条 User 消息）
 	var userInputMessage *request.GeneralAgentConversationMessage
@@ -185,6 +189,9 @@ func filterWgaHistoryMessages(ctx *gin.Context, userId, orgId, threadId string) 
 		PageSize:  1000,
 	})
 	if err != nil {
+		if wgaConversationHistoryEventESIndexNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

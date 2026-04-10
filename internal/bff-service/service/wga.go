@@ -325,7 +325,7 @@ func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 			"orgId":    orgId,
 		},
 	})
-	if err != nil {
+	if err != nil && !wgaConversationHistoryEventESIndexNotFound(err) {
 		log.Errorf("[wga] thread %v delete chat history from ES err: %v", req.ThreadID, err)
 	}
 
@@ -379,6 +379,9 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId, threadId
 		PageSize:  1000,
 	})
 	if err != nil {
+		if wgaConversationHistoryEventESIndexNotFound(err) {
+			return &response.ListResult{}, nil
+		}
 		return nil, err
 	}
 
