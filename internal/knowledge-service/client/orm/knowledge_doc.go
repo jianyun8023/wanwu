@@ -816,11 +816,14 @@ func buildUpdateParams(status int) (map[string]interface{}, bool) {
 			"graph_status": model.GraphStatus(status),
 		}, false
 	}
-	//更新文档状态
-	return map[string]interface{}{
+	updateParams := map[string]interface{}{
 		"status":    status,
-		"error_msg": util.BuildDocErrMessage(status),
-	}, true
+		"error_msg": "",
+	}
+	if util.BuildDocRespStatus(status) == model.DocFail {
+		updateParams["error_msg"] = util.BuildDocErrMessage(status)
+	}
+	return updateParams, true
 }
 
 func stopDocProcess(tx *gorm.DB) error {
