@@ -3245,7 +3245,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "删除草稿智能体对话",
+                "description": "删除草稿智能体对话，传detailId删除单条，不传删除全部",
                 "consumes": [
                     "application/json"
                 ],
@@ -19626,6 +19626,10 @@ const docTemplate = `{
             ],
             "properties": {
                 "assistantId": {
+                    "type": "string"
+                },
+                "detailId": {
+                    "description": "可选，传值则删除单条对话，不传则删除全部对话",
                     "type": "string"
                 }
             }

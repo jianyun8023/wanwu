@@ -75,6 +75,22 @@ func (s *Service) ClearConversationES(ctx context.Context, req *assistant_servic
 	return &emptypb.Empty{}, nil
 }
 
+// DeleteConversationDetailById 按id删除单条对话详情
+func (s *Service) DeleteConversationDetailById(ctx context.Context, req *assistant_service.DeleteConversationDetailByIdReq) (*emptypb.Empty, error) {
+	fieldConditions := map[string]interface{}{
+		"id":             req.DetailId,
+		"conversationId": req.ConversationId,
+		"userId.keyword": req.Identity.UserId,
+	}
+	indexPattern := "conversation_detail_infos_*"
+	if err := es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions); err != nil {
+		log.Errorf("从ES删除单条对话详情失败，detailId: %s, conversationId: %s, error: %v", req.DetailId, req.ConversationId, err)
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 // deleteConversationDetailFromES 删除ES中的对话详情数据
 func deleteConversationDetailFromES(ctx context.Context, conversationId, userId string) error {
 	fieldConditions := map[string]interface{}{

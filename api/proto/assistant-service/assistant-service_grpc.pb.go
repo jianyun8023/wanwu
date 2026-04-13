@@ -63,6 +63,7 @@ const (
 	AssistantService_GetConversationIdByAssistantId_FullMethodName      = "/assistant_service.AssistantService/GetConversationIdByAssistantId"
 	AssistantService_GetConversationList_FullMethodName                 = "/assistant_service.AssistantService/GetConversationList"
 	AssistantService_GetConversationDetailList_FullMethodName           = "/assistant_service.AssistantService/GetConversationDetailList"
+	AssistantService_DeleteConversationDetailById_FullMethodName        = "/assistant_service.AssistantService/DeleteConversationDetailById"
 	AssistantService_AssistantConversionStream_FullMethodName           = "/assistant_service.AssistantService/AssistantConversionStream"
 	AssistantService_MultiAssistantConversionStream_FullMethodName      = "/assistant_service.AssistantService/MultiAssistantConversionStream"
 	AssistantService_GetWgaConversationConfig_FullMethodName            = "/assistant_service.AssistantService/GetWgaConversationConfig"
@@ -143,6 +144,7 @@ type AssistantServiceClient interface {
 	GetConversationIdByAssistantId(ctx context.Context, in *GetConversationIdByAssistantIdReq, opts ...grpc.CallOption) (*ConversationIdResp, error)
 	GetConversationList(ctx context.Context, in *GetConversationListReq, opts ...grpc.CallOption) (*GetConversationListResp, error)
 	GetConversationDetailList(ctx context.Context, in *GetConversationDetailListReq, opts ...grpc.CallOption) (*GetConversationDetailListResp, error)
+	DeleteConversationDetailById(ctx context.Context, in *DeleteConversationDetailByIdReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AssistantConversionStream(ctx context.Context, in *AssistantConversionStreamReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AssistantConversionStreamResp], error)
 	MultiAssistantConversionStream(ctx context.Context, in *MultiAssistantConversionStreamReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AssistantConversionStreamResp], error)
 	// --- wga config ---
@@ -611,6 +613,16 @@ func (c *assistantServiceClient) GetConversationDetailList(ctx context.Context, 
 	return out, nil
 }
 
+func (c *assistantServiceClient) DeleteConversationDetailById(ctx context.Context, in *DeleteConversationDetailByIdReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AssistantService_DeleteConversationDetailById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *assistantServiceClient) AssistantConversionStream(ctx context.Context, in *AssistantConversionStreamReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AssistantConversionStreamResp], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &AssistantService_ServiceDesc.Streams[0], AssistantService_AssistantConversionStream_FullMethodName, cOpts...)
@@ -914,6 +926,7 @@ type AssistantServiceServer interface {
 	GetConversationIdByAssistantId(context.Context, *GetConversationIdByAssistantIdReq) (*ConversationIdResp, error)
 	GetConversationList(context.Context, *GetConversationListReq) (*GetConversationListResp, error)
 	GetConversationDetailList(context.Context, *GetConversationDetailListReq) (*GetConversationDetailListResp, error)
+	DeleteConversationDetailById(context.Context, *DeleteConversationDetailByIdReq) (*emptypb.Empty, error)
 	AssistantConversionStream(*AssistantConversionStreamReq, grpc.ServerStreamingServer[AssistantConversionStreamResp]) error
 	MultiAssistantConversionStream(*MultiAssistantConversionStreamReq, grpc.ServerStreamingServer[AssistantConversionStreamResp]) error
 	// --- wga config ---
@@ -1080,6 +1093,9 @@ func (UnimplementedAssistantServiceServer) GetConversationList(context.Context, 
 }
 func (UnimplementedAssistantServiceServer) GetConversationDetailList(context.Context, *GetConversationDetailListReq) (*GetConversationDetailListResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConversationDetailList not implemented")
+}
+func (UnimplementedAssistantServiceServer) DeleteConversationDetailById(context.Context, *DeleteConversationDetailByIdReq) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteConversationDetailById not implemented")
 }
 func (UnimplementedAssistantServiceServer) AssistantConversionStream(*AssistantConversionStreamReq, grpc.ServerStreamingServer[AssistantConversionStreamResp]) error {
 	return status.Errorf(codes.Unimplemented, "method AssistantConversionStream not implemented")
@@ -1945,6 +1961,24 @@ func _AssistantService_GetConversationDetailList_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AssistantService_DeleteConversationDetailById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteConversationDetailByIdReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AssistantServiceServer).DeleteConversationDetailById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AssistantService_DeleteConversationDetailById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AssistantServiceServer).DeleteConversationDetailById(ctx, req.(*DeleteConversationDetailByIdReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AssistantService_AssistantConversionStream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(AssistantConversionStreamReq)
 	if err := stream.RecvMsg(m); err != nil {
@@ -2523,6 +2557,10 @@ var AssistantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConversationDetailList",
 			Handler:    _AssistantService_GetConversationDetailList_Handler,
+		},
+		{
+			MethodName: "DeleteConversationDetailById",
+			Handler:    _AssistantService_DeleteConversationDetailById_Handler,
 		},
 		{
 			MethodName: "GetWgaConversationConfig",
