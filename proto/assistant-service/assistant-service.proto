@@ -66,6 +66,7 @@ service AssistantService {
   rpc GetConversationIdByAssistantId(GetConversationIdByAssistantIdReq) returns (ConversationIdResp) {}
   rpc GetConversationList(GetConversationListReq) returns (GetConversationListResp) {}
   rpc GetConversationDetailList(GetConversationDetailListReq) returns (GetConversationDetailListResp) {}
+  rpc DeleteConversationDetailById(DeleteConversationDetailByIdReq) returns (google.protobuf.Empty) {}
   rpc AssistantConversionStream(AssistantConversionStreamReq) returns (stream AssistantConversionStreamResp) {}
   rpc MultiAssistantConversionStream(MultiAssistantConversionStreamReq) returns (stream AssistantConversionStreamResp) {}
 
@@ -561,6 +562,12 @@ message GetConversationIdByAssistantIdReq{
 message ClearConversationESReq{
   string conversationId = 1;
   Identity identity = 2;
+}
+
+message DeleteConversationDetailByIdReq {
+  string detailId = 1;       // 对话详情id
+  string conversationId = 2; // 用于校验权限
+  Identity identity = 3;
 }
 
 message GetConversationListReq {

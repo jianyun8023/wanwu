@@ -787,13 +787,27 @@ func ConversationCreate(ctx *gin.Context, userId, orgId string, req request.Conv
 }
 
 func ConversationDelete(ctx *gin.Context, userId, orgId string, req request.ConversationIdRequest) (interface{}, error) {
-	_, err := assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
-		ConversationId: req.ConversationId,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
+	var err error
+	if req.DetailId != "" {
+		// 传了 detailId：删除单条对话详情
+		_, err = assistant.DeleteConversationDetailById(ctx.Request.Context(), &assistant_service.DeleteConversationDetailByIdReq{
+			DetailId:       req.DetailId,
+			ConversationId: req.ConversationId,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+	} else {
+		// 未传 detailId：删除全部对话
+		_, err = assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
+			ConversationId: req.ConversationId,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -848,14 +862,26 @@ func DraftConversationDeleteByAssistantID(ctx *gin.Context, userId, orgId string
 		return nil, err
 	}
 
-	// 删除草稿会话
-	_, err = assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
-		ConversationId: conversationIdResp.ConversationId,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
+	if req.DetailId != "" {
+		// 传了 detailId：删除单条对话详情
+		_, err = assistant.DeleteConversationDetailById(ctx.Request.Context(), &assistant_service.DeleteConversationDetailByIdReq{
+			DetailId:       req.DetailId,
+			ConversationId: conversationIdResp.ConversationId,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+	} else {
+		// 未传 detailId：删除全部对话
+		_, err = assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
+			ConversationId: conversationIdResp.ConversationId,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+	}
 	if err != nil {
 		return nil, err
 	}

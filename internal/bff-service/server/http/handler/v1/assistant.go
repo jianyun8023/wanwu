@@ -602,7 +602,7 @@ func DraftAssistantConversationDetailList(ctx *gin.Context) {
 //
 //	@Tags			agent
 //	@Summary		删除草稿智能体对话
-//	@Description	删除草稿智能体对话
+//	@Description	删除草稿智能体对话，传detailId删除单条，不传删除全部
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
