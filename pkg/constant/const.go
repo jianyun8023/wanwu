@@ -44,6 +44,12 @@ const (
 	MCPServerToolTypeOpenAPI     = "openapi" // 用户导入的openapi
 )
 
+// mcp transport type
+const (
+	MCPTransportSSE        = "sse"
+	MCPTransportStreamable = "streamable"
+)
+
 // agent category
 const (
 	AgentCategorySingle = 1
@@ -83,9 +89,4 @@ const (
 	AppStatisticSourceOpenAPI = "openapi"
 	AppStatisticSourceWebUrl  = "webURL"
 	AppStatisticSourceDraft   = "draft" // 应用的草稿版本不统计
-)
-
-const (
-	MCPTransportSSE        = "sse"
-	MCPTransportStreamable = "streamable"
 )

@@ -85,13 +85,7 @@ func GetToolsFromMCPServers(ctx context.Context, toolParamsList []*request.MCPTo
 	for _, serverInfo := range toolParamsList {
 		log.Printf("Connecting to MCP server: %v", serverInfo)
 
-		// 根据 Transport 字段选择传输协议，默认使用 sse
-		transport := serverInfo.Transport
-		if transport == "" {
-			transport = constant.MCPTransportSSE
-		}
-
-		mcpClient, err := createMCPClient(ctx, serverInfo.URL, transport)
+		mcpClient, err := createMCPClient(ctx, serverInfo.URL, serverInfo.Transport)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create MCP client for %v: %v", serverInfo, err)
 		}
