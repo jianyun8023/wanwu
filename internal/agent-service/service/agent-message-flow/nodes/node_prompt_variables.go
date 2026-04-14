@@ -100,9 +100,10 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			}
 			parts = append(parts, *message)
 		}
+		input += "\n用户上传的文档连接为:" + req.UploadFile[0]
 		parts = append(parts, schema.MessageInputPart{
 			Type: schema.ChatMessagePartTypeText,
-			Text: req.Input,
+			Text: input,
 		})
 		messages = append(messages, &schema.Message{
 			Role:                  schema.User,

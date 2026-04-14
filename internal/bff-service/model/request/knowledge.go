@@ -182,6 +182,7 @@ type RagSearchKnowledgeBaseReq struct {
 	RewriteQuery         bool                           `json:"rewrite_query"`                 // 是否query改写
 	EnableVision         bool                           `json:"enable_vision"`                 // 召回结果是否包含多模态文件(只在callback层做最后的赋值)
 	AttachmentFiles      []*RagKnowledgeAttachment      `json:"attachment_files"`              // 上传的多模态文件
+	ReturnMeta           bool                           `json:"return_meta,omitempty"`         // 是否返回元数据
 }
 
 type RagKnowledgeAttachment struct {

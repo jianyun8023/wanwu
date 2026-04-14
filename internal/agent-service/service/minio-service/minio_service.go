@@ -83,7 +83,7 @@ func UploadLocalFile(ctx context.Context, minioDir string, minioFileName string,
 	return minioFileName, filePath, fileSize, err
 }
 
-func CopyFile(ctx context.Context, srcFilePath string, destObjectNamePre string) (string, string, int64, error) {
+func CopyFile(ctx context.Context, srcFilePath string, destObjectNamePre string, open bool) (string, string, int64, error) {
 	bucketName, objectName, fileName := SplitFilePath(srcFilePath)
 	if len(bucketName) == 0 || len(objectName) == 0 {
 		return "", "", 0, errors.New("invalid file path")
@@ -111,10 +111,12 @@ func CopyFile(ctx context.Context, srcFilePath string, destObjectNamePre string)
 		log.Errorf("minio copy object error %s", err)
 		return "", "", 0, err
 	}
-	if len(uploadInfo.Location) == 0 {
-		return "http://" + minioConfig.EndPoint + "/" + minioConfig.Bucket + "/" + destObjectName, fileName, uploadInfo.Size, nil
+	configInfo := config.GetConfig()
+	var minioUrl = "http://" + configInfo.Minio.EndPoint
+	if open {
+		minioUrl = configInfo.Minio.DownloadUrl
 	}
-	return uploadInfo.Location, fileName, uploadInfo.Size, nil
+	return minioUrl + "/" + minioConfig.Bucket + "/" + destObjectName, fileName, uploadInfo.Size, nil
 }
 
 func getContentType(uri string) (contentType string) {
