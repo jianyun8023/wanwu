@@ -353,8 +353,9 @@
           <el-select
             v-model="createForm.thinkingSupport"
             :placeholder="$t('common.select.placeholder')"
-            :disabled="!allowEdit"
+            :disabled="!allowEdit || linkStatus === 'test'"
             style="width: 100%"
+            @change="handleChangeThinking"
           >
             <el-option
               v-for="item in supportList"
@@ -363,6 +364,33 @@
               :value="item.key"
             ></el-option>
           </el-select>
+          <div
+            class="thinking-link-test"
+            v-if="createForm.thinkingSupport === 'support'"
+          >
+            <div class="left-test">
+              <i class="el-icon-link"></i>
+              <span>{{ $t('modelAccess.linkText') }}</span>
+            </div>
+            <div class="right-result">
+              <div v-if="linkStatus === 'test'">
+                <i class="el-icon-loading"></i>
+                {{ $t('modelAccess.testing') }}
+              </div>
+              <div v-if="linkStatus === 'success'" class="test-success">
+                <i class="el-icon-success"></i>
+                {{ $t('modelAccess.testSuccess') }}
+              </div>
+              <div v-if="linkStatus === 'error'" class="test-error">
+                <i class="el-icon-error"></i>
+                {{ $t('modelAccess.testError') }}
+                <i
+                  class="el-icon-refresh-right"
+                  @click="handleChangeThinking('support')"
+                ></i>
+              </div>
+            </div>
+          </div>
         </el-form-item>
         <!--<el-form-item :label="$t('modelAccess.table.publishTime')" prop="publishDate">
           <el-date-picker
@@ -382,7 +410,12 @@
         <el-button @click="handleClose">
           {{ $t('common.button.cancel') }}
         </el-button>
-        <el-button :loading="loading" type="primary" @click="handleSubmit">
+        <el-button
+          :disabled="['test', 'error'].includes(linkStatus)"
+          :loading="loading"
+          type="primary"
+          @click="handleSubmit"
+        >
           {{ $t('common.button.confirm') }}
         </el-button>
       </span>
@@ -390,7 +423,12 @@
   </div>
 </template>
 <script>
-import { addModel, editModel, fetchModelIdList } from '@/api/modelAccess';
+import {
+  addModel,
+  editModel,
+  fetchModelIdList,
+  testLinkThinking,
+} from '@/api/modelAccess';
 import { uploadAvatar } from '@/api/user';
 import { avatarSrc, getModelDefaultIcon } from '@/utils/util';
 import {
@@ -467,6 +505,7 @@ export default {
       modelIdList: [DEFAULT_MODEL_ITEM],
       currentModelId: '',
       modelObjStr: '',
+      linkStatus: '',
       createForm: {
         model: '',
         displayName: '',
@@ -644,6 +683,25 @@ export default {
     showMaxAudioLimit() {
       return this.createForm.modelType === ASR;
     },
+    handleChangeThinking(value) {
+      if (value === 'support') {
+        this.linkStatus = 'test';
+        const thinkingData = this.formatSubmitData();
+        testLinkThinking(thinkingData)
+          .then(res => {
+            if (res.code === 0) {
+              this.linkStatus = 'success';
+            } else {
+              this.linkStatus = 'error';
+            }
+          })
+          .catch(() => {
+            this.linkStatus = 'error';
+          });
+      } else {
+        this.linkStatus = '';
+      }
+    },
     getModelIdList() {
       fetchModelIdList({
         provider: this.provider.key,
@@ -753,66 +811,70 @@ export default {
         this.$refs.createForm.clearValidate();
       }
     },
+    formatSubmitData() {
+      const {
+        apiKey,
+        appKey,
+        accessKey,
+        endpointUrl,
+        functionCalling,
+        modelType,
+        visionSupport,
+        thinkingSupport,
+        contextSize,
+        maxTokens,
+        /*maxTextLength,
+        maxVideoClipSize,
+        supportFileTypes,*/
+        maxImageSize,
+        maxAsrFileSize,
+      } = this.createForm;
+      const form = {
+        ...this.createForm,
+        provider: this.provider.key || '',
+        config: {
+          endpointUrl,
+          ...(this.provider.key !== OLLAMA &&
+            !this.showAppAndAccessKey() && { apiKey }),
+          ...(modelType === LLM && {
+            functionCalling,
+            maxTokens,
+            thinkingSupport,
+          }),
+          ...(this.showVision() && { visionSupport }),
+          ...(this.showContextSize() && { contextSize }),
+          ...(this.showMaxAudioLimit() && { maxAsrFileSize }),
+          ...(this.showMaxPicLimit() && { maxImageSize }),
+          ...(this.showAppAndAccessKey() && { appKey, accessKey }),
+          /*...(this.showMaxVideoLimit() && { maxVideoClipSize }),
+          ...(this.isMultiModal() && { supportFileTypes, maxTextLength }),*/
+        },
+      };
+      const deleteKeys = [
+        'apiKey',
+        'appKey',
+        'accessKey',
+        'endpointUrl',
+        'functionCalling',
+        'visionSupport',
+        'thinkingSupport',
+        'contextSize',
+        'maxTokens',
+        /*'maxTextLength',
+        'maxVideoClipSize',
+        'supportFileTypes',*/
+        'maxImageSize',
+        'maxAsrFileSize',
+      ];
+      deleteKeys.forEach(key => {
+        delete form[key];
+      });
+      return form;
+    },
     handleSubmit() {
       this.$refs.createForm.validate(async valid => {
         if (valid) {
-          const {
-            apiKey,
-            appKey,
-            accessKey,
-            endpointUrl,
-            functionCalling,
-            modelType,
-            visionSupport,
-            thinkingSupport,
-            contextSize,
-            maxTokens,
-            /*maxTextLength,
-            maxVideoClipSize,
-            supportFileTypes,*/
-            maxImageSize,
-            maxAsrFileSize,
-          } = this.createForm;
-          const form = {
-            ...this.createForm,
-            provider: this.provider.key || '',
-            config: {
-              endpointUrl,
-              ...(this.provider.key !== OLLAMA &&
-                !this.showAppAndAccessKey() && { apiKey }),
-              ...(modelType === LLM && {
-                functionCalling,
-                maxTokens,
-                thinkingSupport,
-              }),
-              ...(this.showVision() && { visionSupport }),
-              ...(this.showContextSize() && { contextSize }),
-              ...(this.showMaxAudioLimit() && { maxAsrFileSize }),
-              ...(this.showMaxPicLimit() && { maxImageSize }),
-              ...(this.showAppAndAccessKey() && { appKey, accessKey }),
-              /*...(this.showMaxVideoLimit() && { maxVideoClipSize }),
-              ...(this.isMultiModal() && { supportFileTypes, maxTextLength }),*/
-            },
-          };
-          const deleteKeys = [
-            'apiKey',
-            'appKey',
-            'accessKey',
-            'endpointUrl',
-            'functionCalling',
-            'visionSupport',
-            'thinkingSupport',
-            'contextSize',
-            'maxTokens',
-            /*'maxTextLength',
-            'maxVideoClipSize',
-            'supportFileTypes',*/
-            'maxImageSize',
-            'maxAsrFileSize',
-          ];
-          deleteKeys.forEach(key => {
-            delete form[key];
-          });
+          const form = this.formatSubmitData();
 
           try {
             this.loading = true;
@@ -856,6 +918,38 @@ export default {
   .embedding-tip {
     color: #f56c6c;
     line-height: 16px;
+  }
+  .thinking-link-test {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    .left-test {
+      border-radius: 4px;
+      border: 1px solid #dcdfe6;
+      padding: 2px 10px;
+      height: 30px;
+      line-height: 24px;
+      margin-right: 10px;
+      .el-icon-link {
+        transform: rotate(45deg);
+        font-size: 16px;
+        color: #1cc78d;
+        margin-right: 3px;
+      }
+    }
+    .right-result {
+      .test-success {
+        color: #67c23a;
+      }
+      .test-error {
+        color: #f56c6c;
+        .el-icon-refresh-right {
+          cursor: pointer;
+          color: #606266;
+          margin-left: 5px;
+        }
+      }
+    }
   }
 }
 .dialog-title-wrapper {
