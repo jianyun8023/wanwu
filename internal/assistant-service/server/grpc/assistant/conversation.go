@@ -18,7 +18,6 @@ import (
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/client/model"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/config"
-	"github.com/UnicomAI/wanwu/pkg/es"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
@@ -58,47 +57,42 @@ func (s *Service) ConversationDelete(ctx context.Context, req *assistant_service
 	}
 
 	// 删除es中的对话详情
-	if err := deleteConversationDetailFromES(ctx, req.ConversationId, req.Identity.UserId); err != nil {
+	if _, err := s.DeleteFromES(ctx, &assistant_service.DeleteFromESReq{
+		IndexName: "conversation_detail_infos_*",
+		Conditions: map[string]string{
+			"conversationId": req.ConversationId,
+			"userId.keyword": req.Identity.UserId,
+		},
+	}); err != nil {
 		log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-// ClearConversationES 清空对话ES数据（不删除会话ID）
+// ClearConversationES 清空对话ES数据（不删除会话ID），支持按detailId删除单条
 func (s *Service) ClearConversationES(ctx context.Context, req *assistant_service.ClearConversationESReq) (*emptypb.Empty, error) {
-	// 删除es中的对话详情（不删除数据库会话记录）
-	if err := deleteConversationDetailFromES(ctx, req.ConversationId, req.Identity.UserId); err != nil {
-		log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// DeleteConversationDetailById 按id删除单条对话详情
-func (s *Service) DeleteConversationDetailById(ctx context.Context, req *assistant_service.DeleteConversationDetailByIdReq) (*emptypb.Empty, error) {
-	fieldConditions := map[string]interface{}{
-		"id":             req.DetailId,
+	conditions := map[string]string{
 		"conversationId": req.ConversationId,
 		"userId.keyword": req.Identity.UserId,
 	}
-	indexPattern := "conversation_detail_infos_*"
-	if err := es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions); err != nil {
-		log.Errorf("从ES删除单条对话详情失败，detailId: %s, conversationId: %s, error: %v", req.DetailId, req.ConversationId, err)
+	if req.DetailId != "" {
+		conditions["id"] = req.DetailId
+	}
+
+	if _, err := s.DeleteFromES(ctx, &assistant_service.DeleteFromESReq{
+		IndexName:  "conversation_detail_infos_*",
+		Conditions: conditions,
+	}); err != nil {
+		if req.DetailId != "" {
+			log.Errorf("从ES删除单条对话详情失败，detailId: %s, conversationId: %s, error: %v", req.DetailId, req.ConversationId, err)
+		} else {
+			log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
+		}
 		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-// deleteConversationDetailFromES 删除ES中的对话详情数据
-func deleteConversationDetailFromES(ctx context.Context, conversationId, userId string) error {
-	fieldConditions := map[string]interface{}{
-		"conversationId": conversationId,
-		"userId.keyword": userId,
-	}
-	indexPattern := "conversation_detail_infos_*"
-	return es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions)
 }
 
 // GetConversationIdByAssistantId 获取对话记录id
@@ -146,22 +140,18 @@ func (s *Service) GetConversationList(ctx context.Context, req *assistant_servic
 
 // GetConversationDetailList 对话详情历史列表
 func (s *Service) GetConversationDetailList(ctx context.Context, req *assistant_service.GetConversationDetailListReq) (*assistant_service.GetConversationDetailListResp, error) {
-	// 计算分页参数
-	from := (req.PageNo - 1) * req.PageSize
-	size := int(req.PageSize)
-
-	// 组装查询条件
-	fieldConditions := map[string]interface{}{
-		"conversationId": req.ConversationId,
-		"userId.keyword": req.Identity.UserId,
-		"orgId.keyword":  req.Identity.OrgId,
-	}
-
-	// 使用通配符查询所有对话详情索引
-	indexPattern := "conversation_detail_infos_*"
-
-	// 从ES查询数据
-	documents, total, err := es.Assistant().SearchByFields(ctx, indexPattern, fieldConditions, int(from), size, "desc")
+	// 复用 SearchFromES 查询ES数据
+	searchResp, err := s.SearchFromES(ctx, &assistant_service.SearchFromESReq{
+		IndexName: "conversation_detail_infos_*",
+		Conditions: map[string]string{
+			"conversationId": req.ConversationId,
+			"userId.keyword": req.Identity.UserId,
+			"orgId.keyword":  req.Identity.OrgId,
+		},
+		PageNo:    req.PageNo,
+		PageSize:  req.PageSize,
+		SortOrder: "desc",
+	})
 	if err != nil {
 		log.Errorf("从ES查询对话详情失败，conversationId: %s, userId: %s, error: %v", req.ConversationId, req.Identity.UserId, err)
 		return nil, fmt.Errorf("查询对话详情失败: %v", err)
@@ -169,9 +159,9 @@ func (s *Service) GetConversationDetailList(ctx context.Context, req *assistant_
 
 	// 转换查询结果为响应格式
 	var conversationDetails []*assistant_service.ConversionDetailInfo
-	for _, doc := range documents {
+	for _, docStr := range searchResp.DocJsonList {
 		var detail model.ConversationDetails
-		if err := json.Unmarshal(doc, &detail); err != nil {
+		if err := json.Unmarshal([]byte(docStr), &detail); err != nil {
 			log.Warnf("解析ES文档失败: %v", err)
 			continue
 		}
@@ -197,11 +187,11 @@ func (s *Service) GetConversationDetailList(ctx context.Context, req *assistant_
 	}
 
 	log.Infof("成功从ES查询对话详情，conversationId: %s, userId: %s, 总数: %d, 返回: %d",
-		req.ConversationId, req.Identity.UserId, total, len(conversationDetails))
+		req.ConversationId, req.Identity.UserId, searchResp.Total, len(conversationDetails))
 
 	return &assistant_service.GetConversationDetailListResp{
 		Data:     conversationDetails,
-		Total:    total,
+		Total:    searchResp.Total,
 		PageSize: req.PageSize,
 		PageNo:   req.PageNo,
 	}, nil
