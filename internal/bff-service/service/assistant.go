@@ -787,27 +787,13 @@ func ConversationCreate(ctx *gin.Context, userId, orgId string, req request.Conv
 }
 
 func ConversationDelete(ctx *gin.Context, userId, orgId string, req request.ConversationIdRequest) (interface{}, error) {
-	var err error
-	if req.DetailId != "" {
-		// 传了 detailId：删除单条对话详情
-		_, err = assistant.DeleteConversationDetailById(ctx.Request.Context(), &assistant_service.DeleteConversationDetailByIdReq{
-			DetailId:       req.DetailId,
-			ConversationId: req.ConversationId,
-			Identity: &assistant_service.Identity{
-				UserId: userId,
-				OrgId:  orgId,
-			},
-		})
-	} else {
-		// 未传 detailId：删除全部对话
-		_, err = assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
-			ConversationId: req.ConversationId,
-			Identity: &assistant_service.Identity{
-				UserId: userId,
-				OrgId:  orgId,
-			},
-		})
-	}
+	_, err := assistant.ConversationDelete(ctx.Request.Context(), &assistant_service.ConversationDeleteReq{
+		ConversationId: req.ConversationId,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -818,6 +804,7 @@ func ClearPublishedConversationES(ctx *gin.Context, userId, orgId string, req re
 	// 清空已发布智能体的对话ES数据（不删除会话ID）
 	_, err := assistant.ClearConversationES(ctx.Request.Context(), &assistant_service.ClearConversationESReq{
 		ConversationId: req.ConversationId,
+		DetailId:       req.DetailId,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -864,9 +851,9 @@ func DraftConversationDeleteByAssistantID(ctx *gin.Context, userId, orgId string
 
 	if req.DetailId != "" {
 		// 传了 detailId：删除单条对话详情
-		_, err = assistant.DeleteConversationDetailById(ctx.Request.Context(), &assistant_service.DeleteConversationDetailByIdReq{
-			DetailId:       req.DetailId,
+		_, err = assistant.ClearConversationES(ctx.Request.Context(), &assistant_service.ClearConversationESReq{
 			ConversationId: conversationIdResp.ConversationId,
+			DetailId:       req.DetailId,
 			Identity: &assistant_service.Identity{
 				UserId: userId,
 				OrgId:  orgId,
