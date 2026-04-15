@@ -42,44 +42,49 @@
         </el-select>
       </div>
       <div class="provider-card-wrapper">
-        <div
-          :class="[
-            'provider-card-item',
-            { 'is-active': item.key === currentObj.key },
-          ]"
-          v-if="providerType && providerType.length"
-          v-for="item in providerType"
-          :key="item.key"
-          @click="setCurrentSelected(item)"
-        >
-          <div class="provider-card-top">
-            <div class="provider-card-top-left">
-              <img
-                class="provider-card-img"
-                :src="providerImgObj[item.key]"
-                alt=""
-              />
-              <div class="provider-card-name">{{ item.name }}</div>
+        <div class="provider-card-content">
+          <div
+            :class="[
+              'provider-card-item',
+              { 'is-active': item.key === currentObj.key },
+            ]"
+            v-if="providerType && providerType.length"
+            v-for="item in providerType"
+            :key="item.key"
+            @click="setCurrentSelected(item)"
+          >
+            <div class="provider-card-top">
+              <div class="provider-card-top-left">
+                <img
+                  class="provider-card-img"
+                  :src="providerImgObj[item.key]"
+                  alt=""
+                />
+                <div class="provider-card-name">{{ item.name }}</div>
+              </div>
+              <div
+                class="provider-check-icon"
+                v-if="item.key === currentObj.key"
+              >
+                <i class="el-icon-check"></i>
+              </div>
             </div>
-            <div class="provider-check-icon" v-if="item.key === currentObj.key">
-              <i class="el-icon-check"></i>
+            <div style="margin-top: 10px">
+              <span
+                class="provider-card-tag"
+                v-for="it in item.children"
+                :key="it.key"
+              >
+                {{ it.name }}
+              </span>
             </div>
           </div>
-          <div style="margin-top: 10px">
-            <span
-              class="provider-card-tag"
-              v-for="it in item.children"
-              :key="it.key"
-            >
-              {{ it.name }}
-            </span>
-          </div>
+          <el-empty
+            class="noData"
+            v-if="!(providerType && providerType.length)"
+            :description="$t('common.noData')"
+          ></el-empty>
         </div>
-        <el-empty
-          class="noData"
-          v-if="!(providerType && providerType.length)"
-          :description="$t('common.noData')"
-        ></el-empty>
       </div>
       <span
         slot="footer"
@@ -155,13 +160,20 @@ export default {
   padding: 0 22px 10px 24px;
 }
 .provider-card-wrapper {
-  padding-left: 24px;
-  padding-top: 5px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
   height: calc(100vh - 248px);
   overflow-y: auto;
+  .provider-card-content {
+    padding-left: 24px;
+    padding-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    max-height: calc(100vh - 240px);
+  }
+  .noData {
+    width: 100%;
+    height: calc(100vh - 248px);
+  }
 }
 .provider-card-item {
   width: calc(50% - 20px);
@@ -241,8 +253,5 @@ export default {
     font-size: 18px;
     font-weight: bold;
   }
-}
-.noData {
-  width: 100%;
 }
 </style>
