@@ -14,12 +14,40 @@
           <LinkIcon type="model" />
         </div>
       </template>
+      <div class="provider-search-wrapper">
+        <el-input
+          v-model="params.provider"
+          prefix-icon="el-icon-search"
+          class="no-border-input"
+          style="width: calc(50% - 12px); margin-right: 18px"
+          :placeholder="$t('modelAccess.dialog.providerName')"
+          @keyup.enter.native="searchProviderList"
+          @clear="searchProviderList()"
+          clearable
+        />
+        <el-select
+          v-model="params.modelType"
+          :placeholder="$t('modelAccess.table.modelType')"
+          class="no-border-select"
+          style="width: calc(50% - 10px)"
+          clearable
+          @change="searchProviderList()"
+        >
+          <el-option
+            v-for="item in modelTypeList"
+            :key="item.key"
+            :label="item.name"
+            :value="item.key"
+          />
+        </el-select>
+      </div>
       <div class="provider-card-wrapper">
         <div
           :class="[
             'provider-card-item',
             { 'is-active': item.key === currentObj.key },
           ]"
+          v-if="providerType && providerType.length"
           v-for="item in providerType"
           :key="item.key"
           @click="showCreate(item)"
@@ -47,6 +75,11 @@
             </span>
           </div>
         </div>
+        <el-empty
+          class="noData"
+          v-if="!(providerType && providerType.length)"
+          :description="$t('common.noData')"
+        ></el-empty>
       </div>
       <span
         slot="footer"
@@ -56,7 +89,11 @@
         <el-button @click="handleClose">
           {{ $t('common.button.cancel') }}
         </el-button>
-        <el-button type="primary" @click="handleConfirm">
+        <el-button
+          :disabled="!currentObj.key"
+          type="primary"
+          @click="handleConfirm"
+        >
           {{ $t('common.button.confirm') }}
         </el-button>
       </span>
@@ -64,8 +101,14 @@
   </div>
 </template>
 <script>
-import { PROVIDER_TYPE, YUAN_JING, PROVIDER_IMG_OBJ } from '../constants';
+import {
+  PROVIDER_TYPE,
+  YUAN_JING,
+  PROVIDER_IMG_OBJ,
+  MODEL_TYPE,
+} from '../constants';
 import LinkIcon from '@/components/linkIcon.vue';
+import { fetchProviderList } from '@/api/modelAccess';
 
 export default {
   components: { LinkIcon },
@@ -73,21 +116,32 @@ export default {
     return {
       dialogVisible: false,
       providerImgObj: PROVIDER_IMG_OBJ,
-      providerType: PROVIDER_TYPE,
-      currentObj: PROVIDER_TYPE[0],
+      providerType: [], // PROVIDER_TYPE,
+      currentObj: {}, // PROVIDER_TYPE[0],
       yuanjing: YUAN_JING,
+      modelTypeList: MODEL_TYPE,
+      params: {
+        provider: '',
+        modelType: '',
+      },
     };
   },
   methods: {
     openDialog() {
       this.dialogVisible = true;
-      this.currentObj = PROVIDER_TYPE[0];
+      this.searchProviderList();
     },
     handleClose() {
       this.dialogVisible = false;
     },
     showCreate(item) {
       this.currentObj = item;
+    },
+    searchProviderList() {
+      fetchProviderList(this.params).then(res => {
+        this.providerType = res.data.list || [];
+        this.currentObj = this.providerType[0] || {};
+      });
     },
     handleConfirm() {
       this.handleClose();
@@ -97,13 +151,16 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+.provider-search-wrapper {
+  padding: 0 22px 10px 24px;
+}
 .provider-card-wrapper {
   padding-left: 24px;
   padding-top: 5px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
-  height: calc(100vh - 205px);
+  height: calc(100vh - 248px);
   overflow-y: auto;
 }
 .provider-card-item {
@@ -183,5 +240,8 @@ export default {
     font-size: 18px;
     font-weight: bold;
   }
+}
+.noData {
+  width: 100%;
 }
 </style>

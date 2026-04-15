@@ -11,11 +11,11 @@ export const PDF_PARSER = 'pdf-parser';
 export const ASR = 'sync-asr';
 
 export const MODEL_TYPE_OBJ = {
-  [LLM]: 'LLM',
-  [RERANK]: 'Text Rerank',
-  [EMBEDDING]: 'Text Embedding',
-  [MULTIMODAL_RERANK]: 'Multimodal Rerank',
-  [MULTIMODAL_EMBEDDING]: 'Multimodal Embedding',
+  [LLM]: i18n.t('modelAccess.type.llm'),
+  [RERANK]: i18n.t('modelAccess.type.textRerank'),
+  [EMBEDDING]: i18n.t('modelAccess.type.textEmbedding'),
+  [MULTIMODAL_RERANK]: i18n.t('modelAccess.type.multiRerank'),
+  [MULTIMODAL_EMBEDDING]: i18n.t('modelAccess.type.multiEmbedding'),
   [OCR]: 'OCR',
   [GUI]: 'GUI',
   [PDF_PARSER]: i18n.t('modelAccess.type.pdfParser'),
@@ -78,7 +78,7 @@ export const PROVIDER_MODEL_KEY = {
     ASR,
   ],
   [OLLAMA]: OLL_MODEL_KEY,
-  [QWEN]: [...COMMON_MODEL_KEY, MULTIMODAL_EMBEDDING, ASR],
+  [QWEN]: [...COMMON_MODEL_KEY, ...MULTIMODAL_KEY, ASR],
   [HUOSHAN]: [...OLL_MODEL_KEY, ASR],
   [INFINI]: COMMON_MODEL_KEY,
   [DEEPSEEK]: [LLM],

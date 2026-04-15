@@ -553,14 +553,23 @@ export default {
     publicWarning:
       '您所选的模型为公有模型，若模型所有者下线该模型，将导致应用不可用，请谨慎选择。',
     custom: '自定义',
+    linkText: '连接测试',
+    testing: '测试中',
+    testSuccess: '连接成功',
+    testError: '连接失败',
     type: {
+      llm: '文本生成',
+      textRerank: '文本重排序',
+      textEmbedding: '文本向量化',
+      multiRerank: '多模态重排序',
+      multiEmbedding: '多模态向量化',
+      pdfParser: 'PDF文档解析',
+      asr: '短语音识别',
       yuanjing: '联通元景',
       qwen: '通义千问',
       huoshan: '火山引擎',
       infini: '无问芯穹',
       qianfan: '百度千帆',
-      pdfParser: '文档解析服务',
-      asr: '语音识别模型',
       zhipu: '智谱',
     },
     table: {
@@ -614,6 +623,7 @@ export default {
       edit: '编辑模型',
       select: '选择文件',
       title: '供应商选择',
+      providerName: '请输入供应商名称',
     },
     hint: {
       urlError: 'URL格式不正确',
