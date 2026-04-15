@@ -198,6 +198,7 @@ export const updateGeneralAgentConversationConfig = data => {
 /**
  * SSE 流式对话
  * @param {string} threadId - 对话ID（必填）
+ * @param {string} agentId - 模式ID（选填）
  * @param {Array} messages - 消息列表 [{ id, role, content }]（必填）
  * @param {function} onMessage - 消息回调
  * @param {function} onError - 错误回调
@@ -207,6 +208,7 @@ export const updateGeneralAgentConversationConfig = data => {
  */
 export const chatGeneralAgentConversation = async ({
   threadId,
+  agentId,
   messages,
   onMessage,
   onError,
@@ -241,7 +243,7 @@ export const chatGeneralAgentConversation = async ({
         'x-user-id': user.uid || '',
         'x-org-id': user.orgId || '',
       },
-      body: JSON.stringify({ threadId, messages }),
+      body: JSON.stringify({ threadId, agentId, messages }),
       signal: combinedSignal,
     });
   } catch (error) {
@@ -361,5 +363,18 @@ export const previewGeneralAgentWorkspace = params => {
     method: 'get',
     params,
     responseType: 'blob',
+  });
+};
+
+/**
+ * 检查对话配置是否满足条件
+ * @param {string} agentId - 模式ID
+ * @param {string} threadId - 对话ID
+ */
+export const checkGeneralAgentConversationConfig = data => {
+  return service({
+    url: `${BASE_URL}/conversation/config/check`,
+    method: 'post',
+    data,
   });
 };

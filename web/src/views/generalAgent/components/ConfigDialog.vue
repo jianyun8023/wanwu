@@ -70,18 +70,18 @@
               >
                 <div class="category-header">
                   <span class="category-name">{{ category.category }}</span>
-                  <el-tag
-                    size="mini"
-                    :type="getConditionType(category.condition)"
-                  >
-                    {{ getConditionLabel(category.condition) }}
-                  </el-tag>
                   <span
                     v-if="validationErrors.has(categoryIndex)"
                     class="error-tip"
                   >
                     {{ $t('generalAgent.config.validationError') }}
                   </span>
+                  <el-tag
+                    size="mini"
+                    :type="getConditionType(category.condition)"
+                  >
+                    {{ getConditionLabel(category.condition) }}
+                  </el-tag>
                 </div>
                 <div class="tool-list">
                   <div
@@ -170,7 +170,7 @@
       </div>
 
       <div slot="footer" class="dialog-footer">
-        <el-button @click="handleCancel">
+        <el-button @click="handleClose">
           {{ $t('generalAgent.config.cancel') }}
         </el-button>
         <el-button type="primary" @click="handleConfirm">
@@ -406,51 +406,52 @@ export default {
       }
     },
     handleClose() {
+      this.validationErrors.clear();
       this.$emit('update:visible', false);
     },
 
-    handleCancel() {
+    // 验证工具选择并处理错误状态
+    validateTools() {
+      if (!this.hasTools) {
+        this.validationErrors.clear();
+        return true;
+      }
+
+      const errors = new Set();
+
+      // 验证每个分类的选择条件
+      this.toolList.forEach((category, index) => {
+        const selectedInCategory = category.toolList.filter(tool =>
+          this.isItemSelected(tool.toolId, 'tools'),
+        ).length;
+        const totalInCategory = category.toolList.length;
+
+        // 验证 condition
+        if (
+          (category.condition === 'required' &&
+            selectedInCategory !== totalInCategory) ||
+          (category.condition === 'optional' && selectedInCategory < 1)
+        ) {
+          errors.add(index);
+        }
+      });
+
+      // 处理验证结果
+      if (errors.size > 0) {
+        this.activeTab = 'tools';
+        this.validationErrors = errors;
+        this.$message.warning(this.$t('generalAgent.config.validationWarning'));
+        return false;
+      }
+
+      // 验证通过，清除错误状态
       this.validationErrors.clear();
-      this.handleClose();
+      return true;
     },
 
     async handleConfirm() {
-      if (this.hasTools) {
-        const errors = new Set();
-
-        // 验证每个分类的选择条件
-        this.toolList.forEach((category, index) => {
-          const selectedInCategory = category.toolList.filter(tool => {
-            return this.isItemSelected(tool.toolId, 'tools');
-          }).length;
-          const totalInCategory = category.toolList.length;
-
-          // 验证 condition
-          if (
-            category.condition === 'required' &&
-            selectedInCategory !== totalInCategory
-          ) {
-            errors.add(index);
-          } else if (
-            category.condition === 'optional' &&
-            selectedInCategory < 1
-          ) {
-            errors.add(index);
-          }
-          // none 类型不做限制
-        });
-
-        if (errors.size > 0) {
-          this.activeTab = 'tools';
-          this.validationErrors = errors;
-          this.$message.warning(
-            this.$t('generalAgent.config.validationWarning'),
-          );
-          return;
-        }
-
-        // 验证通过,清除错误状态
-        this.validationErrors.clear();
+      if (!this.validateTools()) {
+        return;
       }
 
       // 收集所有选中的工具（遍历所有分类）

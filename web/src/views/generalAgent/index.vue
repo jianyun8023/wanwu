@@ -293,7 +293,9 @@
           </div>
           <!-- 可选模式按钮区域 - 仅在未选择模式且有数据时显示 -->
           <div
-            v-if="selectedModes.length === 0 && Object.keys(modeOptions).length > 0"
+            v-if="
+              selectedModes.length === 0 && Object.keys(modeOptions).length > 0
+            "
             class="mode-buttons"
           >
             <!-- 模式按钮列表 -->
@@ -344,6 +346,7 @@
 
       <!-- 配置弹窗 -->
       <configDialog
+        ref="configDialog"
         :visible.sync="showConfigDialog"
         :agent-id="selectedModes[0]?.value ?? ''"
       />
@@ -360,6 +363,7 @@ import ModelSelect from '@/components/modelSelect.vue';
 import StreamUploadField from '@/components/stream/streamUploadField.vue';
 import {
   chatGeneralAgentConversation,
+  checkGeneralAgentConversationConfig,
   createGeneralAgentConversation,
   deleteGeneralAgentConversation,
   downloadGeneralAgentWorkspace,
@@ -807,6 +811,40 @@ export default {
         }
       }
 
+      // 检查配置是否满足条件（在发送消息前）
+      const checkRes = await checkGeneralAgentConversationConfig({
+        agentId: this.selectedModes[0]?.value ?? '',
+        threadId: this.currentThreadId,
+      });
+
+      if (checkRes.code === 0 && checkRes.data) {
+        const { meet, modelMeet, toolsMeet } = checkRes.data;
+
+        // 如果配置不满足，检查具体哪些项不满足
+        if (!meet) {
+          // 检查模型是否满足
+          if (!modelMeet) {
+            this.$message.warning(
+              this.$t('generalAgent.error.modelNotAvailable'),
+            );
+            return;
+          }
+
+          // 检查工具是否满足
+          if (toolsMeet && Array.isArray(toolsMeet)) {
+            const unmetTools = toolsMeet.filter(category => !category.meet);
+            if (unmetTools.length > 0) {
+              this.showConfigDialog = true;
+              this.$nextTick(async () => {
+                await this.$refs.configDialog?.fetchToolList();
+                this.$refs.configDialog?.validateTools();
+              });
+              return;
+            }
+          }
+        }
+      }
+
       const userMessage = this.buildUserMessage(content);
       this.ensureMessageList(this.currentThreadId);
       this.addUserMessage(this.currentThreadId, content, this.uploadedFiles);
@@ -827,6 +865,7 @@ export default {
       }
 
       const streamingThreadId = this.currentThreadId;
+      const agentId = this.selectedModes[0]?.value ?? '';
 
       // 使用 mixin 初始化流式状态
       const { abortController, assistantMessage } =
@@ -844,7 +883,7 @@ export default {
       try {
         await chatGeneralAgentConversation({
           threadId: streamingThreadId,
-          agentId: this.selectedModes[0]?.value ?? '',
+          agentId,
           messages: [userMessage],
           onMessage: event => {
             this.handleSSEEvent(

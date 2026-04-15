@@ -2174,6 +2174,7 @@ export default {
       createConversationFailed: '创建对话失败，请重试',
       chatRequestFailed: '对话请求失败',
       sendMessageFailed: '发送消息失败: ',
+      modelNotAvailable: '选择的模型暂不可用，请切换模型',
     },
     activityBlock: {
       steps: '个步骤',
