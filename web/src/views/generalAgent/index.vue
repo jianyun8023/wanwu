@@ -237,7 +237,7 @@
               </div>
               <div class="toolbar-right">
                 <StreamUploadField
-                  :fileTypeArr="['doc/*', 'image/*']"
+                  :fileTypeArr="['doc/*', 'md', 'image/*']"
                   type="agentChat"
                   @setFileId="handleSetFileId"
                 >
