@@ -35,7 +35,7 @@ func CreateSkillDir(runId string, skill *request.SkillToolInfo, uploadFile []str
 	}
 	if len(uploadFile) > 0 {
 		for _, file := range uploadFile {
-			err := minio_service.DownloadFileToLocal(context.Background(), file, inputDir+util.NewRandomFile(file))
+			err := minio_service.DownloadFileToLocal(context.Background(), file, filepath.Join(inputDir, util.NewRandomFile(file)))
 			if err != nil {
 				return nil, err
 			}
