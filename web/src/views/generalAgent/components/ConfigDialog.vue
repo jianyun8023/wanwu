@@ -232,6 +232,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    agentId: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -351,7 +355,7 @@ export default {
       }
     },
     async fetchToolList() {
-      const res = await getGeneralAgentToolSelect();
+      const res = await getGeneralAgentToolSelect({ agentId: this.agentId });
       this.toolList = res?.data?.list || [];
     },
     async fetchMcpList() {

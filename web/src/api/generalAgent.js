@@ -24,11 +24,13 @@ export const getGeneralAgentAssistantSelect = params => {
 /**
  * 获取工具选择列表
  * 返回按类别分组的工具列表
+ * @param {string} agentId - 模式ID（可选）
  */
-export const getGeneralAgentToolSelect = () => {
+export const getGeneralAgentToolSelect = params => {
   return service({
     url: `${BASE_URL}/tool/select`,
     method: 'get',
+    params,
   });
 };
 
@@ -71,6 +73,16 @@ export const getGeneralAgentWorkflowSelect = () => {
 export const getGeneralAgentSkillSelect = () => {
   return service({
     url: `${BASE_URL}/skill/select`,
+    method: 'get',
+  });
+};
+
+/**
+ * 获取可选模式列表
+ */
+export const getGeneralAgentSubList = () => {
+  return service({
+    url: `${BASE_URL}/sub/list`,
     method: 'get',
   });
 };

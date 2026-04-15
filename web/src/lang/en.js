@@ -1945,23 +1945,6 @@ export default {
       element: 'Element',
       parseFailed: 'Unable to parse this PPT file',
     },
-    modeManager: {
-      research: 'Deep Research',
-      researchPlaceholder:
-        'Select a model and tell me what you want to research to get a report',
-      analysis: 'Data Analysis',
-      analysisPlaceholder:
-        'Select a model, upload Excel or CSV files for data analysis',
-      ppt: 'Create PPT',
-      pptPlaceholder:
-        'Select a model and tell me the PPT topic or content you want to generate',
-      excel: 'Create Excel',
-      excelPlaceholder:
-        'Select a model and tell me the Excel topic or content you want to generate',
-      web: 'Create Web Page',
-      webPlaceholder:
-        'Select a model and tell me the web page topic or content you want to generate',
-    },
     index: {
       newConversation: 'New Conversation',
       workspaceZip: 'workspace.zip',

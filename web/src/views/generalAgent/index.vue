@@ -291,14 +291,25 @@
               </div>
             </div>
           </div>
-          <div v-if="selectedModes.length === 0" class="mode-buttons">
+          <!-- 可选模式按钮区域 - 仅在未选择模式且有数据时显示 -->
+          <div
+            v-if="selectedModes.length === 0 && Object.keys(modeOptions).length > 0"
+            class="mode-buttons"
+          >
+            <!-- 模式按钮列表 -->
             <div
               v-for="(mode, key) in modeOptions"
               :key="key"
               class="mode-btn"
               @click="addMode(mode.value)"
             >
-              <i :class="mode.icon"></i>
+              <img
+                v-if="mode.avatar"
+                :src="mode.avatar"
+                class="mode-avatar"
+                alt=""
+              />
+              <i v-else :class="mode.icon"></i>
               <span>{{ mode.label }}</span>
             </div>
           </div>
@@ -332,7 +343,10 @@
       />
 
       <!-- 配置弹窗 -->
-      <configDialog :visible.sync="showConfigDialog" />
+      <configDialog
+        :visible.sync="showConfigDialog"
+        :agent-id="selectedModes[0]?.value ?? ''"
+      />
     </div>
   </div>
 </template>
@@ -505,6 +519,7 @@ export default {
     this.fetchConversationList();
     this.initUserInfo();
     this.setupResizeObserver();
+    this.fetchModeOptions();
   },
   beforeDestroy() {
     this.reset();
@@ -829,6 +844,7 @@ export default {
       try {
         await chatGeneralAgentConversation({
           threadId: streamingThreadId,
+          agentId: this.selectedModes[0]?.value ?? '',
           messages: [userMessage],
           onMessage: event => {
             this.handleSSEEvent(
@@ -1829,6 +1845,13 @@ $message-max-width: 900px;
       cursor: pointer;
       transition: all 0.2s;
       user-select: none;
+
+      .mode-avatar {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
 
       i {
         font-size: 14px;
