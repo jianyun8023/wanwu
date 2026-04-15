@@ -18,12 +18,12 @@
         >
           {{ $t('knowledgeManage.qaDatabase.title') }}
         </div>
-        <div
-          :class="['tab', { active: category === DB }]"
-          @click="tabClick(DB)"
-        >
-          {{ $t('knowledgeManage.dbDatabase.title') }}
-        </div>
+        <!--        <div-->
+        <!--          :class="['tab', { active: category === DB }]"-->
+        <!--          @click="tabClick(DB)"-->
+        <!--        >-->
+        <!--          {{ $t('knowledgeManage.dbDatabase.title') }}-->
+        <!--        </div>-->
       </div>
       <div class="search-box">
         <div class="no-border-input">
