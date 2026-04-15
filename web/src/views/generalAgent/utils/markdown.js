@@ -88,6 +88,9 @@ export const md = MarkdownIt({
   },
 });
 
+// 禁用模糊链接匹配，避免文件名被误识别为链接
+md.linkify.set({ fuzzyLink: false });
+
 md.use(mk, { throwOnError: false, errorColor: '#000000', output: 'mathml' });
 
 md.disable('code');
