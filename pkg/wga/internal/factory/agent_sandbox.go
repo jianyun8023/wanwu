@@ -154,8 +154,8 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 		mcps := make([]wga_sandbox_option.MCP, len(a.options.MCPs))
 		for i, mcp := range a.options.MCPs {
 			mcps[i] = wga_sandbox_option.MCP{
-				Name:   mcp.Name,
-				SSEURL: mcp.SSEURL,
+				Name: mcp.Name,
+				URL:  mcp.URL,
 			}
 		}
 		opts = append(opts, wga_sandbox_option.WithMCPs(mcps))

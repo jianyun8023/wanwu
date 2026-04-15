@@ -44,8 +44,8 @@ type ExtraTool struct {
 
 // MCP MCP 服务器配置。
 type MCP struct {
-	Name   string // MCP 名称
-	SSEURL string // MCP SSE 服务器地址
+	Name string // MCP 名称
+	URL  string // MCP SSE/STREAMABLE 服务器地址
 }
 
 // WorkspaceConfig 工作空间配置。
@@ -218,8 +218,8 @@ func WithMCP(mcp MCP) Option {
 		if mcp.Name == "" {
 			return fmt.Errorf("mcp name is required")
 		}
-		if mcp.SSEURL == "" {
-			return fmt.Errorf("mcp [%s] sse url is required", mcp.Name)
+		if mcp.URL == "" {
+			return fmt.Errorf("mcp [%s] url is required", mcp.Name)
 		}
 		opts.MCPs = append(opts.MCPs, mcp)
 		return nil
