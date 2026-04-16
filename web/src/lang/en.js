@@ -279,6 +279,9 @@ export default {
       informationSecurity: '信息安全',
       other: '其他',
     },
+    state: {
+      draft: '草稿',
+    },
   },
   docDownload: {
     title: '文档下载',
