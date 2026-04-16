@@ -114,14 +114,14 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 	for _, tc := range a.cfg.ToolCategories {
 		for _, toolCfg := range tc.Tools {
 			var auth *openapi3_util.Auth
+			var err error
 			if toolCfg.AuthRequired {
-				// 需要鉴权的工具：必须在 options.Tools 中找到匹配项并获取认证信息
+				// 需要鉴权的工具必须在 options.Tools 中找到匹配项并获取认证信息；否则视为未配置该工具，不加入沙箱工具列表
 				var matched bool
 				for _, toolOpt := range a.options.Tools {
 					if toolOpt.Title == toolCfg.Doc.Info.Title {
-						matched = true
-						if converted, err := toolOpt.APIAuth.ToOpenapiAuth(); err == nil {
-							auth = converted
+						if auth, err = toolOpt.APIAuth.ToOpenapiAuth(); err == nil && auth.Type != "none" {
+							matched = true
 						}
 						break
 					}
@@ -129,7 +129,7 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 				if !matched {
 					continue
 				}
-			}
+			} // 无需鉴权的工具直接加入沙箱工具列表
 			var operationIDs []string
 			for _, op := range toolCfg.Operations {
 				operationIDs = append(operationIDs, op.OperationID)

@@ -83,7 +83,7 @@ runSession, outputCh, _ := wga_sandbox.Run(ctx,
     }),
     // MCP 服务器
     wga_sandbox_option.WithMCPs([]wga_sandbox_option.MCP{
-        {Name: "Jira工单", SSEURL: "https://jira.example.com/sse"},
+        {Name: "Jira工单", URL: "https://jira.example.com/sse"},
     }),
 )
 
@@ -119,7 +119,7 @@ runSession, outputCh, _ := wga_sandbox.Run(ctx,
         &schema.Message{Role: schema.User, Content: "任务描述"},
     }),
     wga_sandbox_option.WithMCPs([]wga_sandbox_option.MCP{
-        {Name: "Jira工单", SSEURL: "https://jira.example.com/sse"},
+        {Name: "Jira工单", URL: "https://jira.example.com/sse"},
     }),
 )
 
@@ -208,18 +208,54 @@ eventCh := tr.TranslateStream(ctx, outputCh)
 | `WithSkipCleanup` | 跳过清理 | 否 |
 | `WithAgentName` | 智能体名称 | 否 |
 
+## 类型
+
+### Tool
+
+工具配置。
+
+```go
+type Tool struct {
+    OpenAPI3Schema *openapi3.T       // OpenAPI 3.0 schema 文档（必须）
+    OperationIDs   []string          // 允许的 operations，为空则全部允许
+    APIAuth        *openapi3_util.Auth // API 认证（可选）
+    Name           string            // 工具名称，从 schema 的 info.title 自动读取
+}
+```
+
+### Skill
+
+技能配置。
+
+```go
+type Skill struct {
+    Dir string // skill 目录路径
+}
+```
+
+### MCP
+
+MCP 服务器配置。
+
+```go
+type MCP struct {
+    Name string // MCP 名称
+    URL  string // MCP SSE/STREAMABLE 服务器地址
+}
+```
+
 ## MCP 服务器
 
 `WithMCPs` 用于配置 MCP (Model Context Protocol) 服务器，允许智能体通过 SSE 协议与外部工具交互。
 
 **字段验证**：
 - `Name`：必须非空
-- `SSEURL`：必须非空
+- `URL`：必须非空
 
 ```go
 wga_sandbox_option.WithMCPs([]wga_sandbox_option.MCP{
-    {Name: "Jira工单", SSEURL: "https://jira.example.com/sse"},
-    {Name: "Confluence", SSEURL: "https://confluence.example.com/sse"},
+    {Name: "Jira工单", URL: "https://jira.example.com/sse"},
+    {Name: "Confluence", URL: "https://confluence.example.com/sse"},
 })
 ```
 

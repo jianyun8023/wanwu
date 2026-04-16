@@ -15,7 +15,6 @@ type MCP = option.MCP
 type RunSession = option.RunSession
 
 type CheckResult = option.CheckResult
-type CheckModel = option.CheckModel
 
 type ToolCategoryInfo = config.ToolCategory
 

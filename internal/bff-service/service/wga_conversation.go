@@ -88,10 +88,6 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 
 	runID := uuid.NewString()
 
-	if req.AgentID == "" {
-		req.AgentID = config.WgaCfg().AgentID
-	}
-
 	// 构建 WGA 选项
 	opts, err := buildWgaRunOptions(ctx, userId, orgId, req.AgentID, req.ThreadID, runID, userInputMessage)
 	if err != nil {
@@ -99,7 +95,11 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	}
 
 	// 运行 WGA
-	_, iter, err := wga.Run(ctx.Request.Context(), req.AgentID, opts...)
+	agentID := req.AgentID
+	if agentID == "" {
+		agentID = config.WgaCfg().AgentID
+	}
+	_, iter, err := wga.Run(ctx.Request.Context(), agentID, opts...)
 	if err != nil {
 		return err
 	}
@@ -304,12 +304,20 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 
 	// 校验并构建工具配置选项
 	if wgaConfig != nil && len(wgaConfig.ToolList) > 0 {
-		if err := checkWgaToolConfig(ctx, userID, orgID, agentID, wgaConfig.ToolList); err != nil {
-			return nil, err
-		}
 		toolOpts, err := buildWgaToolOptions(ctx, userID, orgID, wgaConfig.ToolList)
 		if err != nil {
 			return nil, err
+		}
+		if agentID != "" {
+			checkResult, err := wga.CheckToolOptions(ctx.Request.Context(), agentID, toolOpts...)
+			if err != nil {
+				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("tool options check failed: %v", err))
+			}
+			for _, tc := range checkResult.ToolCategories {
+				if !tc.Meet {
+					return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("tool category (%s) condition (%s) not meet", tc.Category, tc.Condition))
+				}
+			}
 		}
 		opts = append(opts, toolOpts...)
 	}

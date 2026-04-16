@@ -182,14 +182,21 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 
 	// 校验 tool 配置
 	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
+	toolIds := make([]string, 0, len(req.ToolList))
 	for _, t := range req.ToolList {
 		toolList = append(toolList, &assistant_service.WgaConfigTool{
 			ToolId:   t.ToolID,
 			ToolType: t.ToolType,
 		})
+		if t.ToolType == constant.ToolTypeBuiltIn {
+			toolIds = append(toolIds, t.ToolID)
+		}
 	}
-	if err := checkWgaToolConfig(ctx, userId, orgId, "", toolList); err != nil {
-		return err
+	validToolIds, _ := getValidToolIds(ctx, userId, orgId, toolIds)
+	for _, t := range req.ToolList {
+		if !validToolIds[t.ToolID] {
+			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found or invalid: %s", t.ToolID))
+		}
 	}
 
 	// 校验 mcp 配置
@@ -616,13 +623,13 @@ func CheckGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string,
 	opts = append(opts, toolOpts...)
 
 	// 检查工具配置
-	checkResult, err := wga.CheckOptions(ctx.Request.Context(), req.AgentID, opts...)
+	checkResult, err := wga.CheckToolOptions(ctx.Request.Context(), req.AgentID, opts...)
 	if err != nil {
-		return nil, err
+		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("check tool options err: %v", err))
 	}
 
 	result := &response.GeneralAgentConfigCheckResponse{
-		ModelMeet: checkResult.Model.Meet,
+		ModelMeet: true,
 		ToolsMeet: make([]response.GeneralAgentToolCategories, 0, len(checkResult.ToolCategories)),
 	}
 
@@ -879,58 +886,6 @@ func buildWgaModelOption(ctx *gin.Context, modelConfig *common.AppModelConfig) (
 
 // --- internal wga tool ---
 
-// checkWgaToolConfig 校验工具配置是否存在且是 WGA 所需的（用于运行前检查）
-func checkWgaToolConfig(ctx *gin.Context, userId, orgId, agentID string, toolList []*assistant_service.WgaConfigTool) error {
-	if len(toolList) == 0 {
-		return nil
-	}
-
-	// 获取 wga 允许的 tool 名称列表，仅当 agentID 存在时获取
-	var toolCategories []*wga_option.ToolCategoryInfo
-	validToolTitles := make(map[string]bool)
-	var err error
-	if agentID != "" {
-		toolCategories, err = wga.GetAgentToolCategories(agentID)
-		if err != nil {
-			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("get agent tool categories failed: %v", err))
-		}
-
-		for _, tc := range toolCategories {
-			for _, t := range tc.Tools {
-				validToolTitles[t.Doc.Info.Title] = true
-			}
-		}
-	}
-
-	for _, t := range toolList {
-		switch t.ToolType {
-		case constant.ToolTypeBuiltIn:
-			// 验证 builtin tool 是否存在
-			toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-				ToolSquareId: t.ToolId,
-				Identity: &mcp_service.Identity{
-					UserId: userId,
-					OrgId:  orgId,
-				},
-			})
-			if err != nil {
-				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("builtin tool not found: %s", t.ToolId))
-			}
-
-			if agentID != "" {
-				// 验证 tool 是否在 wga 工具列表中
-				if !validToolTitles[toolResp.Info.Name] {
-					return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not allowed for wga: %s", toolResp.Info.Name))
-				}
-			}
-		default:
-			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("invalid tool type: %s", t.ToolType))
-		}
-	}
-
-	return nil
-}
-
 // buildWgaToolOptions 构建工具配置选项（复用逻辑）
 func buildWgaToolOptions(ctx *gin.Context, userId, orgId string, toolList []*assistant_service.WgaConfigTool) ([]wga_option.Option, error) {
 	var opts []wga_option.Option
@@ -970,6 +925,27 @@ func buildWgaToolOptions(ctx *gin.Context, userId, orgId string, toolList []*ass
 		}
 	}
 	return opts, nil
+}
+
+// getValidToolIds 批量获取有效的Tool ID映射
+func getValidToolIds(ctx *gin.Context, userId, orgId string, toolIds []string) (map[string]bool, error) {
+	if len(toolIds) == 0 {
+		return make(map[string]bool), nil
+	}
+	validIds := make(map[string]bool)
+	for _, toolId := range toolIds {
+		_, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
+			ToolSquareId: toolId,
+			Identity: &mcp_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+		if err == nil {
+			validIds[toolId] = true
+		}
+	}
+	return validIds, nil
 }
 
 // --- internal wga assistant ---
@@ -1055,6 +1031,31 @@ func buildWgaAssistantOptions(ctx *gin.Context, userId, orgId string, assistantL
 	return opts, nil
 }
 
+// getValidAssistantIds 批量获取有效的智能体ID映射
+// 返回: validIds - 有效ID映射, assistantInfos - 智能体信息映射, error
+func getValidAssistantIds(ctx *gin.Context, userId, orgId string, assistantIds []string) (map[string]bool, map[string]*assistant_service.AssistantBrief, error) {
+	if len(assistantIds) == 0 {
+		return make(map[string]bool), make(map[string]*assistant_service.AssistantBrief), nil
+	}
+	assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
+		AssistantIdList: assistantIds,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	validIds := make(map[string]bool)
+	assistantInfos := make(map[string]*assistant_service.AssistantBrief)
+	for _, info := range assistantResp.AssistantInfos {
+		validIds[info.Info.AppId] = true
+		assistantInfos[info.Info.AppId] = info
+	}
+	return validIds, assistantInfos, nil
+}
+
 // --- internal wga mcp ---
 
 // checkWgaMCPConfig 校验wga MCP配置（用于更新配置）
@@ -1134,6 +1135,32 @@ func buildWgaMCPOptions(ctx *gin.Context, userId, orgId string, mcpList []*assis
 	return opts, nil
 }
 
+// getValidMcpIds 批量获取有效的MCP ID映射
+// 返回: validIds - 有效ID映射, mcpTypes - ID对应的类型映射(mcp/mcpserver), error
+func getValidMcpIds(ctx *gin.Context, mcpCustomIds, mcpServerIds []string) (map[string]bool, map[string]string, error) {
+	if len(mcpCustomIds) == 0 && len(mcpServerIds) == 0 {
+		return make(map[string]bool), make(map[string]string), nil
+	}
+	mcpResp, err := mcp.GetMCPByMCPIdList(ctx.Request.Context(), &mcp_service.GetMCPByMCPIdListReq{
+		McpIdList:       mcpCustomIds,
+		McpServerIdList: mcpServerIds,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	validIds := make(map[string]bool)
+	mcpTypes := make(map[string]string)
+	for _, item := range mcpResp.Infos {
+		validIds[item.McpId] = true
+		mcpTypes[item.McpId] = constant.MCPTypeMCP
+	}
+	for _, item := range mcpResp.Servers {
+		validIds[item.McpServerId] = true
+		mcpTypes[item.McpServerId] = constant.MCPTypeMCPServer
+	}
+	return validIds, mcpTypes, nil
+}
+
 // --- internal wga workflow ---
 
 // checkWgaWorkflowConfig 校验wga Workflow配置（用于更新配置）
@@ -1178,6 +1205,22 @@ func buildWgaWorkflowOptions(ctx *gin.Context, userId, orgId string, workflowLis
 		opts = append(opts, wga_option.WithExtraTool(wga_option.ExtraTool{OpenAPI3Schema: schema}))
 	}
 	return opts, nil
+}
+
+// getValidWorkflowIds 批量获取有效的Workflow ID映射
+func getValidWorkflowIds(ctx *gin.Context, workflowIds []string) (map[string]bool, error) {
+	if len(workflowIds) == 0 {
+		return make(map[string]bool), nil
+	}
+	workflowResp, err := ListWorkflowByIDs(ctx, "", workflowIds)
+	if err != nil {
+		return nil, err
+	}
+	validIds := make(map[string]bool)
+	for _, w := range workflowResp.Workflows {
+		validIds[w.WorkflowId] = true
+	}
+	return validIds, nil
 }
 
 // --- internal wga skill ---
@@ -1279,93 +1322,7 @@ func getValidSkillIds(ctx *gin.Context, skillIds []string) (map[string]bool, err
 	return validIds, nil
 }
 
-// getValidAssistantIds 批量获取有效的智能体ID映射
-// 返回: validIds - 有效ID映射, assistantInfos - 智能体信息映射, error
-func getValidAssistantIds(ctx *gin.Context, userId, orgId string, assistantIds []string) (map[string]bool, map[string]*assistant_service.AssistantBrief, error) {
-	if len(assistantIds) == 0 {
-		return make(map[string]bool), make(map[string]*assistant_service.AssistantBrief), nil
-	}
-	assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
-		AssistantIdList: assistantIds,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	validIds := make(map[string]bool)
-	assistantInfos := make(map[string]*assistant_service.AssistantBrief)
-	for _, info := range assistantResp.AssistantInfos {
-		validIds[info.Info.AppId] = true
-		assistantInfos[info.Info.AppId] = info
-	}
-	return validIds, assistantInfos, nil
-}
-
-// getValidMcpIds 批量获取有效的MCP ID映射
-// 返回: validIds - 有效ID映射, mcpTypes - ID对应的类型映射(mcp/mcpserver), error
-func getValidMcpIds(ctx *gin.Context, mcpCustomIds, mcpServerIds []string) (map[string]bool, map[string]string, error) {
-	if len(mcpCustomIds) == 0 && len(mcpServerIds) == 0 {
-		return make(map[string]bool), make(map[string]string), nil
-	}
-	mcpResp, err := mcp.GetMCPByMCPIdList(ctx.Request.Context(), &mcp_service.GetMCPByMCPIdListReq{
-		McpIdList:       mcpCustomIds,
-		McpServerIdList: mcpServerIds,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	validIds := make(map[string]bool)
-	mcpTypes := make(map[string]string)
-	for _, item := range mcpResp.Infos {
-		validIds[item.McpId] = true
-		mcpTypes[item.McpId] = constant.MCPTypeMCP
-	}
-	for _, item := range mcpResp.Servers {
-		validIds[item.McpServerId] = true
-		mcpTypes[item.McpServerId] = constant.MCPTypeMCPServer
-	}
-	return validIds, mcpTypes, nil
-}
-
-// getValidWorkflowIds 批量获取有效的Workflow ID映射
-func getValidWorkflowIds(ctx *gin.Context, workflowIds []string) (map[string]bool, error) {
-	if len(workflowIds) == 0 {
-		return make(map[string]bool), nil
-	}
-	workflowResp, err := ListWorkflowByIDs(ctx, "", workflowIds)
-	if err != nil {
-		return nil, err
-	}
-	validIds := make(map[string]bool)
-	for _, w := range workflowResp.Workflows {
-		validIds[w.WorkflowId] = true
-	}
-	return validIds, nil
-}
-
-// getValidToolIds 批量获取有效的Tool ID映射
-func getValidToolIds(ctx *gin.Context, userId, orgId string, toolIds []string) (map[string]bool, error) {
-	if len(toolIds) == 0 {
-		return make(map[string]bool), nil
-	}
-	validIds := make(map[string]bool)
-	for _, toolId := range toolIds {
-		_, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-			ToolSquareId: toolId,
-			Identity: &mcp_service.Identity{
-				UserId: userId,
-				OrgId:  orgId,
-			},
-		})
-		if err == nil {
-			validIds[toolId] = true
-		}
-	}
-	return validIds, nil
-}
+// --- internal wga workspace ---
 
 func buildWgaFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo, error) {
 	entries, err := os.ReadDir(dirPath)
