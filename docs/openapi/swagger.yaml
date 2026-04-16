@@ -2110,6 +2110,12 @@ definitions:
         description: 状态
         type: integer
     type: object
+  response.ListResult:
+    properties:
+      list: {}
+      total:
+        type: integer
+    type: object
   response.ModelInfo:
     properties:
       allowEdit:
@@ -2352,6 +2358,21 @@ definitions:
     type: object
   response.OpenAPICreateAgentResponse:
     properties:
+      uuid:
+        type: string
+    type: object
+  response.OpenAPIModelListItem:
+    properties:
+      displayName:
+        type: string
+      model:
+        type: string
+      modelType:
+        type: string
+      provider:
+        type: string
+      scopeType:
+        type: string
       uuid:
         type: string
     type: object
@@ -3196,6 +3217,52 @@ paths:
           schema:
             $ref: '#/definitions/response.Response'
       summary: 获取MCPServer streamable 类型消息
+      tags:
+      - openapi
+  /model/list:
+    get:
+      consumes:
+      - application/json
+      description: 根据查询条件返回当前 API Key 所属用户/组织可见的模型列表。未传 isActive 时默认仅返回已启用模型。
+      parameters:
+      - description: 模型类型
+        enum:
+        - llm
+        - embedding
+        - rerank
+        in: query
+        name: modelType
+        type: string
+      - description: 模型供应商
+        in: query
+        name: provider
+        type: string
+      - description: 模型显示名称
+        in: query
+        name: displayName
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.ListResult'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/response.OpenAPIModelListItem'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - JWT: []
+      summary: 模型列表查询OpenAPI
       tags:
       - openapi
   /oauth/code/authorize:

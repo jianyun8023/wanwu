@@ -7,6 +7,7 @@ const (
 	OpenAPITypeAgent     = "agent"     // 智能体
 	OpenAPITypeRag       = "rag"       // 文本问答
 	OpenAPITypeKnowledge = "knowledge" // 知识库
+	OpenAPITypeModel     = "model"     // 可用模型列表查询
 )
 
 // app type

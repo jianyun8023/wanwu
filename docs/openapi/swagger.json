@@ -1197,6 +1197,86 @@
                 }
             }
         },
+        "/model/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "根据查询条件返回当前 API Key 所属用户/组织可见的模型列表。未传 isActive 时默认仅返回已启用模型。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "模型列表查询OpenAPI",
+                "parameters": [
+                    {
+                        "enum": [
+                            "llm",
+                            "embedding",
+                            "rerank"
+                        ],
+                        "type": "string",
+                        "description": "模型类型",
+                        "name": "modelType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "模型供应商",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "模型显示名称",
+                        "name": "displayName",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.OpenAPIModelListItem"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/oauth/code/authorize": {
             "get": {
                 "description": "授权码方式-获取授权码",
@@ -4679,6 +4759,15 @@
                 }
             }
         },
+        "response.ListResult": {
+            "type": "object",
+            "properties": {
+                "list": {},
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.ModelInfo": {
             "type": "object",
             "required": [
@@ -5038,6 +5127,29 @@
         "response.OpenAPICreateAgentResponse": {
             "type": "object",
             "properties": {
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.OpenAPIModelListItem": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "modelType": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "scopeType": {
+                    "type": "string"
+                },
                 "uuid": {
                     "type": "string"
                 }
