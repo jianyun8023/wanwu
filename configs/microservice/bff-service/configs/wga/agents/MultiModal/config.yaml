@@ -42,7 +42,6 @@ tool_categories:
         auth_required: true
         operations:
           - operation_id: tavily_basic_search
-          
 
 skills:
 
