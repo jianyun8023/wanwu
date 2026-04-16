@@ -1,6 +1,9 @@
 package response
 
-import "github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+import (
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
+)
 
 type DocPageResult struct {
 	List             []*ListDocResp    `json:"list"`
@@ -78,7 +81,13 @@ type DocSegmentResp struct {
 	SegmentContentList  []*SegmentContent `json:"contentList"`         //内容
 	SegmentImportStatus string            `json:"segmentImportStatus"` //分段导入状态描述
 	SegmentMethod       string            `json:"segmentMethod"`       //分段方式 父子分段/通用分段
-	DocAnalyzerText     []string          `json:"docAnalyzerText"`     //文档解析类型 文字提取 / OCR解析  / 模型解析
+	DocAnalyzerText     []*DocAnalyzerTextInfo `json:"docAnalyzerText"` //文档解析类型 文字提取 / OCR解析  / 模型解析
+}
+
+type DocAnalyzerTextInfo struct {
+	Text        string          `json:"text"`
+	DisplayName string          `json:"displayName,omitempty"`
+	Tags        []mp_common.Tag `json:"tags,omitempty"`
 }
 
 type DocMetaData struct {

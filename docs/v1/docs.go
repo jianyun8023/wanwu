@@ -11475,7 +11475,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -25724,6 +25723,23 @@ const docTemplate = `{
                 }
             }
         },
+        "response.DocAnalyzerTextInfo": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mp_common.Tag"
+                    }
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "response.DocChildSegmentResp": {
             "type": "object",
             "properties": {
@@ -25988,7 +26004,7 @@ const docTemplate = `{
                     "description": "文档解析类型 文字提取 / OCR解析  / 模型解析",
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/response.DocAnalyzerTextInfo"
                     }
                 },
                 "fileName": {
