@@ -2761,6 +2761,31 @@ paths:
       summary: 对话流根据conversationId获取历史对话
       tags:
       - openapi
+  /chatflow/file/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 对话流OpenAPI文件上传
+      parameters:
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 对话流OpenAPI文件上传
+      tags:
+      - openapi
   /file/upload/direct:
     post:
       consumes:

@@ -139,7 +139,7 @@ func GetKnowledgeExportRecordList(ctx *gin.Context, userId, orgId string, r *req
 		return nil, err
 	}
 	return &response.KnowledgeExportRecordPageResult{
-		List:     buildExportRecordRespList(ctx, resp.ExportRecordInfos),
+		List:     buildKnowledgeExportRecordRespList(ctx, resp.ExportRecordInfos),
 		Total:    resp.Total,
 		PageNo:   int(resp.PageNum),
 		PageSize: int(resp.PageSize),
@@ -274,10 +274,10 @@ func buildQAPairRespList(ctx *gin.Context, dataList []*knowledgebase_qa_service.
 	return retList
 }
 
-// buildExportRecordRespList 构造知识库导出记录返回列表
-func buildExportRecordRespList(ctx *gin.Context, dataList []*knowledgebase_service.ExportRecordInfo) []*response.ListKnowledgeExportRecordResp {
+// buildKnowledgeExportRecordRespList 构造知识库导出记录返回列表
+func buildKnowledgeExportRecordRespList(ctx *gin.Context, dataList []*knowledgebase_service.ExportRecordInfo) []*response.ListKnowledgeExportRecordResp {
 	retList := make([]*response.ListKnowledgeExportRecordResp, 0)
-	authorMap := buildExportAuthorMap(ctx, dataList)
+	authorMap := buildKnowledgeExportAuthorMap(ctx, dataList)
 	for _, data := range dataList {
 		retList = append(retList, &response.ListKnowledgeExportRecordResp{
 			ExportRecordId: data.ExportRecordId,
@@ -328,7 +328,7 @@ func buildQAPairAuthorMap(ctx *gin.Context, dataList []*knowledgebase_qa_service
 	return authorMap
 }
 
-func buildExportAuthorMap(ctx *gin.Context, dataList []*knowledgebase_service.ExportRecordInfo) map[string]string {
+func buildKnowledgeExportAuthorMap(ctx *gin.Context, dataList []*knowledgebase_service.ExportRecordInfo) map[string]string {
 	authorMap := make(map[string]string)
 	userIdSet := make(map[string]bool)
 	for _, data := range dataList {

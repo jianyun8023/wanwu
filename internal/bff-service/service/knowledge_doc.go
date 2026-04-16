@@ -317,7 +317,7 @@ func GetDocSegmentList(ctx *gin.Context, userId, orgId string, req *request.DocS
 		return nil, err
 	}
 	// 查询ASR和图文问答模型信息
-	analyzerModelMap := buildAnalyzerModelMap(ctx, resp.DocAnalyzer, resp.AsrModelId, resp.MultimodalModelId, resp.ParserModelId)
+	analyzerModelMap := buildDocAnalyzerModelMap(ctx, resp.DocAnalyzer, resp.AsrModelId, resp.MultimodalModelId, resp.ParserModelId)
 	return buildDocSegmentResp(resp, analyzerModelMap), nil
 }
 
@@ -461,8 +461,8 @@ func buildDocAnalyzerText(docAnalyzer []string, analyzerModelMap map[string]*res
 	})
 }
 
-// buildAnalyzerModelMap 查询docAnalyzer中涉及的模型信息，返回 analyzerKey -> ModelInfo 的映射
-func buildAnalyzerModelMap(ctx *gin.Context, docAnalyzer []string, asrModelId, multimodalModelId, parserModelId string) map[string]*response.ModelInfo {
+// buildDocAnalyzerModelMap 查询docAnalyzer中涉及的模型信息，返回 analyzerKey -> ModelInfo 的映射
+func buildDocAnalyzerModelMap(ctx *gin.Context, docAnalyzer []string, asrModelId, multimodalModelId, parserModelId string) map[string]*response.ModelInfo {
 	modelMap := make(map[string]*response.ModelInfo)
 	analyzerSet := lo.SliceToMap(docAnalyzer, func(item string) (string, bool) { return item, true })
 

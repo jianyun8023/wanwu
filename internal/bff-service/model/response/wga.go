@@ -52,7 +52,7 @@ type GeneralAgentToolInfoResp struct {
 
 type GeneralAgentConfigCheckResponse struct {
 	Meet      bool                         `json:"meet"`      // 是否符合要求
-	ModelMeet bool                         `json:"modelMeet"` // 是否符合模型要求
+	ModelMeet bool                         `json:"modelMeet"` // 是否符合模型要求 FIXME 去掉模型检查
 	ToolsMeet []GeneralAgentToolCategories `json:"toolsMeet"` // 工具是否符合要求
 }
 

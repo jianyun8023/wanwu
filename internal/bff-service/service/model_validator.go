@@ -605,7 +605,7 @@ func getSyncAsrReqByProvider(ctx *gin.Context, modelInfo *model_service.ModelInf
 	return req, nil
 }
 
-func validateThinking(ctx context.Context, iLLM mp.ILLM, model string, stream *bool, enableThinking bool) error {
+func validateModelThinking(ctx context.Context, iLLM mp.ILLM, model string, stream *bool, enableThinking bool) error {
 	temp := enableThinking
 	reqThinking := &mp_common.LLMReq{
 		Model: model,
@@ -649,7 +649,7 @@ func validateThinking(ctx context.Context, iLLM mp.ILLM, model string, stream *b
 	return nil
 }
 
-func ValidateThinkingModel(ctx *gin.Context, userId, orgId string, req *request.ImportOrUpdateModelRequest) error {
+func ValidateModelThinking(ctx *gin.Context, userId, orgId string, req *request.ImportOrUpdateModelRequest) error {
 	modelInfo, err := parseImportAndUpdateClientReq(userId, orgId, req)
 	if err != nil {
 		return err
@@ -665,10 +665,10 @@ func ValidateThinkingModel(ctx *gin.Context, userId, orgId string, req *request.
 	}
 
 	stream := false
-	if err := validateThinking(ctx.Request.Context(), iLLM, modelInfo.Model, &stream, true); err != nil {
+	if err := validateModelThinking(ctx.Request.Context(), iLLM, modelInfo.Model, &stream, true); err != nil {
 		return err
 	}
-	if err := validateThinking(ctx.Request.Context(), iLLM, modelInfo.Model, &stream, false); err != nil {
+	if err := validateModelThinking(ctx.Request.Context(), iLLM, modelInfo.Model, &stream, false); err != nil {
 		return err
 	}
 	return nil

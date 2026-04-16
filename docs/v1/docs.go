@@ -11475,6 +11475,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -26195,7 +26196,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "modelMeet": {
-                    "description": "是否符合模型要求",
+                    "description": "是否符合模型要求 FIXME 去掉模型检查",
                     "type": "boolean"
                 },
                 "toolsMeet": {

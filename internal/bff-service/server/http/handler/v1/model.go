@@ -324,7 +324,7 @@ func RecommendModels(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
-// ValidateThinking
+// ValidateModelThinking
 //
 //	@Tags			model
 //	@Summary		深度思考校验
@@ -335,12 +335,12 @@ func RecommendModels(ctx *gin.Context) {
 //	@Param			data	body		request.ImportOrUpdateModelRequest	true	"模型信息"
 //	@Success		200		{object}	response.Response
 //	@Router			/model/validate-thinking [post]
-func ValidateThinking(ctx *gin.Context) {
+func ValidateModelThinking(ctx *gin.Context) {
 	var req request.ImportOrUpdateModelRequest
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	err := service.ValidateThinkingModel(ctx, getUserID(ctx), getOrgID(ctx), &req)
+	err := service.ValidateModelThinking(ctx, getUserID(ctx), getOrgID(ctx), &req)
 	gin_util.Response(ctx, nil, err)
 }
 
