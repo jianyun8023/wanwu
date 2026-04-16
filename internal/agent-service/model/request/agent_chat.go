@@ -67,6 +67,7 @@ type AgentChatReq struct {
 }
 
 type AgentChatParams struct {
+	DetailId         string          `json:"detailId"`
 	Input            string          `json:"input" validate:"required"`
 	UploadFile       []string        `json:"uploadFile"`
 	Stream           bool            `json:"stream"`

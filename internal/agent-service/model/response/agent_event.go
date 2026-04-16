@@ -157,6 +157,7 @@ func buildSubAgentEventInfo(respContext *request.AgentChatContext, chatMessage *
 	var outputList = make([]string, 0)
 	var agentChatResp = &AgentChatResp{
 		Code:           agentSuccessCode,
+		DetailId:       respContext.AgentChatReq.DetailId,
 		Message:        "success",
 		Response:       "",
 		Order:          order,

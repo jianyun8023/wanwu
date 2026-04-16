@@ -72,6 +72,7 @@ type AgentChatResp struct {
 	Code           int             `json:"code"`
 	Message        string          `json:"message"`
 	Response       string          `json:"response"`
+	DetailId       string          `json:"detailId"`
 	Order          int             `json:"order"` //顺序
 	EventType      AgentEventType  `json:"eventType"`
 	EventData      *SubEventData   `json:"eventData"`
@@ -109,6 +110,7 @@ func AgentChatSuccessResp(req *request.AgentChatContext, chatMessage *schema.Mes
 	return &AgentChatResp{
 		Code:           agentSuccessCode,
 		Message:        "success",
+		DetailId:       req.AgentChatReq.DetailId,
 		Response:       content,
 		EventType:      buildEventType(subAgentEventData),
 		EventData:      subAgentEventData,
@@ -121,11 +123,12 @@ func AgentChatSuccessResp(req *request.AgentChatContext, chatMessage *schema.Mes
 		Order:          order,
 	}
 }
-func AgentChatFailResp() string {
+func AgentChatFailResp(detailId string) string {
 	var agentChatResp = &AgentChatResp{
 		Code:     agentFailCode,
 		Message:  "智能体处理异常，请稍后重试",
 		Response: "智能体处理异常，请稍后重试",
+		DetailId: detailId,
 		Finish:   finish,
 	}
 	respString, err := buildRespString(agentChatResp)

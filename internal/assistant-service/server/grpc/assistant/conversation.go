@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 	"os"
 	"strings"
@@ -198,6 +199,7 @@ func (s *Service) GetConversationDetailList(ctx context.Context, req *assistant_
 }
 
 func (s *Service) AssistantConversionStream(req *assistant_service.AssistantConversionStreamReq, stream assistant_service.AssistantService_AssistantConversionStreamServer) error {
+	req.DetailId = uuid.New().String()
 	//会话处理
 	conversationProcessor := &service.ConversationProcessor{
 		SSEWriter: sse_util.NewGrpcSSEWriter(stream, "AssistantConversionStreamNew", nil),
@@ -273,6 +275,7 @@ func buildConversationParams(req *assistant_service.AssistantConversionStreamReq
 		OrgId:          req.Identity.OrgId,
 		Query:          req.Prompt,
 		UserId:         req.Identity.UserId,
+		DetailId:       req.DetailId,
 	}
 }
 
@@ -292,6 +295,7 @@ func buildAgentSendRequest(req *assistant_service.AssistantConversionStreamReq) 
 		UserId:         req.Identity.UserId,
 		OrgId:          req.Identity.OrgId,
 		Draft:          req.Draft,
+		DetailId:       req.DetailId,
 	}, util.MustU32(req.AssistantId))
 
 	var monitorKey = "agent_chat_service"

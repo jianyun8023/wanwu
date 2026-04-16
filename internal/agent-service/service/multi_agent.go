@@ -119,6 +119,7 @@ func buildAgentChatParams(multiAgentChatReq *request.MultiAgentChatReq) *request
 	}
 	baseParams := multiAgentChatReq.AgentChatBaseParams
 	return &request.AgentChatParams{
+		DetailId:         multiAgentChatReq.DetailId,
 		MultiAgent:       true,
 		SubAgentInfoList: subAgentInfoList,
 		Input:            multiAgentChatReq.Input,
@@ -139,6 +140,7 @@ func buildMultiSubAgent(ctx *gin.Context, multiAgentChatReq *request.MultiAgentC
 			AgentChatBaseParams: *agentParams,
 			Stream:              multiAgentChatReq.Stream,
 			UploadFile:          multiAgentChatReq.UploadFile,
+			DetailId:            multiAgentChatReq.DetailId,
 		}, agentInfo)
 		if err != nil {
 			return nil, nil, err
@@ -187,5 +189,6 @@ func skillToSingleAgent(ctx *gin.Context, multiAgentChatReq *request.MultiAgentC
 		},
 		Stream:     multiAgentChatReq.Stream,
 		UploadFile: multiAgentChatReq.UploadFile,
+		DetailId:   multiAgentChatReq.DetailId,
 	})
 }
