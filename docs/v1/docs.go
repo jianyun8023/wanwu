@@ -24003,7 +24003,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "publishType": {
-                    "description": "发布类型(public:公开发布,private:私密发布)",
+                    "description": "发布类型(public:公开发布,private:私密发布)，为空表示未发布(草稿)",
                     "type": "string"
                 },
                 "uniqueId": {
@@ -24012,6 +24012,10 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "description": "应用更新时间(用于历史记录排序)",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "已发布应用的版本号(未发布时为空)",
                     "type": "string"
                 }
             }
@@ -26145,7 +26149,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "publishType": {
-                    "description": "发布类型(public:公开发布,private:私密发布)",
+                    "description": "发布类型(public:公开发布,private:私密发布)，为空表示未发布(草稿)",
                     "type": "string"
                 },
                 "uniqueId": {
@@ -26163,6 +26167,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.User"
                         }
                     ]
+                },
+                "version": {
+                    "description": "已发布应用的版本号(未发布时为空)",
+                    "type": "string"
                 }
             }
         },

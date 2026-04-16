@@ -240,6 +240,21 @@ type CozeWorkflowVersion struct {
 	CommitId  string `json:"commit_id"`
 }
 
+type CozeMGetWorkflowLatestVersionResponse struct {
+	Data []*CozeWorkflowVersionInfo `json:"data"`
+	Code int64                      `json:"code"`
+	Msg  string                     `json:"msg"`
+}
+
+type CozeWorkflowVersionInfo struct {
+	WorkflowID         string `json:"workflow_id"`
+	Version            string `json:"version"`
+	VersionDescription string `json:"version_description"`
+	CreatedAt          int64  `json:"created_at"`
+	CommitID           string `json:"commit_id"`
+	Type               int64  `json:"type"`
+}
+
 type CozeCommonResp struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`

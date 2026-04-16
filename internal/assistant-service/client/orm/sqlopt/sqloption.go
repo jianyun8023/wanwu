@@ -219,3 +219,12 @@ func WithThreadID(threadId string) SQLOption {
 		return db
 	})
 }
+
+func WithAssistantIDs(assistantIds []uint32) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if len(assistantIds) > 0 {
+			return db.Where("assistant_id IN ?", assistantIds)
+		}
+		return db
+	})
+}

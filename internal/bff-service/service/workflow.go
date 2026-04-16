@@ -507,6 +507,34 @@ func GetWorkflowVersionList(ctx *gin.Context, workflowID string) (*response.Coze
 	return ret.Data, nil
 }
 
+func MultiGetWorkflowVersionList(ctx *gin.Context, workflowIDs []string) ([]*response.CozeWorkflowVersionInfo, error) {
+	url, _ := net_url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.MultiVersionListUri)
+	ret := &response.CozeMGetWorkflowLatestVersionResponse{}
+	resp, err := resty.New().
+		R().
+		SetContext(ctx.Request.Context()).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeaders(workflowHttpReqHeader(ctx)).
+		SetBody(map[string]any{
+			"workflow_ids": workflowIDs,
+		}).
+		SetResult(ret).
+		Post(url)
+	if err != nil {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_workflow_version_list", err.Error())
+	}
+	if resp.StatusCode() >= 300 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_workflow_version_list",
+			fmt.Sprintf("[%d] code %v msg %v", resp.StatusCode(), ret.Code, ret.Msg))
+	}
+	if ret.Code != 0 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_workflow_version_list",
+			fmt.Sprintf("code %v msg %v", ret.Code, ret.Msg))
+	}
+	return ret.Data, nil
+}
+
 func GetWorkflowVersion(ctx *gin.Context, appID string) (string, string, error) {
 	url, _ := net_url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.VersionListUri)
 	ret := &response.CozeWorkflowVersionListResp{}

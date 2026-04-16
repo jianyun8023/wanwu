@@ -4667,13 +4667,16 @@ definitions:
         description: 应用名称
         type: string
       publishType:
-        description: 发布类型(public:公开发布,private:私密发布)
+        description: 发布类型(public:公开发布,private:私密发布)，为空表示未发布(草稿)
         type: string
       uniqueId:
         description: 随机unique id(每次动态生成)
         type: string
       updatedAt:
         description: 应用更新时间(用于历史记录排序)
+        type: string
+      version:
+        description: 已发布应用的版本号(未发布时为空)
         type: string
     type: object
   response.AppKeyInfo:
@@ -6082,7 +6085,7 @@ definitions:
         description: 应用名称
         type: string
       publishType:
-        description: 发布类型(public:公开发布,private:私密发布)
+        description: 发布类型(public:公开发布,private:私密发布)，为空表示未发布(草稿)
         type: string
       uniqueId:
         description: 随机unique id(每次动态生成)
@@ -6094,6 +6097,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/response.User'
         description: 作者信息
+      version:
+        description: 已发布应用的版本号(未发布时为空)
+        type: string
     type: object
   response.GeneralAgentCheckTool:
     properties:

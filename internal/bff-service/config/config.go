@@ -238,6 +238,7 @@ type WorkflowServiceConfig struct {
 	// version
 	PublishUri           string               `json:"publish_uri" mapstructure:"publish_uri"`
 	VersionListUri       string               `json:"version_list_uri" mapstructure:"version_list_uri"`
+	MultiVersionListUri  string               `json:"multi_version_list_uri" mapstructure:"multi_version_list_uri"`
 	UpdateVersionDescUri string               `json:"update_version_desc_uri" mapstructure:"update_version_desc_uri"`
 	RollbackUri          string               `json:"rollback_uri" mapstructure:"rollback_uri"`
 	ModelParams          []WorkflowModelParam `json:"model_params" mapstructure:"model_params"`

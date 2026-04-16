@@ -33,6 +33,7 @@ service AssistantService {
   rpc AssistantSnapshotRollback(AssistantSnapshotRollbackReq) returns (google.protobuf.Empty) {}
   rpc AssistantSnapshotInfo(AssistantSnapshotInfoReq) returns (AssistantInfo) {}
   rpc AssistantSnapshotLatest(AssistantSnapshotInfoReq) returns (AssistantSnapshot) {}
+  rpc AssistantSnapshotLatestBatch(AssistantSnapshotLatestBatchReq) returns (AssistantSnapshotLatestBatchResp) {}
 
   // --- workFlow ---
   rpc AssistantWorkFlowCreate(AssistantWorkFlowCreateReq) returns (google.protobuf.Empty) {}
@@ -204,6 +205,15 @@ message AssistantSnapshot {
 message AssistantSnapshotListResp {
   repeated AssistantSnapshot list = 1;
   int64 total = 2;
+}
+
+message AssistantSnapshotLatestBatchReq {
+  repeated string assistantIdList = 1;
+  Identity identity = 2;
+}
+
+message AssistantSnapshotLatestBatchResp {
+  repeated AssistantSnapshot list = 1;
 }
 
 message AssistantSnapshotRollbackReq {

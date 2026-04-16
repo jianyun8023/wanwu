@@ -40,6 +40,7 @@ const (
 	AssistantService_AssistantSnapshotRollback_FullMethodName           = "/assistant_service.AssistantService/AssistantSnapshotRollback"
 	AssistantService_AssistantSnapshotInfo_FullMethodName               = "/assistant_service.AssistantService/AssistantSnapshotInfo"
 	AssistantService_AssistantSnapshotLatest_FullMethodName             = "/assistant_service.AssistantService/AssistantSnapshotLatest"
+	AssistantService_AssistantSnapshotLatestBatch_FullMethodName        = "/assistant_service.AssistantService/AssistantSnapshotLatestBatch"
 	AssistantService_AssistantWorkFlowCreate_FullMethodName             = "/assistant_service.AssistantService/AssistantWorkFlowCreate"
 	AssistantService_AssistantWorkFlowDelete_FullMethodName             = "/assistant_service.AssistantService/AssistantWorkFlowDelete"
 	AssistantService_AssistantWorkFlowEnableSwitch_FullMethodName       = "/assistant_service.AssistantService/AssistantWorkFlowEnableSwitch"
@@ -115,6 +116,7 @@ type AssistantServiceClient interface {
 	AssistantSnapshotRollback(ctx context.Context, in *AssistantSnapshotRollbackReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AssistantSnapshotInfo(ctx context.Context, in *AssistantSnapshotInfoReq, opts ...grpc.CallOption) (*AssistantInfo, error)
 	AssistantSnapshotLatest(ctx context.Context, in *AssistantSnapshotInfoReq, opts ...grpc.CallOption) (*AssistantSnapshot, error)
+	AssistantSnapshotLatestBatch(ctx context.Context, in *AssistantSnapshotLatestBatchReq, opts ...grpc.CallOption) (*AssistantSnapshotLatestBatchResp, error)
 	// --- workFlow ---
 	AssistantWorkFlowCreate(ctx context.Context, in *AssistantWorkFlowCreateReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AssistantWorkFlowDelete(ctx context.Context, in *AssistantWorkFlowDeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -375,6 +377,16 @@ func (c *assistantServiceClient) AssistantSnapshotLatest(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AssistantSnapshot)
 	err := c.cc.Invoke(ctx, AssistantService_AssistantSnapshotLatest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *assistantServiceClient) AssistantSnapshotLatestBatch(ctx context.Context, in *AssistantSnapshotLatestBatchReq, opts ...grpc.CallOption) (*AssistantSnapshotLatestBatchResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssistantSnapshotLatestBatchResp)
+	err := c.cc.Invoke(ctx, AssistantService_AssistantSnapshotLatestBatch_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -886,6 +898,7 @@ type AssistantServiceServer interface {
 	AssistantSnapshotRollback(context.Context, *AssistantSnapshotRollbackReq) (*emptypb.Empty, error)
 	AssistantSnapshotInfo(context.Context, *AssistantSnapshotInfoReq) (*AssistantInfo, error)
 	AssistantSnapshotLatest(context.Context, *AssistantSnapshotInfoReq) (*AssistantSnapshot, error)
+	AssistantSnapshotLatestBatch(context.Context, *AssistantSnapshotLatestBatchReq) (*AssistantSnapshotLatestBatchResp, error)
 	// --- workFlow ---
 	AssistantWorkFlowCreate(context.Context, *AssistantWorkFlowCreateReq) (*emptypb.Empty, error)
 	AssistantWorkFlowDelete(context.Context, *AssistantWorkFlowDeleteReq) (*emptypb.Empty, error)
@@ -1011,6 +1024,9 @@ func (UnimplementedAssistantServiceServer) AssistantSnapshotInfo(context.Context
 }
 func (UnimplementedAssistantServiceServer) AssistantSnapshotLatest(context.Context, *AssistantSnapshotInfoReq) (*AssistantSnapshot, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AssistantSnapshotLatest not implemented")
+}
+func (UnimplementedAssistantServiceServer) AssistantSnapshotLatestBatch(context.Context, *AssistantSnapshotLatestBatchReq) (*AssistantSnapshotLatestBatchResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssistantSnapshotLatestBatch not implemented")
 }
 func (UnimplementedAssistantServiceServer) AssistantWorkFlowCreate(context.Context, *AssistantWorkFlowCreateReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AssistantWorkFlowCreate not implemented")
@@ -1527,6 +1543,24 @@ func _AssistantService_AssistantSnapshotLatest_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AssistantServiceServer).AssistantSnapshotLatest(ctx, req.(*AssistantSnapshotInfoReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AssistantService_AssistantSnapshotLatestBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssistantSnapshotLatestBatchReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AssistantServiceServer).AssistantSnapshotLatestBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AssistantService_AssistantSnapshotLatestBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AssistantServiceServer).AssistantSnapshotLatestBatch(ctx, req.(*AssistantSnapshotLatestBatchReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2431,6 +2465,10 @@ var AssistantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AssistantSnapshotLatest",
 			Handler:    _AssistantService_AssistantSnapshotLatest_Handler,
+		},
+		{
+			MethodName: "AssistantSnapshotLatestBatch",
+			Handler:    _AssistantService_AssistantSnapshotLatestBatch_Handler,
 		},
 		{
 			MethodName: "AssistantWorkFlowCreate",
