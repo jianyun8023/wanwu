@@ -1,7 +1,7 @@
 ARG WANWU_ARCH
 
 # --- 第一阶段：构建阶段 ---
-FROM --platform=linux/$WANWU_ARCH node:14 AS builder
+FROM --platform=linux/$WANWU_ARCH node:22 AS builder
 ARG WANWU_ARCH
 WORKDIR /app
 COPY web .
