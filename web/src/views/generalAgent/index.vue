@@ -238,7 +238,7 @@
               <div class="toolbar-right">
                 <StreamUploadField
                   :fileTypeArr="['doc/*', 'md', 'image/*']"
-                  type="agentChat"
+                  type="wga"
                   @setFileId="handleSetFileId"
                 >
                   <template #default="{ openDialog }">
@@ -799,6 +799,19 @@ export default {
       // 检查当前会话是否正在流式传输
       const currentStreaming = this.streamingMap[this.currentThreadId];
       if (currentStreaming && currentStreaming.isStreaming) return;
+
+      // 在发送消息前进行本地配置校验
+      await this.$refs.configDialog?.fetchToolList();
+
+      // 先执行校验，检查是否有错误（不弹窗）
+      const isValid = this.$refs.configDialog?.validateTools();
+
+      if (!isValid) {
+        // 有错误，打开弹窗显示错误提示
+        this.showConfigDialog = true;
+        await this.$nextTick();
+        return;
+      }
 
       if (this.isNewConversation || !this.currentThreadId) {
         const title = content.slice(0, 50);
