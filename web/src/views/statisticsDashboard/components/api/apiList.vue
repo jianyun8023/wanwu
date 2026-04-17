@@ -150,15 +150,13 @@
           </el-table-column>
           <el-table-column prop="apiKey" label="API Key" align="left">
             <template slot-scope="scope">
-              <template slot-scope="scope">
-                <span>
-                  {{
-                    scope.row.apiKey
-                      ? scope.row.apiKey.slice(0, 6) + '******'
-                      : '--'
-                  }}
-                </span>
-              </template>
+              <span>
+                {{
+                  scope.row.apiKey
+                    ? scope.row.apiKey.slice(0, 6) + '******'
+                    : '--'
+                }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column
