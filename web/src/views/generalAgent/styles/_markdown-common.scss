@@ -235,8 +235,8 @@
     margin: 24px 0 12px;
     font-weight: 600;
     line-height: 1.35;
-    color: $text-primary;
-    font-family: $font-sans;
+    color: inherit;
+    font-family: inherit;
 
     &:first-child {
       margin-top: 0;
@@ -266,7 +266,7 @@
     li {
       margin: 6px 0;
       line-height: 1.75;
-      font-size: 16px;
+      font-size: inherit;
     }
   }
 
@@ -297,6 +297,7 @@
     color: #8b5cf6;
     text-decoration: none;
     font-weight: 500;
+    font-size: inherit;
     transition: color 0.2s ease;
 
     &:hover {
@@ -325,6 +326,7 @@
       padding: 12px 16px;
       border: 1px solid #e5e7eb;
       text-align: left;
+      font-size: inherit;
     }
 
     th {
@@ -357,15 +359,18 @@
 
   strong {
     font-weight: 600;
+    font-size: inherit;
     color: $text-primary;
   }
 
   em {
     font-style: italic;
+    font-size: inherit;
     color: $text-secondary;
   }
 
   del {
+    font-size: inherit;
     color: #9ca3af;
     text-decoration: line-through;
   }
