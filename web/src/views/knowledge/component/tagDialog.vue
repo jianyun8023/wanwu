@@ -92,7 +92,10 @@ export default {
   methods: {
     submitDialog() {
       if (this.type === 'section') {
-        this.$emit('sendList', this.tagList);
+        this.$emit(
+          'sendList',
+          this.tagList.filter(item => item.tagName.trim()),
+        );
       } else {
         this.bindTag();
       }

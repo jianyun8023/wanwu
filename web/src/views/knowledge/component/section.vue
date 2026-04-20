@@ -274,13 +274,13 @@
                   ].includes(permissionType)
                 "
               >
+                <span class="el-icon-price-tag icon-tag"></span>
                 <span
                   :class="['smartDate', 'tagList']"
                   @click.stop="addTag(item.labels, item.contentId)"
                   v-if="item.labels.length === 0"
                 >
-                  <span class="el-icon-price-tag icon-tag"></span>
-                  创建关键词
+                  {{ $t('keyword.create') }}
                 </span>
                 <span
                   class="tagList-item"
