@@ -1,4 +1,7 @@
 // Package opencode 提供 opencode 智能体的运行器实现（基于 HTTP API）。
+//
+// 基于 opencode >= v1.4.11 的 SSE 事件格式实现。
+// 通过 SSE 连接接收 opencode 事件流，转换为统一的 JSON 格式输出。
 package opencode
 
 import (
@@ -107,7 +110,7 @@ type Runner struct {
 }
 
 // partTypeTracker 跟踪 partID 到 part 类型的映射。
-// 在 opencode 1.3.17 中，message.part.delta 事件只携带 partID 而不携带 part 类型，
+// message.part.delta 事件只携带 partID 而不携带 part 类型，
 // 需要通过 message.part.updated 事件中记录的 part 类型来推断 delta 的类型。
 type partTypeTracker struct {
 	types map[string]string // partID -> type ("text" | "reasoning" | "tool" | ...)
@@ -567,50 +570,82 @@ func (r *Runner) handleEvent(data string) (string, bool) {
 		return "", false
 	}
 
+	// 区分 BusEvent 和 SyncEvent
+	if event.Payload.Type == "sync" && event.Payload.SyncEvent != nil {
+		return r.handleSyncEvent(&event)
+	}
+
+	return r.handleBusEvent(&event)
+}
+
+// handleBusEvent 处理 BusEvent 类型的事件（对应 opencode/src/bus/bus-event.ts）。
+// BusEvent 用于实时增量推送，包括：
+// - message.part.delta: 流式文本/推理增量
+// - session.idle: 会话空闲
+// - session.error: 会话错误
+func (r *Runner) handleBusEvent(event *sseEvent) (string, bool) {
 	switch event.Payload.Type {
-	case "message.updated":
-		// 记录用户消息 ID，不需要检查 sessionID
-		r.trackUserMessageIDFromEvent(&event)
-		return "", false
+	case "message.part.delta":
+		// 流式增量事件（对应 MessageV2.Event.PartDelta）
+		if event.Payload.Properties.SessionID != r.sessionID {
+			return "", false
+		}
+		return r.convertDeltaEvent(event), false
 	case "session.idle":
-		// session.idle: SessionID 在 Properties 中
+		// 会话空闲事件（对应 SessionStatus.Event.Idle）
 		if event.Payload.Properties.SessionID != r.sessionID {
 			return "", false
 		}
 		return "", true
 	case "session.error":
-		// session.error: SessionID 在 Properties 中
+		// 会话错误事件（对应 Session.Event.Error）
 		if event.Payload.Properties.SessionID != r.sessionID {
 			return "", false
 		}
-		return r.convertErrorEvent(&event), false
-	case "message.part.delta":
-		// 1.3.17 新增：流式增量事件，SessionID 在 Properties 中
-		if event.Payload.Properties.SessionID != r.sessionID {
-			return "", false
-		}
-		return r.convertDeltaEvent(&event), false
-	case "message.part.updated":
-		// message.part.updated: SessionID 在 Part 中
-		if event.Payload.Properties.Part.SessionID != r.sessionID {
-			return "", false
-		}
-		return r.convertMessagePartEvent(&event), false
+		return r.convertErrorEvent(event), false
 	default:
 		return "", false
 	}
 }
 
-// trackUserMessageIDFromEvent 从 message.updated 事件中记录用户消息 ID。
-func (r *Runner) trackUserMessageIDFromEvent(event *sseEvent) {
-	info := event.Payload.Properties.Info
-	if info.Role == "user" && info.ID != "" {
+// handleSyncEvent 处理 SyncEvent 类型的事件（对应 opencode/src/sync/index.ts）。
+// SyncEvent 用于状态变更通知，包括：
+// - message.updated.1: 消息创建/更新
+// - message.part.updated.1: Part 状态更新
+func (r *Runner) handleSyncEvent(event *sseEvent) (string, bool) {
+	syncEvent := event.Payload.SyncEvent
+	if syncEvent == nil {
+		return "", false
+	}
+
+	switch syncEvent.Type {
+	case "message.updated.1":
+		// 消息更新事件（对应 MessageV2.Event.Updated）
+		r.trackUserMessageIDFromSyncEvent(syncEvent)
+		return "", false
+	case "message.part.updated.1":
+		// Part 更新事件（对应 MessageV2.Event.PartUpdated）
+		if syncEvent.Data.SessionID != r.sessionID {
+			return "", false
+		}
+		return r.convertMessagePartEventFromSync(syncEvent), false
+	default:
+		return "", false
+	}
+}
+
+// trackUserMessageIDFromSyncEvent 从 message.updated 事件中记录用户消息 ID。
+// 用于过滤用户消息的 delta 输出（用户消息不需要输出）。
+func (r *Runner) trackUserMessageIDFromSyncEvent(syncEvent *sseSyncEvent) {
+	info := syncEvent.Data.Info
+	if info != nil && info.Role == "user" && info.ID != "" {
 		r.userMsgIDs[info.ID] = true
 	}
 }
 
-// convertDeltaEvent 转换 message.part.delta 事件（1.3.17 新增的流式增量事件）。
-// delta 事件用于流式传输文本和推理内容的增量，替代旧版 message.part.updated 中的 delta 字段。
+// convertDeltaEvent 转换 message.part.delta 事件（对应 MessageV2.Event.PartDelta）。
+// delta 事件用于流式传输文本和推理内容的增量，只携带 partID 而不携带 part 类型，
+// 需要通过 partTypeTracker 查找类型（从 message.part.updated 事件中记录）。
 func (r *Runner) convertDeltaEvent(event *sseEvent) string {
 	props := event.Payload.Properties
 	delta := props.Delta
@@ -624,7 +659,6 @@ func (r *Runner) convertDeltaEvent(event *sseEvent) string {
 	}
 
 	// 根据 part 类型判断是 text 还是 reasoning
-	// 1.3.17 中 message.part.delta 事件携带 partID，需要通过 partTypeTracker 查找类型
 	partType := r.partTypeTracker.get(props.PartID)
 	switch partType {
 	case "reasoning":
@@ -638,14 +672,16 @@ func (r *Runner) convertDeltaEvent(event *sseEvent) string {
 	}
 }
 
-// convertMessagePartEvent 转换 message.part.updated 事件。
-// 1.3.17 中 message.part.updated 用于：
+// convertMessagePartEventFromSync 转换 message.part.updated 事件（对应 MessageV2.Event.PartUpdated）。
+// PartUpdated 事件用于通知 Part 状态变更，包括：
 // - step-start/step-finish: 步骤标记
-// - text/reasoning: 初始创建和最终完成状态（不携带增量，增量通过 message.part.delta 传输）
-// - tool: 工具调用的状态变更（pending/running/completed）
-func (r *Runner) convertMessagePartEvent(event *sseEvent) string {
-	props := event.Payload.Properties
-	part := props.Part
+// - text/reasoning: 跟踪 part 类型供 delta 事件使用
+// - tool: 工具调用状态变更
+func (r *Runner) convertMessagePartEventFromSync(syncEvent *sseSyncEvent) string {
+	part := syncEvent.Data.Part
+	if part == nil {
+		return ""
+	}
 
 	if r.userMsgIDs[part.MessageID] {
 		return ""
@@ -653,25 +689,23 @@ func (r *Runner) convertMessagePartEvent(event *sseEvent) string {
 
 	switch part.Type {
 	case "step-start":
-		// 跟踪当前 step 的 part 列表（在 step 期间创建的 part 属于当前 step）
+		// 跟踪当前 step 的 part 列表
 		r.partTypeTracker.stepStart(part.ID)
-		return r.convertStepStartEvent(&part)
+		return r.convertStepStartEvent(part)
 	case "step-finish":
 		r.partTypeTracker.stepFinish()
-		return r.convertStepFinishEvent(&part)
+		return r.convertStepFinishEvent(part)
 	case "text":
 		// 跟踪 part 类型，供 delta 事件使用
 		r.partTypeTracker.set(part.ID, "text")
-		// 1.3.17 中 text part.updated 不携带增量文本，增量通过 message.part.delta 传输
-		// 所以这里不需要输出文本事件
+		// SyncEvent 中 text part.updated 不携带增量文本
 		return ""
 	case "reasoning":
 		// 跟踪 part 类型，供 delta 事件使用
 		r.partTypeTracker.set(part.ID, "reasoning")
-		// 1.3.17 中 reasoning part.updated 不携带增量文本，增量通过 message.part.delta 传输
 		return ""
 	case "tool":
-		return r.convertToolEvent(&part)
+		return r.convertToolEvent(part)
 	default:
 		return ""
 	}
