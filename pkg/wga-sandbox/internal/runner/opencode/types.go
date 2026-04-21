@@ -66,6 +66,30 @@ type toolState struct {
 	Error  string      `json:"error,omitempty"`
 }
 
+// stepStartPart 步骤开始部分。
+type stepStartPart struct {
+	Type string `json:"type"`
+}
+
+// stepFinishPart 步骤结束部分。
+type stepFinishPart struct {
+	Type   string               `json:"type"`
+	Reason string               `json:"reason,omitempty"`
+	Tokens stepFinishPartTokens `json:"tokens,omitempty"`
+	Cost   float64              `json:"cost,omitempty"`
+}
+
+// stepFinishPartTokens 步骤结束 token 统计。
+type stepFinishPartTokens struct {
+	Input     float64 `json:"input,omitempty"`
+	Output    float64 `json:"output,omitempty"`
+	Reasoning float64 `json:"reasoning,omitempty"`
+	Cache     struct {
+		Read  float64 `json:"read,omitempty"`
+		Write float64 `json:"write,omitempty"`
+	} `json:"cache,omitempty"`
+}
+
 // errorPart 错误部分。
 type errorPart struct {
 	Error struct {
@@ -98,11 +122,15 @@ type sseEventPayload struct {
 // sseEventProps SSE 事件属性。
 type sseEventProps struct {
 	SessionID string         `json:"sessionID"`
-	Delta     string         `json:"delta"`
+	Delta     string         `json:"delta"` // 旧版 message.part.updated 的 delta（1.3.17 已废弃）
 	Part      sseEventPart   `json:"part"`
 	Status    sseEventStatus `json:"status"`
 	Error     sseEventError  `json:"error"`
 	Info      sseEventInfo   `json:"info"`
+	// 1.3.17 新增：message.part.delta 事件字段
+	MessageID string `json:"messageID"`
+	PartID    string `json:"partID"`
+	Field     string `json:"field"`
 }
 
 // sseEventInfo SSE 消息信息（message.updated 事件）。
@@ -130,6 +158,18 @@ type sseEventPart struct {
 	CallID    string       `json:"callID"`
 	Tool      string       `json:"tool"`
 	State     sseToolState `json:"state"`
+	Reason    string       `json:"reason"` // step-finish 的 reason
+	Tokens    struct {
+		Total     float64 `json:"total"`
+		Input     float64 `json:"input"`
+		Output    float64 `json:"output"`
+		Reasoning float64 `json:"reasoning"`
+		Cache     struct {
+			Read  float64 `json:"read"`
+			Write float64 `json:"write"`
+		} `json:"cache"`
+	} `json:"tokens"` // step-finish 的 token 统计
+	Cost float64 `json:"cost"` // step-finish 的 cost
 }
 
 // sseToolState 工具调用状态。
