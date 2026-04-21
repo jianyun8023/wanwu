@@ -1,4 +1,7 @@
 // Package opencode 提供 opencode 智能体的运行器实现（基于 HTTP API）。
+//
+// 基于 opencode >= v1.4.11 的 SSE 事件格式实现。
+// 通过 SSE 连接接收 opencode 事件流，转换为统一的 JSON 格式输出。
 package opencode
 
 import (
@@ -98,11 +101,46 @@ var _ runner.Runner = (*Runner)(nil)
 // Runner 实现 opencode 智能体运行器（基于 HTTP API）。
 // 通过 SSE 连接接收事件流，转换为 JSON 格式输出。
 type Runner struct {
-	sb         sandbox.Sandbox
-	opt        wga_sandbox_option.RunOption
-	sessionID  string
-	userMsgIDs map[string]bool // 用户消息 ID 集合，用于过滤
-	logPrefix  string
+	sb              sandbox.Sandbox
+	opt             wga_sandbox_option.RunOption
+	sessionID       string
+	userMsgIDs      map[string]bool // 用户消息 ID 集合，用于过滤
+	logPrefix       string
+	partTypeTracker *partTypeTracker // partID -> part 类型映射，用于 delta 事件判断 text/reasoning
+}
+
+// partTypeTracker 跟踪 partID 到 part 类型的映射。
+// message.part.delta 事件只携带 partID 而不携带 part 类型，
+// 需要通过 message.part.updated 事件中记录的 part 类型来推断 delta 的类型。
+type partTypeTracker struct {
+	types map[string]string // partID -> type ("text" | "reasoning" | "tool" | ...)
+}
+
+func newPartTypeTracker() *partTypeTracker {
+	return &partTypeTracker{types: make(map[string]string)}
+}
+
+// set 记录 partID 对应的类型。
+func (t *partTypeTracker) set(partID, partType string) {
+	if partID != "" && partType != "" {
+		t.types[partID] = partType
+	}
+}
+
+// get 获取 partID 对应的类型。
+func (t *partTypeTracker) get(partID string) string {
+	return t.types[partID]
+}
+
+// stepStart 在新的 step 开始时调用，清理旧的 part 类型映射。
+func (t *partTypeTracker) stepStart(stepID string) {
+	// 新 step 开始时清理上一轮的映射，避免内存泄漏
+	t.types = make(map[string]string)
+}
+
+// stepFinish 在 step 结束时调用。
+func (t *partTypeTracker) stepFinish() {
+	// step 结束时不清理，因为可能还有后续 delta 事件
 }
 
 // ============================================================================
@@ -113,10 +151,11 @@ type Runner struct {
 func NewRunner(sb sandbox.Sandbox, opt wga_sandbox_option.RunOption) runner.Runner {
 	logPrefix := fmt.Sprintf("[wga-sandbox][%s]", opt.RunSession.RunID)
 	return &Runner{
-		sb:         sb,
-		opt:        opt,
-		userMsgIDs: make(map[string]bool),
-		logPrefix:  logPrefix,
+		sb:              sb,
+		opt:             opt,
+		userMsgIDs:      make(map[string]bool),
+		logPrefix:       logPrefix,
+		partTypeTracker: newPartTypeTracker(),
 	}
 }
 
@@ -531,70 +570,193 @@ func (r *Runner) handleEvent(data string) (string, bool) {
 		return "", false
 	}
 
+	// 区分 BusEvent 和 SyncEvent
+	if event.Payload.Type == "sync" && event.Payload.SyncEvent != nil {
+		return r.handleSyncEvent(&event)
+	}
+
+	return r.handleBusEvent(&event)
+}
+
+// handleBusEvent 处理 BusEvent 类型的事件（对应 opencode/src/bus/bus-event.ts）。
+// BusEvent 用于实时增量推送，包括：
+// - message.part.delta: 流式文本/推理增量
+// - session.idle: 会话空闲
+// - session.error: 会话错误
+func (r *Runner) handleBusEvent(event *sseEvent) (string, bool) {
 	switch event.Payload.Type {
-	case "message.updated":
-		// 记录用户消息 ID，不需要检查 sessionID
-		r.trackUserMessageIDFromEvent(&event)
-		return "", false
+	case "message.part.delta":
+		// 流式增量事件（对应 MessageV2.Event.PartDelta）
+		if event.Payload.Properties.SessionID != r.sessionID {
+			return "", false
+		}
+		return r.convertDeltaEvent(event), false
 	case "session.idle":
-		// session.idle: SessionID 在 Properties 中
+		// 会话空闲事件（对应 SessionStatus.Event.Idle）
 		if event.Payload.Properties.SessionID != r.sessionID {
 			return "", false
 		}
 		return "", true
 	case "session.error":
-		// session.error: SessionID 在 Properties 中
+		// 会话错误事件（对应 Session.Event.Error）
 		if event.Payload.Properties.SessionID != r.sessionID {
 			return "", false
 		}
-		return r.convertErrorEvent(&event), false
-	case "message.part.updated":
-		// message.part.updated: SessionID 在 Part 中
-		if event.Payload.Properties.Part.SessionID != r.sessionID {
-			return "", false
-		}
-		return r.convertMessagePartEvent(&event), false
+		return r.convertErrorEvent(event), false
 	default:
 		return "", false
 	}
 }
 
-// trackUserMessageIDFromEvent 从 message.updated 事件中记录用户消息 ID。
-func (r *Runner) trackUserMessageIDFromEvent(event *sseEvent) {
-	info := event.Payload.Properties.Info
-	if info.Role == "user" && info.ID != "" {
+// handleSyncEvent 处理 SyncEvent 类型的事件（对应 opencode/src/sync/index.ts）。
+// SyncEvent 用于状态变更通知，包括：
+// - message.updated.1: 消息创建/更新
+// - message.part.updated.1: Part 状态更新
+func (r *Runner) handleSyncEvent(event *sseEvent) (string, bool) {
+	syncEvent := event.Payload.SyncEvent
+	if syncEvent == nil {
+		return "", false
+	}
+
+	switch syncEvent.Type {
+	case "message.updated.1":
+		// 消息更新事件（对应 MessageV2.Event.Updated）
+		r.trackUserMessageIDFromSyncEvent(syncEvent)
+		return "", false
+	case "message.part.updated.1":
+		// Part 更新事件（对应 MessageV2.Event.PartUpdated）
+		if syncEvent.Data.SessionID != r.sessionID {
+			return "", false
+		}
+		return r.convertMessagePartEventFromSync(syncEvent), false
+	default:
+		return "", false
+	}
+}
+
+// trackUserMessageIDFromSyncEvent 从 message.updated 事件中记录用户消息 ID。
+// 用于过滤用户消息的 delta 输出（用户消息不需要输出）。
+func (r *Runner) trackUserMessageIDFromSyncEvent(syncEvent *sseSyncEvent) {
+	info := syncEvent.Data.Info
+	if info != nil && info.Role == "user" && info.ID != "" {
 		r.userMsgIDs[info.ID] = true
 	}
 }
 
-// convertMessagePartEvent 转换 message.part.updated 事件。
-func (r *Runner) convertMessagePartEvent(event *sseEvent) string {
+// convertDeltaEvent 转换 message.part.delta 事件（对应 MessageV2.Event.PartDelta）。
+// delta 事件用于流式传输文本和推理内容的增量，只携带 partID 而不携带 part 类型，
+// 需要通过 partTypeTracker 查找类型（从 message.part.updated 事件中记录）。
+func (r *Runner) convertDeltaEvent(event *sseEvent) string {
 	props := event.Payload.Properties
-	part := props.Part
+	delta := props.Delta
+	if delta == "" {
+		return ""
+	}
+
+	// 通过 messageID 判断是否为用户消息的 delta（用户消息不需要输出）
+	if r.userMsgIDs[props.MessageID] {
+		return ""
+	}
+
+	// 根据 part 类型判断是 text 还是 reasoning
+	partType := r.partTypeTracker.get(props.PartID)
+	switch partType {
+	case "reasoning":
+		if !r.opt.EnableThinking {
+			return ""
+		}
+		return r.buildReasoningEvent(delta)
+	default:
+		// 未知 part 类型或 text 类型，作为 text 处理
+		return r.buildTextEvent(delta)
+	}
+}
+
+// convertMessagePartEventFromSync 转换 message.part.updated 事件（对应 MessageV2.Event.PartUpdated）。
+// PartUpdated 事件用于通知 Part 状态变更，包括：
+// - step-start/step-finish: 步骤标记
+// - text/reasoning: 跟踪 part 类型供 delta 事件使用
+// - tool: 工具调用状态变更
+func (r *Runner) convertMessagePartEventFromSync(syncEvent *sseSyncEvent) string {
+	part := syncEvent.Data.Part
+	if part == nil {
+		return ""
+	}
 
 	if r.userMsgIDs[part.MessageID] {
 		return ""
 	}
 
 	switch part.Type {
+	case "step-start":
+		// 跟踪当前 step 的 part 列表
+		r.partTypeTracker.stepStart(part.ID)
+		return r.convertStepStartEvent(part)
+	case "step-finish":
+		r.partTypeTracker.stepFinish()
+		return r.convertStepFinishEvent(part)
 	case "text":
-		return r.convertTextEvent(&part, props.Delta)
+		// 跟踪 part 类型，供 delta 事件使用
+		r.partTypeTracker.set(part.ID, "text")
+		// SyncEvent 中 text part.updated 不携带增量文本
+		return ""
 	case "reasoning":
-		return r.convertReasoningEvent(&part, props.Delta)
+		// 跟踪 part 类型，供 delta 事件使用
+		r.partTypeTracker.set(part.ID, "reasoning")
+		return ""
 	case "tool":
-		return r.convertToolEvent(&part)
+		return r.convertToolEvent(part)
 	default:
 		return ""
 	}
 }
 
-// convertTextEvent 转换文本事件。
-// delta 非空时输出增量文本（流式），delta 为空时跳过（最终事件，已通过增量输出）。
-func (r *Runner) convertTextEvent(part *sseEventPart, delta string) string {
-	if delta == "" {
-		return ""
+// convertStepStartEvent 转换步骤开始事件。
+func (r *Runner) convertStepStartEvent(part *sseEventPart) string {
+	event := OpencodeEvent{
+		Type:      OpencodeEventTypeStepStart,
+		Timestamp: time.Now().UnixMilli(),
+		SessionID: r.sessionID,
 	}
+	stepP := stepStartPart{Type: "step_start"}
+	event.Part, _ = json.Marshal(stepP)
 
+	data, _ := json.Marshal(event)
+	return string(data)
+}
+
+// convertStepFinishEvent 转换步骤结束事件。
+func (r *Runner) convertStepFinishEvent(part *sseEventPart) string {
+	event := OpencodeEvent{
+		Type:      OpencodeEventTypeStepFinish,
+		Timestamp: time.Now().UnixMilli(),
+		SessionID: r.sessionID,
+	}
+	finishP := stepFinishPart{
+		Type:   "step_finish",
+		Reason: part.Reason,
+		Tokens: stepFinishPartTokens{
+			Input:     part.Tokens.Input,
+			Output:    part.Tokens.Output,
+			Reasoning: part.Tokens.Reasoning,
+			Cache: struct {
+				Read  float64 `json:"read,omitempty"`
+				Write float64 `json:"write,omitempty"`
+			}{
+				Read:  part.Tokens.Cache.Read,
+				Write: part.Tokens.Cache.Write,
+			},
+		},
+		Cost: part.Cost,
+	}
+	event.Part, _ = json.Marshal(finishP)
+
+	data, _ := json.Marshal(event)
+	return string(data)
+}
+
+// buildTextEvent 构建文本增量事件。
+func (r *Runner) buildTextEvent(delta string) string {
 	event := OpencodeEvent{
 		Type:      OpencodeEventTypeText,
 		Timestamp: time.Now().UnixMilli(),
@@ -607,17 +769,8 @@ func (r *Runner) convertTextEvent(part *sseEventPart, delta string) string {
 	return string(data)
 }
 
-// convertReasoningEvent 转换推理事件。
-// delta 非空时输出增量文本（流式），delta 为空时跳过（最终事件，已通过增量输出）。
-// 未开启 EnableThinking 时不输出 reasoning。
-func (r *Runner) convertReasoningEvent(part *sseEventPart, delta string) string {
-	if !r.opt.EnableThinking {
-		return ""
-	}
-	if delta == "" {
-		return ""
-	}
-
+// buildReasoningEvent 构建推理增量事件。
+func (r *Runner) buildReasoningEvent(delta string) string {
 	event := OpencodeEvent{
 		Type:      OpencodeEventTypeReasoning,
 		Timestamp: time.Now().UnixMilli(),
