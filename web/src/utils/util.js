@@ -102,7 +102,7 @@ export const replaceIcon = logoPath => {
     document.createElement('link');
   link.type = 'image/x-icon';
   link.rel = 'shortcut icon';
-  link.href = logoPath ? avatarSrc(logoPath) : basePath + '/aibase/favicon.ico';
+  link.href = avatarSrc(logoPath, basePath + '/aibase/favicon.ico');
   document.getElementsByTagName('head')[0].appendChild(link);
 };
 

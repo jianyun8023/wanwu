@@ -168,11 +168,10 @@ export default {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
-    max-height: calc(100vh - 240px);
   }
   .noData {
     width: 100%;
-    height: calc(100vh - 248px);
+    height: calc(100vh - 258px);
   }
 }
 .provider-card-item {
