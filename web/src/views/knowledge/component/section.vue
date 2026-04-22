@@ -354,6 +354,7 @@
           >
             <template slot-scope="scope">
               <uploadImgMd
+                v-if="isMultiModal"
                 :placeholder="
                   $t('knowledgeManage.create.chunkContentPlaceholder')
                 "
@@ -361,6 +362,14 @@
                 :permission-type="permissionType"
                 :knowledgeId="obj.knowledgeId"
               ></uploadImgMd>
+              <el-input
+                v-else
+                type="textarea"
+                v-model="scope.row.content"
+                :autosize="{ minRows: 3, maxRows: 5 }"
+                class="full-width-textarea"
+                :disabled="[POWER_TYPE_READ].includes(permissionType)"
+              ></el-input>
               <div
                 v-if="
                   cardObj[0]['isParent'] &&
@@ -464,6 +473,7 @@
                       ></div>
                       <div v-else class="content-edit">
                         <uploadImgMd
+                          v-if="isMultiModal"
                           :placeholder="
                             $t('knowledgeManage.create.chunkContentPlaceholder')
                           "
@@ -477,6 +487,18 @@
                               ] = newContent)
                           "
                         ></uploadImgMd>
+                        <el-input
+                          v-else
+                          v-model="
+                            editingContent[`${scope.row.contentId}-${index}`]
+                          "
+                          type="textarea"
+                          :rows="3"
+                          :placeholder="
+                            $t('knowledgeManage.create.chunkContentPlaceholder')
+                          "
+                          class="edit-input"
+                        />
                       </div>
                     </div>
                   </el-collapse-item>
@@ -564,6 +586,7 @@ import {
   POWER_TYPE_EDIT,
   POWER_TYPE_ADMIN,
   POWER_TYPE_SYSTEM_ADMIN,
+  MULTIMODAL,
 } from '@/views/knowledge/constants';
 import SearchInput from '@/components/searchInput.vue';
 import uploadImgMd from '@/components/uploadImgMd.vue';
@@ -627,6 +650,9 @@ export default {
   },
   computed: {
     ...mapGetters('app', ['permissionType']),
+    isMultiModal() {
+      return Number(this.obj.category) === MULTIMODAL;
+    },
   },
   created() {
     this.obj = this.$route.query;
@@ -665,6 +691,7 @@ export default {
         this.obj.id,
         this.obj.knowledgeId,
         isChildChunk,
+        this.obj.category,
       );
     },
     updateChildData() {
