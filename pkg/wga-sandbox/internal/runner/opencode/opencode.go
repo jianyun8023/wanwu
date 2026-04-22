@@ -25,6 +25,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/wga-sandbox/internal/sandbox"
 	wga_sandbox_option "github.com/UnicomAI/wanwu/pkg/wga-sandbox/wga-sandbox-option"
 	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/schema"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 )
@@ -86,7 +87,9 @@ const (
 
 {{range .Messages}}### role: {{.Role}}
 
-{{.ReasoningContent}}{{.Content}}
+{{.ReasoningContent}}{{if .UserInputMultiContent}}{{$parts := listParts .UserInputMultiContent}}{{range $i, $part := $parts}}{{if $i}}
+
+{{end}}{{$part}}{{end}}{{else}}{{.Content}}{{end}}
 
 {{end}}{{end}}`
 )
@@ -533,24 +536,51 @@ func (r *Runner) sendPromptAsync(ctx context.Context) error {
 }
 
 // buildSystemAndPrompt 构建系统提示词和用户提示词。
+// historyMessages: 倒序找到第一条 role=user 之前的所有消息
+// prompt: 倒序找到第一条 role=user 消息，将这条及之后的所有消息拼接成 prompt
 func (r *Runner) buildSystemAndPrompt() (system string, prompt string, err error) {
-	var historyMessages []adk.Message
-	if len(r.opt.Messages) > 1 {
-		historyMessages = r.opt.Messages[:len(r.opt.Messages)-1]
+	// 从后往前找到第一条 role=user 的消息
+	firstUserIndex := -1
+	for i := len(r.opt.Messages) - 1; i >= 0; i-- {
+		if r.opt.Messages[i].Role == schema.User {
+			firstUserIndex = i
+			break
+		}
 	}
+
+	var historyMessages []adk.Message
+	var promptMessages []adk.Message
+
+	if firstUserIndex >= 0 {
+		// historyMessages: 第一条 user 之前的消息
+		if firstUserIndex > 0 {
+			historyMessages = r.opt.Messages[:firstUserIndex]
+		}
+		// promptMessages: 第一条 user 及之后的消息
+		promptMessages = r.opt.Messages[firstUserIndex:]
+	} else {
+		// 没有 user 消息，全部作为 prompt
+		promptMessages = r.opt.Messages
+	}
+
 	system, err = renderSystem(r.opt.Instruction, r.opt.OverallTask, historyMessages)
 	if err != nil {
 		return "", "", err
 	}
-	if len(r.opt.Messages) > 0 {
-		message := r.opt.Messages[len(r.opt.Messages)-1]
-		if len(message.UserInputMultiContent) > 0 {
-			b, _ := json.Marshal(message.UserInputMultiContent)
-			prompt = string(b)
+
+	// 拼接 promptMessages
+	for i, msg := range promptMessages {
+		if i > 0 {
+			prompt += "\n\n"
+		}
+		if len(msg.UserInputMultiContent) > 0 {
+			b, _ := json.Marshal(msg.UserInputMultiContent)
+			prompt += string(b)
 		} else {
-			prompt = message.Content
+			prompt += msg.Content
 		}
 	}
+
 	return system, prompt, nil
 }
 
@@ -870,7 +900,10 @@ func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_opti
 
 // renderSystem 渲染系统提示词模板。
 func renderSystem(instruction, overallTask string, messages []adk.Message) (string, error) {
-	tmpl, err := template.New("system").Parse(systemTemplate)
+	tmpl, err := template.New("system").Funcs(template.FuncMap{
+		"formatPart": formatMessageInputPart,
+		"listParts":  listMessageInputParts,
+	}).Parse(systemTemplate)
 	if err != nil {
 		return "", fmt.Errorf("parse system template failed: %w", err)
 	}
@@ -889,6 +922,48 @@ func renderSystem(instruction, overallTask string, messages []adk.Message) (stri
 		return "", fmt.Errorf("execute system template failed: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// listMessageInputParts 将消息部分列表格式化为字符串列表，过滤空结果。
+func listMessageInputParts(parts []schema.MessageInputPart) []string {
+	var result []string
+	for _, part := range parts {
+		if s := formatMessageInputPart(part); s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// formatMessageInputPart 格式化消息部分为文本表示。
+// text: 直接输出文本内容
+// image_url/audio_url/video_url/file_url: 输出 URL
+func formatMessageInputPart(part schema.MessageInputPart) string {
+	switch part.Type {
+	case schema.ChatMessagePartTypeText:
+		return part.Text
+	case schema.ChatMessagePartTypeImageURL:
+		if part.Image != nil && part.Image.URL != nil {
+			return fmt.Sprintf("[image](%s)", *part.Image.URL)
+		}
+	case schema.ChatMessagePartTypeAudioURL:
+		if part.Audio != nil && part.Audio.URL != nil {
+			return fmt.Sprintf("[audio](%s)", *part.Audio.URL)
+		}
+	case schema.ChatMessagePartTypeVideoURL:
+		if part.Video != nil && part.Video.URL != nil {
+			return fmt.Sprintf("[video](%s)", *part.Video.URL)
+		}
+	case schema.ChatMessagePartTypeFileURL:
+		if part.File != nil && part.File.URL != nil {
+			name := "file"
+			if part.File.Name != "" {
+				name = part.File.Name
+			}
+			return fmt.Sprintf("[%s](%s)", name, *part.File.URL)
+		}
+	}
+	return ""
 }
 
 // ============================================================================
