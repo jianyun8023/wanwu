@@ -41,10 +41,10 @@
             @handleRecommendClick="handleRecommendClick"
             :modelIconUrl="AgentIcon"
           >
-            <template #afterContent="{ skillsList }">
+            <template #afterContent="{ responseFiles }">
               <div class="skills-card-list">
                 <SkillCard
-                  v-for="skill in skillsList"
+                  v-for="skill in responseFiles"
                   :key="skill.skillId"
                   :info="skill"
                   :type="3"

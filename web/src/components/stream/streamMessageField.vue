@@ -515,10 +515,16 @@
             </div>
           </div>
           <!-- 主体内容后的slot -->
-          <div class="answer-operation">
+          <div
+            v-if="
+              n.finish === 1 &&
+              (i !== session_data.history.length - 1 || sessionStatus !== 0)
+            "
+            class="answer-operation"
+          >
             <slot
               name="afterContent"
-              :skillsList="n.responseFiles"
+              :responseFiles="n.responseFiles"
               :item="n"
               :index="i"
             />
