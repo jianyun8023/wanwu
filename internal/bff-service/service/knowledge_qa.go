@@ -1,6 +1,7 @@
 package service
 
 import (
+	"net/url"
 	"strings"
 
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
@@ -279,10 +280,11 @@ func buildKnowledgeExportRecordRespList(ctx *gin.Context, dataList []*knowledgeb
 	retList := make([]*response.ListKnowledgeExportRecordResp, 0)
 	authorMap := buildKnowledgeExportAuthorMap(ctx, dataList)
 	for _, data := range dataList {
+		filePath, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, data.FilePath)
 		retList = append(retList, &response.ListKnowledgeExportRecordResp{
 			ExportRecordId: data.ExportRecordId,
 			ExportTime:     data.ExportTime,
-			FilePath:       buildAccessFilePath(data.FilePath),
+			FilePath:       filePath,
 			Status:         int(data.Status),
 			ErrorMsg:       gin_util.I18nKey(ctx, data.ErrorMsg),
 			Author:         authorMap[data.UserId],
@@ -290,11 +292,6 @@ func buildKnowledgeExportRecordRespList(ctx *gin.Context, dataList []*knowledgeb
 		})
 	}
 	return retList
-}
-
-func buildAccessFilePath(filePath string) string {
-	path := config.Cfg().Server.WebBaseUrl + "/minio/download/api/" + filePath
-	return path
 }
 
 func buildQAPairAuthorMap(ctx *gin.Context, dataList []*knowledgebase_qa_service.QAPairInfo) map[string]string {

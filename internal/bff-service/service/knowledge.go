@@ -138,14 +138,6 @@ func SelectKnowledgeIdByRagName(ctx *gin.Context, ragName string) (string, error
 	return resp.KnowledgeId, nil
 }
 
-// GetDeployInfo 查询部署信息
-func GetDeployInfo(ctx *gin.Context) (interface{}, error) {
-	cfgServer := config.Cfg().Server
-	return map[string]string{
-		"webBaseUrl": cfgServer.WebBaseUrl + "/minio/download/api/",
-	}, nil
-}
-
 // CreateKnowledge 创建知识库
 func CreateKnowledge(ctx *gin.Context, userId, orgId string, r *request.CreateKnowledgeReq) (*response.CreateKnowledgeResp, error) {
 	knowledgeGraph := &knowledgebase_service.KnowledgeGraph{}

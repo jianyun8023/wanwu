@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -78,6 +79,7 @@ func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.
 	if err != nil {
 		return nil, err
 	}
+	zipUrl, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, resp.ObjectPath)
 
 	return &response.CustomSkillDetail{
 		SkillDetail: response.SkillDetail{
@@ -88,7 +90,7 @@ func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.
 			Desc:          resp.Desc,
 			SkillMarkdown: config.FixFrontMatterFormat(resp.Markdown),
 		},
-		ZipUrl: buildAccessFilePath(resp.ObjectPath),
+		ZipUrl: zipUrl,
 	}, nil
 }
 
@@ -123,6 +125,8 @@ func toCustomSkill(ctx *gin.Context, skill *mcp_service.CustomSkill) *response.C
 	if skill == nil {
 		return nil
 	}
+	zipUrl, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, skill.ObjectPath)
+
 	return &response.CustomSkillDetail{
 		SkillDetail: response.SkillDetail{
 			SkillId: skill.SkillId,
@@ -131,7 +135,7 @@ func toCustomSkill(ctx *gin.Context, skill *mcp_service.CustomSkill) *response.C
 			Author:  skill.Author,
 			Desc:    skill.Desc,
 		},
-		ZipUrl: buildAccessFilePath(skill.ObjectPath),
+		ZipUrl: zipUrl,
 	}
 }
 

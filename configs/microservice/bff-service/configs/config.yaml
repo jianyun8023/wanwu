@@ -201,6 +201,7 @@ minio:
   endpoint: localhost:9000
   user: root
   password: Wanwu123456
+  download_url: http://localhost:8081/minio/download/api
 
 redis:
   host: localhost
@@ -285,7 +286,6 @@ workflow:
   # upload
   upload_action_uri: /api/common/upload/apply_upload_action
   upload_common_uri: /api/common/upload
-  upload_file_uri: /api/bot/upload_file_by_wanwu
   sign_img_uri: /api/workflow_api/sign_image_url
   # version
   publish_uri: /api/workflow_api/publish

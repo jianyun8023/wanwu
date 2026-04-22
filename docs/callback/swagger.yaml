@@ -2033,6 +2033,19 @@ definitions:
     - categoryName
     - userId
     type: object
+  request.UploadFileByBase64Req:
+    properties:
+      file:
+        description: base64格式
+        type: string
+      fileExt:
+        description: 文件后缀名，如 "png", "pdf"
+        type: string
+      fileName:
+        type: string
+    required:
+    - file
+    type: object
   request.WeightParams:
     properties:
       text_weight:
@@ -2104,19 +2117,6 @@ definitions:
     - dir
     type: object
   request.WgaSandboxTool:
-    type: object
-  request.WorkflowUploadFileByBase64Req:
-    properties:
-      file:
-        description: base64格式
-        type: string
-      fileExt:
-        description: 文件后缀名，如 "png", "pdf"
-        type: string
-      fileName:
-        type: string
-    required:
-    - file
     type: object
   response.CustomToolActionInfo:
     properties:
@@ -2428,7 +2428,7 @@ definitions:
           $ref: '#/definitions/protocol.Tool'
         type: array
     type: object
-  response.UploadFileByWorkflowResp:
+  response.UploadFileByBase64Resp:
     properties:
       uri:
         type: string
@@ -2791,6 +2791,32 @@ paths:
           schema:
             $ref: '#/definitions/response.Response'
       summary: 根据userId和spaceId获取Chatflow
+      tags:
+      - callback
+  /file/upload/base64:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 通过base64格式上传文件参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.UploadFileByBase64Req'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.UploadFileByBase64Resp'
+              type: object
+      summary: 通过base64上传文件
       tags:
       - callback
   /file/url/base64:
@@ -3233,62 +3259,6 @@ paths:
                   $ref: '#/definitions/response.ToolSquareDetail'
               type: object
       summary: 获取内置工具详情
-      tags:
-      - callback
-  /workflow/upload/file:
-    post:
-      consumes:
-      - multipart/form-data
-      parameters:
-      - description: 文件
-        in: formData
-        name: file
-        required: true
-        type: file
-      - description: 文件名
-        in: formData
-        name: fileName
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/response.UploadFileByWorkflowResp'
-              type: object
-      summary: 通过二进制上传文件
-      tags:
-      - callback
-  /workflow/upload/file/base64:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: 通过base64格式上传文件参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/request.WorkflowUploadFileByBase64Req'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/response.UploadFileByWorkflowResp'
-              type: object
-      summary: 通过base64上传文件
       tags:
       - callback
 swagger: "2.0"

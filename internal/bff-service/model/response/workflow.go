@@ -204,11 +204,6 @@ type CozeConversationData struct {
 	AccountID     *int64            `thrift:"AccountID,7,optional" form:"account_id" json:"account_id,omitempty"`
 }
 
-type UploadFileByWorkflowResp struct {
-	Url string `json:"url"`
-	Uri string `json:"uri"`
-}
-
 type CozeListMessageApiResponse struct {
 	Messages []*OpenMessageApi `thrift:"messages,1,optional" form:"data" json:"data,omitempty"`
 	// Is there still data, true yes, false no

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
+	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	minio_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/minio-util"
@@ -375,10 +377,11 @@ func buildSkillChatDoneProcessor(ctx *gin.Context, userId, orgId string, req req
 			return err
 		}
 		// 构建文件访问路径并添加到响应中
+		fileUrl, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, minio.DirFileExpire, fileName)
 		lastSSE.ResponseFiles = append(lastSSE.ResponseFiles, &response.AssistantResponseFile{
 			FileName: fileName,
 			FileSize: int64(len(zipBytes)),
-			FileUrl:  buildAccessFilePath(filepath.Join(minio.BucketFileUpload, minio.DirFileExpire, fileName)),
+			FileUrl:  fileUrl,
 			MIMEType: "application/zip",
 			MetaData: map[string]interface{}{
 				"name":        fm.Name,

@@ -531,6 +531,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/file/upload/base64": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "callback"
+                ],
+                "summary": "通过base64上传文件",
+                "parameters": [
+                    {
+                        "description": "通过base64格式上传文件参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UploadFileByBase64Req"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.UploadFileByBase64Resp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/file/url/base64": {
             "post": {
                 "consumes": [
@@ -1216,101 +1261,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/response.ToolSquareDetail"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/workflow/upload/file": {
-            "post": {
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "callback"
-                ],
-                "summary": "通过二进制上传文件",
-                "parameters": [
-                    {
-                        "type": "file",
-                        "description": "文件",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "文件名",
-                        "name": "fileName",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/response.UploadFileByWorkflowResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/workflow/upload/file/base64": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "callback"
-                ],
-                "summary": "通过base64上传文件",
-                "parameters": [
-                    {
-                        "description": "通过base64格式上传文件参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.WorkflowUploadFileByBase64Req"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/response.UploadFileByWorkflowResp"
                                         }
                                     }
                                 }
@@ -4316,6 +4266,25 @@ const docTemplate = `{
                 }
             }
         },
+        "request.UploadFileByBase64Req": {
+            "type": "object",
+            "required": [
+                "file"
+            ],
+            "properties": {
+                "file": {
+                    "description": "base64格式",
+                    "type": "string"
+                },
+                "fileExt": {
+                    "description": "文件后缀名，如 \"png\", \"pdf\"",
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                }
+            }
+        },
         "request.WeightParams": {
             "type": "object",
             "properties": {
@@ -4424,25 +4393,6 @@ const docTemplate = `{
         },
         "request.WgaSandboxTool": {
             "type": "object"
-        },
-        "request.WorkflowUploadFileByBase64Req": {
-            "type": "object",
-            "required": [
-                "file"
-            ],
-            "properties": {
-                "file": {
-                    "description": "base64格式",
-                    "type": "string"
-                },
-                "fileExt": {
-                    "description": "文件后缀名，如 \"png\", \"pdf\"",
-                    "type": "string"
-                },
-                "fileName": {
-                    "type": "string"
-                }
-            }
         },
         "response.CustomToolActionInfo": {
             "type": "object",
@@ -4901,7 +4851,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.UploadFileByWorkflowResp": {
+        "response.UploadFileByBase64Resp": {
             "type": "object",
             "properties": {
                 "uri": {
