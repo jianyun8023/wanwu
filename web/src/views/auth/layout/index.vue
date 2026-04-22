@@ -33,15 +33,15 @@ import { getCommonInfo } from '@/api/user';
 
 export default {
   components: { ChangeLang },
-  data() {
-    return {
-      backgroundSrc: require('@/assets/imgs/auth_bg.png'),
-      basePath: this.$basePath,
-    };
-  },
   computed: {
     ...mapState('login', ['commonInfo']),
     ...mapState('user', ['lang']),
+    backgroundSrc() {
+      return avatarSrc(
+        this.commonInfo?.login?.background?.path || '',
+        require('@/assets/imgs/auth_bg.png'),
+      );
+    },
   },
   watch: {
     lang: {
@@ -56,29 +56,14 @@ export default {
   },
   created() {
     this.getCommonInfo().then(() => {
-      const { tab = {}, login = {} } = this.commonInfo || {};
-      const { logo = {}, title = '' } = tab || {};
-      const { background = {} } = login || {};
-
-      background.path && this.setAuthBg(background.path);
-      title && replaceTitle(title);
-      logo.path && replaceIcon(logo.path);
+      replaceTitle(this.commonInfo?.tab?.title || '');
+      replaceIcon(this.commonInfo?.tab?.logo?.path || '');
       this.$emit('getCommonInfo', this.commonInfo);
     });
   },
   methods: {
     avatarSrc,
     ...mapActions('login', ['getCommonInfo']),
-    setDefaultImage() {
-      this.backgroundSrc = require('@/assets/imgs/auth_bg.png');
-    },
-    setAuthBg(backgroundPath) {
-      if (!backgroundPath) {
-        this.setDefaultImage();
-        return;
-      }
-      this.backgroundSrc = avatarSrc(backgroundPath);
-    },
   },
 };
 </script>
