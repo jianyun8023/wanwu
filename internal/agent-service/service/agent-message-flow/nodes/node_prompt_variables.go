@@ -2,9 +2,12 @@ package nodes
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
@@ -100,7 +103,7 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			}
 			parts = append(parts, *message)
 		}
-		input += "\n用户上传的文档连接为:" + req.UploadFile[0]
+		input += "\n用户上传的文档连接为:" + rebuildUlr(req.UploadFile[0])
 		parts = append(parts, schema.MessageInputPart{
 			Type: schema.ChatMessagePartTypeText,
 			Text: input,
@@ -110,12 +113,84 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			UserInputMultiContent: parts,
 		})
 	} else if agentChatInfo.UploadUrl { //非视觉模型，传了url
-		input += "\n用户上传的文档连接为:" + req.UploadFile[0]
+		input += "\n用户上传的文档连接为:" + rebuildUlr(req.UploadFile[0])
 		messages = append(messages, schema.UserMessage(input))
 	} else {
 		messages = append(messages, schema.UserMessage(input))
 	}
 	return messages, nil
+}
+
+func rebuildUlr(fileUrl string) (retUrl string) {
+	defer func() {
+		if err := recover(); err != nil {
+			retUrl = fileUrl
+			return
+		}
+	}()
+	if strings.Contains(fileUrl, "minio-wanwu") {
+		openUrl := config.GetConfig().Minio.DownloadUrl
+		if openUrl != "" {
+			path, err := replaceURLDomainAndMergePath(fileUrl, openUrl)
+			if err == nil {
+				return path
+			}
+		}
+	}
+	return fileUrl
+}
+
+// replaceURLDomainAndMergePath 替换域名，并将新 URL 的路径与原始 URL 的路径拼接。
+// originalURL: 原始完整 URL
+// newBaseURL:  新基础 URL（从中提取 Scheme、Host 和 Path，Path 会与原始 Path 拼接）
+// 返回替换后的 URL 字符串，或错误
+func replaceURLDomainAndMergePath(originalURL, newBaseURL string) (string, error) {
+	// 解析原始 URL
+	orig, err := url.Parse(originalURL)
+	if err != nil {
+		return "", fmt.Errorf("解析原始 URL 失败: %w", err)
+	}
+
+	// 解析新基础 URL
+	newBase, err := url.Parse(newBaseURL)
+	if err != nil {
+		return "", fmt.Errorf("解析新基础 URL 失败: %w", err)
+	}
+
+	if newBase.Host == "" {
+		return "", errors.New("新基础 URL 必须包含协议和主机（例如 http://example.com）")
+	}
+
+	var newSchema = newBase.Scheme
+	if newSchema == "" {
+		newSchema = orig.Scheme
+	}
+
+	// 拼接路径：新路径 + 原始路径
+	// 注意处理斜杠，避免双斜杠或缺失斜杠
+	newPath := strings.TrimRight(newBase.Path, "/")
+	origPath := strings.TrimLeft(orig.Path, "/")
+	mergedPath := newPath + "/" + origPath
+	// 如果原始路径为空，则直接使用新路径（去除末尾多余斜杠）
+	if orig.Path == "" {
+		mergedPath = newPath
+	}
+	// 如果新路径为空，则直接使用原始路径
+	if newBase.Path == "" {
+		mergedPath = orig.Path
+	}
+
+	// 构造新 URL
+	newURL := &url.URL{
+		Scheme:   newSchema,
+		Host:     newBase.Host,
+		Path:     mergedPath,
+		RawPath:  "", // 让 Go 自动编码；如果需要保留原始编码可自行处理，一般不需要
+		RawQuery: orig.RawQuery,
+		Fragment: orig.Fragment,
+	}
+
+	return newURL.String(), nil
 }
 
 // buildFileMessage 构建文件消息
