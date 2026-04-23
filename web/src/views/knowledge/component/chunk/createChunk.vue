@@ -53,10 +53,18 @@
           ]"
         >
           <uploadImgMd
+            v-if="isMultiModal"
             :placeholder="$t('knowledgeManage.create.chunkContentPlaceholder')"
             v-model="ruleForm.content"
             :knowledgeId="this.ruleForm.knowledgeId"
           ></uploadImgMd>
+          <el-input
+            v-else
+            :placeholder="$t('knowledgeManage.create.chunkContentPlaceholder')"
+            v-model="ruleForm.content"
+            type="textarea"
+            :rows="4"
+          ></el-input>
         </el-form-item>
         <el-form-item
           :label="$t('knowledgeManage.create.chunkKeywords')"
@@ -122,6 +130,7 @@ import {
   createBatchSegment,
   createSegmentChild,
 } from '@/api/knowledge';
+import { MULTIMODAL } from '@/views/knowledge/constants';
 
 export default {
   components: { fileUpload, uploadImgMd },
@@ -149,7 +158,13 @@ export default {
       dialogVisible: false,
       templateUrl: `${USER_API}/static/docs/segment.csv`,
       isChildChunk: false,
+      category: null,
     };
+  },
+  computed: {
+    isMultiModal() {
+      return Number(this.category) === MULTIMODAL;
+    },
   },
   methods: {
     typeChange(val) {
@@ -171,9 +186,10 @@ export default {
     handleClose() {
       this.dialogVisible = false;
     },
-    showDialog(docId, knowledgeId, isChildChunk = false) {
+    showDialog(docId, knowledgeId, isChildChunk = false, category = null) {
       this.dialogVisible = true;
       this.isChildChunk = isChildChunk;
+      this.category = category;
       this.ruleForm.docId = docId;
       this.ruleForm.knowledgeId = knowledgeId;
       this.clearForm();

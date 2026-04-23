@@ -1014,6 +1014,14 @@ export default {
                     let fillData = {
                       ...commonData,
                       ...renderResult,
+                      responseFiles:
+                        (this.sseResponse && this.sseResponse.responseFiles) ||
+                        commonData.responseFiles ||
+                        [],
+                      detailId:
+                        (this.sseResponse && this.sseResponse.detailId) ||
+                        commonData.detailId ||
+                        '',
                       finish: worldObj.finish,
                       searchList:
                         search_list && search_list.length

@@ -981,6 +981,7 @@ export default {
           name: row.docName,
           knowledgeId: row.knowledgeId,
           knowledgeName: this.knowledgeName,
+          category: this.category,
           disable: [
             KNOWLEDGE_STATUS_PENDING_PROCESSING,
             KNOWLEDGE_STATUS_ANALYSING,

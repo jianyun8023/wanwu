@@ -274,13 +274,13 @@
                   ].includes(permissionType)
                 "
               >
+                <span class="el-icon-price-tag icon-tag"></span>
                 <span
                   :class="['smartDate', 'tagList']"
                   @click.stop="addTag(item.labels, item.contentId)"
                   v-if="item.labels.length === 0"
                 >
-                  <span class="el-icon-price-tag icon-tag"></span>
-                  创建关键词
+                  {{ $t('keyword.create') }}
                 </span>
                 <span
                   class="tagList-item"
@@ -354,6 +354,7 @@
           >
             <template slot-scope="scope">
               <uploadImgMd
+                v-if="isMultiModal"
                 :placeholder="
                   $t('knowledgeManage.create.chunkContentPlaceholder')
                 "
@@ -361,6 +362,14 @@
                 :permission-type="permissionType"
                 :knowledgeId="obj.knowledgeId"
               ></uploadImgMd>
+              <el-input
+                v-else
+                type="textarea"
+                v-model="scope.row.content"
+                :autosize="{ minRows: 3, maxRows: 5 }"
+                class="full-width-textarea"
+                :disabled="[POWER_TYPE_READ].includes(permissionType)"
+              ></el-input>
               <div
                 v-if="
                   cardObj[0]['isParent'] &&
@@ -464,6 +473,7 @@
                       ></div>
                       <div v-else class="content-edit">
                         <uploadImgMd
+                          v-if="isMultiModal"
                           :placeholder="
                             $t('knowledgeManage.create.chunkContentPlaceholder')
                           "
@@ -477,6 +487,18 @@
                               ] = newContent)
                           "
                         ></uploadImgMd>
+                        <el-input
+                          v-else
+                          v-model="
+                            editingContent[`${scope.row.contentId}-${index}`]
+                          "
+                          type="textarea"
+                          :rows="3"
+                          :placeholder="
+                            $t('knowledgeManage.create.chunkContentPlaceholder')
+                          "
+                          class="edit-input"
+                        />
                       </div>
                     </div>
                   </el-collapse-item>
@@ -564,6 +586,7 @@ import {
   POWER_TYPE_EDIT,
   POWER_TYPE_ADMIN,
   POWER_TYPE_SYSTEM_ADMIN,
+  MULTIMODAL,
 } from '@/views/knowledge/constants';
 import SearchInput from '@/components/searchInput.vue';
 import uploadImgMd from '@/components/uploadImgMd.vue';
@@ -627,6 +650,9 @@ export default {
   },
   computed: {
     ...mapGetters('app', ['permissionType']),
+    isMultiModal() {
+      return Number(this.obj.category) === MULTIMODAL;
+    },
   },
   created() {
     this.obj = this.$route.query;
@@ -665,6 +691,7 @@ export default {
         this.obj.id,
         this.obj.knowledgeId,
         isChildChunk,
+        this.obj.category,
       );
     },
     updateChildData() {
@@ -1399,5 +1426,16 @@ export default {
 .tooltip-content .keyword-tag {
   margin: 2px 4px 2px 0;
   color: #1a56db;
+}
+</style>
+
+<style lang="scss" scoped>
+.tagList .tagList-item {
+  padding: 2px 4px;
+  background: rgb(225, 225, 225);
+  border-radius: 10px;
+  &:hover {
+    background: $tag_bg;
+  }
 }
 </style>

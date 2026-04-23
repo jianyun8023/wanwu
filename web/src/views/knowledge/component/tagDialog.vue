@@ -92,7 +92,10 @@ export default {
   methods: {
     submitDialog() {
       if (this.type === 'section') {
-        this.$emit('sendList', this.tagList);
+        this.$emit(
+          'sendList',
+          this.tagList.filter(item => item.tagName.trim()),
+        );
       } else {
         this.bindTag();
       }
@@ -273,6 +276,7 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 27px;
 
     .del-icon {
       color: $color;

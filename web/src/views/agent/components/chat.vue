@@ -26,7 +26,17 @@
             @sub-conversion-toggle="onSubConversionToggle"
             @delConversationQA="handleDelConversationQA"
             :defaultUrl="editForm.avatar.path"
-          />
+          >
+            <template #afterContent="{ responseFiles }">
+              <div class="product-card-list">
+                <ProductFileCard
+                  v-for="fileItem in responseFiles"
+                  :key="fileItem.fileUrl"
+                  :info="fileItem"
+                />
+              </div>
+            </template>
+          </streamMessageField>
         </div>
         <!--停止生成-重新生成-->
         <div class="center-editable">
@@ -111,6 +121,7 @@ import { md } from '@/mixins/markdown-it';
 import { mapGetters, mapState } from 'vuex';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { AGENT_MESSAGE_CONFIG } from '@/components/stream/constants';
+import ProductFileCard from './productFileCard.vue';
 
 export default {
   inject: {
@@ -140,6 +151,7 @@ export default {
     streamMessageField,
     streamInputField,
     streamGreetingField,
+    ProductFileCard,
   },
   mixins: [sseMethod],
   computed: {
@@ -904,5 +916,12 @@ export default {
     color: #bbb;
     margin-right: 15px;
   }
+}
+.product-card-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  gap: 10px;
+  flex: 1;
 }
 </style>
