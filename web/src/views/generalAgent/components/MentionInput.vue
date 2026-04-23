@@ -45,6 +45,9 @@
                   {{ $t(`generalAgent.config.${item._resourceType}`) }}
                 </span>
               </div>
+              <div v-if="item.author" class="item-desc">
+                作者：{{ item.author }}
+              </div>
               <div class="item-desc">{{ item.desc }}</div>
             </div>
           </div>

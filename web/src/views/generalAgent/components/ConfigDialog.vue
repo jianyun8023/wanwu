@@ -73,23 +73,23 @@
                   v-for="tool in category.toolList"
                   :key="tool.toolId"
                   :class="[
-                    'tool-item',
+                    'item-item',
                     {
                       selected: isItemSelected(tool.toolId),
                     },
                   ]"
                   @click="handleToggleItem(tool)"
                 >
-                  <div class="tool-avatar">
+                  <div class="item-avatar">
                     <img
                       v-if="tool.avatar?.path"
                       :src="avatarSrc(tool.avatar.path)"
                     />
                     <i v-else class="el-icon-setting"></i>
                   </div>
-                  <div class="tool-info">
-                    <div class="tool-name">{{ tool.toolName }}</div>
-                    <div class="tool-desc">{{ tool.desc }}</div>
+                  <div class="item-info">
+                    <div class="item-name">{{ tool.toolName }}</div>
+                    <div class="item-desc">{{ tool.desc }}</div>
                     <div v-if="needsApiKeyReminder(tool)" class="api-key-tip">
                       <i class="el-icon-warning"></i>
                       {{ $t('generalAgent.config.needApiKey') }}
@@ -110,24 +110,27 @@
               v-for="item in filteredList"
               :key="item.id"
               :class="[
-                'tool-item',
+                'item-item',
                 {
                   selected: isItemSelected(item.id),
                 },
               ]"
               @click="handleToggleItem(item)"
             >
-              <div class="tool-avatar">
+              <div class="item-avatar">
                 <img
                   v-if="item.avatar?.path"
                   :src="avatarSrc(item.avatar.path)"
                 />
               </div>
-              <div class="tool-info">
-                <div class="tool-name">
+              <div class="item-info">
+                <div class="item-name">
                   {{ item.name }}
                 </div>
-                <div class="tool-desc">
+                <div v-if="item.author" class="item-desc">
+                  作者：{{ item.author }}
+                </div>
+                <div class="item-desc">
                   {{ item.desc }}
                 </div>
               </div>
@@ -726,7 +729,7 @@ export default {
     }
   }
 
-  .tool-item {
+  .item-item {
     display: flex;
     align-items: center;
     padding: 10px 12px;
@@ -745,7 +748,7 @@ export default {
       border-color: rgba(16, 163, 127, 0.2);
     }
 
-    .tool-avatar {
+    .item-avatar {
       width: 36px;
       height: 36px;
       border-radius: 8px;
@@ -769,18 +772,18 @@ export default {
       }
     }
 
-    .tool-info {
+    .item-info {
       flex: 1;
       min-width: 0;
 
-      .tool-name {
+      .item-name {
         font-size: 14px;
         font-weight: 500;
         color: #1a1a1a;
         margin-bottom: 2px;
       }
 
-      .tool-desc {
+      .item-desc {
         font-size: 12px;
         color: #666;
         overflow: hidden;
@@ -811,35 +814,6 @@ export default {
   }
 }
 
-.tool-tooltip-popper {
-  max-width: 360px !important;
-  padding: 0 !important;
-  border: 1px solid #e4e7ed !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-  border-radius: 8px !important;
-}
-
-.tool-detail-tooltip {
-  padding: 12px 14px;
-
-  .tooltip-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .tooltip-desc {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-}
 
 .api-key-dialog {
   .el-dialog__body {
