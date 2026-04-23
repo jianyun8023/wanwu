@@ -862,7 +862,6 @@ export default {
       this.ensureMessageList(this.currentThreadId);
       this.addUserMessage(this.currentThreadId, content, this.uploadedFiles);
 
-      this.inputMessage = '';
       this.clearFiles();
       this.$refs.mentionInput?.clear();
       this.$nextTick(() => this.scrollToBottom());

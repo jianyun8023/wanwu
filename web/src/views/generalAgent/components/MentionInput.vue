@@ -46,7 +46,12 @@
         </div>
       </div>
 
-      <div slot="reference" ref="senderRef" class="x-sender-container"></div>
+      <div
+        slot="reference"
+        ref="senderRef"
+        class="x-sender-container"
+        :class="{ disabled: disabled }"
+      ></div>
     </el-popover>
   </div>
 </template>
@@ -111,7 +116,11 @@ export default {
   },
   watch: {
     value(newVal) {
-      this.inputValue = newVal;
+      if (newVal === this.inputValue) {
+        return;
+      }
+      this.clear();
+      this.sender.setText(newVal);
     },
     inputValue(newVal) {
       this.$emit('input', newVal);
@@ -120,11 +129,12 @@ export default {
       this.selectedIndex = 0;
     },
     placeholder(newVal) {
-      if (this.sender) {
-        this.sender.updateConfig({
-          placeholder: newVal,
-        });
-      }
+      this.sender.updateConfig({
+        placeholder: newVal,
+      });
+    },
+    disabled(newVal) {
+      newVal ? this.sender.disable() : this.sender.enable();
     },
     availableResourceTypes(newVal) {
       if (newVal.length > 0 && this.tabs.length === 0) {
@@ -160,43 +170,40 @@ export default {
     },
 
     initSender() {
-      if (this.$refs.senderRef) {
-        this.sender = new XSender(this.$refs.senderRef, {
-          placeholder: this.placeholder,
-          autoFocus: false,
-          disabled: this.disabled,
-        });
+      this.sender = new XSender(this.$refs.senderRef, {
+        placeholder: this.placeholder,
+        autoFocus: false,
+      });
 
-        const { EVENT_COMMON_CHANGE } = XSender.EventSet;
-        this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
-          this.inputValue = this.sender.getText();
-          if (this.showConfigPopover) {
-            this.updateMentionSearch();
-          }
-        });
+      const { EVENT_COMMON_CHANGE } = XSender.EventSet;
+      this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
+        this.inputValue = this.sender.getText();
+        if (this.showConfigPopover) {
+          this.updateMentionSearch();
+        }
+      });
 
-        this.sender.chatElement.richText.addEventListener(
-          'keydown',
-          e => {
-            this.handleSenderKeydown(e);
-          },
-          true,
-        );
+      this.sender.chatElement.richText.addEventListener(
+        'keydown',
+        e => {
+          this.handleSenderKeydown(e);
+        },
+        true,
+      );
 
-        this.sender.chatElement.richText.addEventListener('blur', () => {
-          this.handleSenderBlur();
-        });
+      this.sender.chatElement.richText.addEventListener('blur', () => {
+        this.handleSenderBlur();
+      });
 
-        this.sender.chatElement.richText.addEventListener('keyup', e => {
-          if (e.key === '@' || +e.key === 2) {
-            const { instance, offset } = this.sender.getCurrentNode();
-            if (instance?.type !== 'Write') return;
-            if (instance.text[offset - 1] !== '@') return;
+      this.sender.chatElement.richText.addEventListener('keyup', e => {
+        if (e.key === '@' || +e.key === 2) {
+          const { instance, offset } = this.sender.getCurrentNode();
+          if (instance?.type !== 'Write') return;
+          if (instance.text[offset - 1] !== '@') return;
 
-            this.triggerMentionPopover();
-          }
-        });
-      }
+          this.triggerMentionPopover();
+        }
+      });
     },
 
     resetMentionState() {
@@ -280,7 +287,7 @@ export default {
     handleSenderBlur() {
       setTimeout(() => {
         const popover = this.$refs.configPopover?.$refs?.popper;
-        if (popover && popover.contains(document.activeElement)) {
+        if (popover?.contains(document.activeElement)) {
           return;
         }
         this.resetMentionState();
@@ -339,9 +346,7 @@ export default {
 
     scrollToSelected() {
       const selectedItem = document.querySelector('.popover-item.selected');
-      if (selectedItem) {
-        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      selectedItem?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     },
 
     selectConfigItem(item) {
@@ -356,20 +361,10 @@ export default {
       });
 
       this.resetMentionState();
-      this.$nextTick(() => {
-        this.sender?.focus();
-      });
-
-      this.inputValue = this.sender.getText();
-      this.$emit('input', this.inputValue);
     },
 
     clear() {
-      if (this.sender) {
-        this.sender.chatElement.richText.innerHTML = '';
-        this.inputValue = '';
-        this.$emit('input', '');
-      }
+      this.sender.reset();
     },
   },
   mounted() {
@@ -377,18 +372,27 @@ export default {
     this.initSender();
   },
   beforeDestroy() {
-    if (this.sender) {
-      this.sender.destroy();
-      this.sender = null;
-    }
+    this.sender.destroy();
+    this.sender = null;
   },
 };
 </script>
 
 <style lang="scss">
-.x-sender-container * {
-  font-size: 16px !important;
-  font-style: normal;
+.x-sender-container {
+  position: relative;
+  * {
+    font-size: 16px !important;
+    font-style: normal;
+  }
+
+  *:focus,
+  *:focus-visible,
+  *:focus-within {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 }
 
 .config-popover {

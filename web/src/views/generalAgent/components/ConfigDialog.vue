@@ -137,6 +137,9 @@
                 @change="handleToggleItem(item)"
               />
             </div>
+            <div v-if="filteredList.length === 0" class="empty-tip">
+              {{ $t('common.noData') }}
+            </div>
           </div>
         </div>
       </div>
@@ -714,6 +717,13 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    .empty-tip {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 13px;
+    }
   }
 
   .tool-item {
