@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import SkillDetail from '@/views/templateSquare/skillDetail.vue';
+import SkillDetail from '@/components/skills/skillDetail.vue';
 import {
   getSquareSkillList,
   sendSquareSkillToResource,

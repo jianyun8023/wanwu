@@ -86,16 +86,6 @@
               <div class="item-desc" v-html="parseTxt(detail.note)"></div>
             </div>
           </div>
-          <div class="overview bg-border" v-if="detail.skillMarkdown">
-            <div class="overview-item">
-              <!--<div class="item-title">• &nbsp;{{ $t('square.detail') }}</div>-->
-              <div class="item-desc">
-                <div class="tempSquare-markdown">
-                  <MdRender :content="detail.skillMarkdown" />
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -129,14 +119,8 @@ import {
   downloadWorkflow,
   getWorkflowRecommendsList,
   getWorkflowTempInfo,
-  getCustomSkillInfo,
-  getCustomSkillList,
 } from '@/api/templateSquare';
-import {
-  getJoinerSkillList,
-  getJoinerSkillDetail,
-} from '@/api/skillResource/added';
-import { SKILL, WORKFLOW, SKILLCUSTOM } from './constants';
+import { WORKFLOW } from './constants';
 import { avatarSrc, directDownload, resDownloadFile } from '@/utils/util';
 import CreateWorkflow from '@/components/createApp/createWorkflow.vue';
 import MdRender from '@/components/mdRender.vue';
@@ -190,64 +174,30 @@ export default {
       if (main) main.scrollTop = 0;
     },
     async getDetailData() {
-      let res;
-      if (this.type === WORKFLOW) {
-        res = await getWorkflowTempInfo({ templateId: this.templateSquareId });
-      } else if (this.type === SKILLCUSTOM) {
-        res = await getCustomSkillInfo({ skillId: this.templateSquareId });
-      } else {
-        res = await getJoinerSkillDetail({ skillId: this.templateSquareId });
-      }
+      const res = await getWorkflowTempInfo({
+        templateId: this.templateSquareId,
+      });
       this.detail = res.data || {};
     },
     async getRecommendList() {
-      let res;
-      if (this.type === WORKFLOW) {
-        res = await getWorkflowRecommendsList({
-          templateId: this.templateSquareId,
-        });
-      } else if (this.type === SKILLCUSTOM) {
-        res = await getCustomSkillList();
-      } else {
-        res = await getJoinerSkillList();
-      }
-      if (this.type === SKILLCUSTOM || this.type === SKILL) {
-        this.recommendList = res.data.list
-          ? res.data.list.filter(item => item.skillId !== this.templateSquareId)
-          : [];
-      } else {
-        this.recommendList = res.data.list || [];
-      }
+      const res = await getWorkflowRecommendsList({
+        templateId: this.templateSquareId,
+      });
+      this.recommendList = res.data.list || [];
     },
     copyTemplate(item) {
       this.$refs.cloneWorkflowDialog.openDialog(item);
     },
     async downloadTemplate(item) {
-      const isWorkflow = this.type === WORKFLOW;
-      let res;
-      if (isWorkflow) {
-        res = await downloadWorkflow({ templateId: item.templateId });
-      } else if (this.type === SKILLCUSTOM) {
-        await this.handleDownloadCustomSkill(item);
-        return;
-      } else {
-        await this.handleDownloadAddedSkill(item);
-        return;
-      }
-      resDownloadFile(res, `${item.name}${isWorkflow ? '.json' : '.zip'}`);
+      const res = await downloadWorkflow({ templateId: item.templateId });
+      resDownloadFile(res, `${item.name}.json`);
     },
     getPath() {
-      return this.type === SKILL || this.type === SKILLCUSTOM
-        ? '/skill'
-        : this.isPublic
-          ? '/public/templateSquare'
-          : '/templateSquare';
+      return this.isPublic ? '/public/templateSquare' : '/templateSquare';
     },
     handleClick(val) {
-      const templateSquareId =
-        this.type === WORKFLOW ? val.templateId : val.skillId;
       this.$router.push(
-        `${this.getPath()}/detail?templateSquareId=${templateSquareId}&type=${this.type}`,
+        `${this.getPath()}/detail?templateSquareId=${val.templateId}`,
       );
     },
     // 解析文本，遇到.换行等
@@ -266,18 +216,7 @@ export default {
       this.foldStatus = !this.foldStatus;
     },
     back() {
-      this.$router.push({ path: this.getPath(), query: { type: this.type } });
-    },
-    // 自定义skills下载
-    handleDownloadCustomSkill(skillInfo) {
-      const { zipUrl } = skillInfo;
-      directDownload(zipUrl);
-    },
-    // 已添加skills下载
-    handleDownloadAddedSkill(skillInfo) {
-      if (skillInfo.downloadUrl) {
-        directDownload(skillInfo.downloadUrl);
-      }
+      this.$router.push({ path: this.getPath() });
     },
   },
 };
