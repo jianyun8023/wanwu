@@ -118,7 +118,8 @@ message AcquiredSkillGetReq {
 }
 
 message AcquiredSkillGetListReq {
-  string name = 1;
+  Identity identity = 1;
+  string name = 2;
 }
 
 message AcquiredSkillGetListResp {

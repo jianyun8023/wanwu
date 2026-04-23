@@ -13,8 +13,8 @@ type AcquiredSkill struct {
 	AcquiredType       string `gorm:"column:acquired_type;index:idx_acquired_skill_acquired_type;comment:来源类型(builtin/custom)"`
 	Version            string `gorm:"column:version;index:idx_acquired_skill_version;comment:版本号"`
 	VersionDescription string `gorm:"column:version_description;type:text;comment:版本描述"`
-	UserId             string `gorm:"column:user_id;index:idx_acquired_skill_user_id;comment:用户id"`
-	OrgId              string `gorm:"column:org_id;index:idx_acquired_skill_org_id;comment:组织id"`
+	UserID             string `gorm:"column:user_id;index:idx_acquired_skill_user_id;comment:用户id"`
+	OrgID              string `gorm:"column:org_id;index:idx_acquired_skill_org_id;comment:组织id"`
 	CreatedAt          int64  `gorm:"autoCreateTime:milli;comment:创建时间"`
 	UpdatedAt          int64  `gorm:"autoUpdateTime:milli;comment:更新时间"`
 }
