@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"strings"
 
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
-	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	minio_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/minio-util"
 	"github.com/UnicomAI/wanwu/pkg/constant"
@@ -161,23 +159,24 @@ func CheckCustomSkill(ctx *gin.Context, userId, orgId, zipUrl string) (*response
 func GetSkillSelect(ctx *gin.Context, userId, orgId, name, skillType string) (*response.ListResult, error) {
 	var allSkills []*response.SkillInfo
 
-	// 内建 skills
+	// 我添加的 skills（skillType=builtin）
 	if skillType == "" || skillType == constant.SkillTypeBuiltIn {
-		for _, skillsCfg := range config.Cfg().AgentSkills {
-			if name != "" && !strings.Contains(skillsCfg.Name, name) {
-				continue
-			}
-			iconUrl := config.Cfg().DefaultIcon.SkillIcon
-			if skillsCfg.Avatar != "" {
-				iconUrl = skillsCfg.Avatar
-			}
+		joinerResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
+			Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
+			Name:     name,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, skill := range joinerResp.List {
 			allSkills = append(allSkills, &response.SkillInfo{
-				SkillId:   skillsCfg.SkillId,
-				SkillName: skillsCfg.Name,
+				SkillId:   skill.AcquiredSkillId,
+				SkillName: skill.Name,
 				SkillType: constant.SkillTypeBuiltIn,
-				Desc:      skillsCfg.Desc,
-				Author:    skillsCfg.Author,
-				Avatar:    request.Avatar{Path: iconUrl},
+				Desc:      skill.Desc,
+				Author:    skill.Author,
+				Avatar:    cacheSkillAvatar(ctx, skill.Avatar),
 			})
 		}
 	}
