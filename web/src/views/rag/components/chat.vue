@@ -126,6 +126,12 @@ export default {
         ragId: this.editForm.appId,
         fileInfo: this.$refs['editable'].getFileIdList(),
         question: this.inputVal,
+        // RAG 配置里的最长上下文轮数，取 知识库 / 问答库 两处配置的较大值。
+        // 0 表示不携带历史；sendRagEventSource 会据此裁剪 history 并在发请求前剔除该字段。
+        maxHistory: Math.max(
+          this.editForm.knowledgeBaseConfig?.config?.maxHistory || 0,
+          this.editForm.qaKnowledgeBaseConfig?.config?.maxHistory || 0,
+        ),
       });
       this.doragSend();
       this.echo = false;

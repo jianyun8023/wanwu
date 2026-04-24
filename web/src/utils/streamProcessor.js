@@ -158,6 +158,15 @@ export default class StreamProcessor {
           this.searchList,
         );
       }
+
+      // 防止流式输出中未完成的行被 markdown-it 误判为 thematic break (<hr>)
+      // 例如 "* **角色" 逐字输出到 "* **" 时，3个 * 加空格会匹配 <hr> 规则
+      const lastNewline = textToRender.lastIndexOf('\n');
+      const lastLine = lastNewline === -1 ? textToRender : textToRender.slice(lastNewline + 1);
+      if (/^[\s*_-]*([*_-])[\s*_-]*\1[\s*_-]*\1[\s*_-]*$/.test(lastLine)) {
+        textToRender += '\u200B';
+      }
+
       activeHtml = this.md.render(textToRender);
     }
 

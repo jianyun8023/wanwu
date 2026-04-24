@@ -25,6 +25,8 @@ export default {
         avatar: {},
         name: '',
         desc: '',
+        knowledgeBaseConfig: { config: {}, knowledgebases: [] },
+        qaKnowledgeBaseConfig: { config: {}, knowledgebases: [] },
       },
     };
   },
@@ -45,6 +47,12 @@ export default {
           this.editForm.avatar = res.data.avatar;
           this.editForm.name = res.data.name;
           this.editForm.desc = res.data.desc;
+          if (res.data.knowledgeBaseConfig) {
+            this.editForm.knowledgeBaseConfig = res.data.knowledgeBaseConfig;
+          }
+          if (res.data.qaKnowledgeBaseConfig) {
+            this.editForm.qaKnowledgeBaseConfig = res.data.qaKnowledgeBaseConfig;
+          }
           this.setMaxPicNum(res.data.visionConfig.picNum);
         }
       });

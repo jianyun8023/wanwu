@@ -2010,6 +2010,21 @@ export default {
       apiKey: 'API密钥',
       viewApiKey: '查看API文档',
     },
+    step: {
+      qaSearch: '问答库检索',
+      knowledgeSearch: '知识库检索',
+      thinking: '深度思考',
+      running: '运行中',
+      completed: '运行完毕',
+      noHit: '未命中相关内容',
+    },
+    answerFailed: '回答失败',
+    citation: {
+      source: '来源',
+      viewSource: '点击查看来源 →',
+      close: '关闭',
+      openInNewTab: '在新窗口打开',
+    },
   },
   app: {
     modelTips: '暂不支持选择图文问答类模型',

@@ -362,16 +362,34 @@ export default {
       if (output || (!reasoning && [1, 2].includes(finish))) {
         const mainSentence = { response: output || '', finish };
 
-        // 首次收到 output，服务端侧推理结束
+        // 首次收到 output，服务端侧推理结束：立即冻结思考打字机，
+        // 把未动画完的 reasoning 残余文本一次性灌入处理器（保证再展开
+        // 看到的是完整静态内容），然后直通正文。这样用户不会再看到
+        // 折叠卡片里继续滴字，也不会等思考打字机慢慢打完才出正文。
         if (output && !this._reasoningSSEDone) {
           this._reasoningSSEDone = true;
-          // 情况B：打字机恰好已为空（全部打完但 onPrintEnd 已被忽略过），主动触发清空
-          if (
-            this._isInReasoning &&
-            this._reasoningPrint.sIndex >=
-              this._reasoningPrint.sentenceArr.length &&
-            this._reasoningPrint.printStatus === 0
-          ) {
+          if (this._isInReasoning && this._reasoningPrint) {
+            const rp = this._reasoningPrint;
+            let remaining = '';
+            const curSent = rp.sentenceArr[rp.sIndex];
+            if (curSent) {
+              const curText = curSent.response || '';
+              const typedIdx =
+                rp.looper && typeof rp.looper.index === 'number'
+                  ? Math.min(rp.looper.index, curText.length)
+                  : 0;
+              remaining += curText.slice(typedIdx);
+            }
+            for (let i = rp.sIndex + 1; i < rp.sentenceArr.length; i++) {
+              remaining += (rp.sentenceArr[i] && rp.sentenceArr[i].response) || '';
+            }
+            if (remaining) {
+              doRenderReasoning(
+                { world: remaining, finish: 0, isEnd: false },
+                null,
+              );
+            }
+            rp.stop();
             this._flushPendingOutput();
           }
         }
@@ -394,7 +412,7 @@ export default {
       this.stopBtShow = true;
       this.isStoped = false;
       let _history = this.$refs['session-com'].getList();
-      this.sendEventStream(this.inputVal, '', _history.length);
+      this.sendRagEventSource(this.inputVal, '', _history.length);
     },
     sendEventStream(prompt, msgStr, lastIndex) {
       let sessionCom = this.sessionComRef || this.$refs['session-com'];
@@ -577,6 +595,533 @@ export default {
         },
       );
     },
+    /**
+     * sendRagEventSource — RAG 问答流式方法（AG-UI 协议版）
+     *
+     * 请求格式与原 sendEventStream 完全相同（{ ragId, question, fileInfo, history }），
+     * 响应格式从旧 RAG JSON 改为 AG-UI 事件流，事件类型：
+     *   RUN_STARTED / CUSTOM(rag_search_list) /
+     *   REASONING_MESSAGE_START|CONTENT|END /
+     *   TEXT_MESSAGE_START|CONTENT|END /
+     *   RUN_FINISHED / RUN_ERROR
+     *
+     * RUN_ERROR 事件的 data.code 与后端 internal/bff-service/service/rag_chat.go 的
+     * Rag 错误码常量一一对应，下表新增码时双端须同步修改。
+     */
+    sendRagEventSource(prompt, msgStr, lastIndex) {
+      // 与 internal/bff-service/service/rag_chat.go 的 EventNameRagSearchList 对应
+      const CUSTOM_EVENT_SEARCH_LIST = 'rag_search_list';
+      // 与 EventNameRagKnowledgeStart 对应：后端通知即将进入知识库检索，前端据此来创建"知识库检索"卡片
+      const CUSTOM_EVENT_KNOWLEDGE_START = 'rag_knowledge_start';
+      // 与 EventNameRagQAStart 对应：后端通知即将进入问答库检索，前端据此来创建"问答库检索"卡片
+      const CUSTOM_EVENT_QA_START = 'rag_qa_start';
+      // 与 EventNameRagQASearchList 对应：问答库检索结果（含命中/未命中，未命中 value=[]）
+      const CUSTOM_EVENT_QA_SEARCH_LIST = 'rag_qa_search_list';
+      // RAG RUN_ERROR code → vue-i18n key 映射表
+      // 与 internal/bff-service/service/rag_chat.go 的 RagErrCode* 常量对应
+      const RAG_ERROR_CODE_I18N = {
+        sensitive_block: 'sse.sensitiveTips',
+        upstream_error: 'sse.error',
+        unknown_error: 'sse.error',
+      };
+      let sessionCom = this.sessionComRef || this.$refs['session-com'];
+      if (!sessionCom) {
+        console.warn('[sseMethod] session-com ref missing');
+        return;
+      }
+      if (this.getCurrentSessionStatus() === 0) {
+        this.$message.warning(i18n.t('sse.incompleteError'));
+        return;
+      }
+
+      this.sseResponse = {};
+      this.setStoreSessionStatus(0);
+      this.clearInput();
+      this._isInReasoning = false;
+
+      // 推送占位历史条目（loading 状态）
+      sessionCom.pushHistory({
+        query: prompt,
+        pending: true,
+        responseLoading: true,
+        requestFileUrls: [],
+        fileList: this.fileList,
+        pendingResponse: '',
+      });
+
+      // 初始化流处理器（主文本 + 推理）
+      const processor = new StreamProcessor({
+        lastIndex,
+        md,
+        parseSub,
+        convertLatexSyntax,
+      });
+      const reasoningProcessor = this._initReasoningStream({
+        lastIndex,
+        md,
+        parseSub,
+        convertLatexSyntax,
+      });
+      this._print = new Print({
+        onPrintEnd: () => {
+          this.onMainPrintEnd && this.onMainPrintEnd();
+        },
+      });
+
+      // 按 RAG 配置的 maxHistory 裁剪历史轮次：
+      //   - response 取 oriResponse（StreamProcessor 记录的正文原文，不含思考过程）
+      //   - 只纳入已完成、有 query + oriResponse 的轮次
+      //   - 从 0..lastIndex 取（lastIndex 位为本次 pending，不计入自己的历史）
+      //   - maxHistory=0 视为不携带历史
+      //   - needHistory 固定 true（与后端 rag-service 约定）
+      const maxHistory = Number(this.sseParams.maxHistory) || 0;
+      const sessionHistory = sessionCom.getSessionData().history || [];
+      const completed = sessionHistory
+        .slice(0, lastIndex)
+        .filter(turn => turn && turn.query && turn.oriResponse);
+      const history = maxHistory > 0
+        ? completed.slice(-maxHistory).map(turn => ({
+            query: turn.query,
+            response: turn.oriResponse,
+            needHistory: true,
+          }))
+        : [];
+
+      // 贯穿整个流的 searchList（KB 检索结果，由 rag_search_list 更新，初始为空）
+      let currentSearchList = [];
+      // 问答库检索结果（由 rag_qa_search_list 更新，即使未命中也会下发空数组）
+      let currentQASearchList = [];
+
+      // 是否有任何文字/推理内容到达（用于 RUN_FINISHED 兜底 setStoreSessionStatus）
+      let streamHasContent = false;
+
+      /**
+       * ragSteps — 过程卡片数据，供 streamMessageField.vue 的 RagStepCard 渲染。
+       * 三种步骤类型均为 lazy 创建（SSE 启动时不创建任何卡片）：
+       *   - qa_search：收到 CUSTOM(rag_qa_start) 才创建；CUSTOM(rag_qa_search_list) 关闭
+       *                （命中/未命中都会发，未命中 value=[]）。用户未配置问答库时后端不发 qa_start，卡片不出现。
+       *   - knowledge_search：收到 CUSTOM(rag_knowledge_start) 才创建；CUSTOM(rag_search_list) 关闭
+       *                未命中由首个 CONTENT 兜底关闭。用户未配置知识库 / QA 命中时后端不发该事件，卡片不出现。
+       *   - thinking：首个 REASONING_MESSAGE_CONTENT 到达才创建；
+       *                REASONING_MESSAGE_END 关闭（或 TEXT_MESSAGE_CONTENT 兜底）。
+       * RUN_FINISHED / RUN_ERROR 时兜底关闭所有还 running 的步骤。
+       * 每次修改后用 [...ragSteps] 触发 Vue 响应式（避免同引用 push 不更新）。
+       */
+      const ragSteps = [];
+      const findStep = type => ragSteps.find(s => s.type === type);
+      const createStep = type => {
+        const step = {
+          type,
+          status: 'running',
+          startAt: Date.now(),
+          endAt: 0,
+          duration: '',
+        };
+        ragSteps.push(step);
+        return step;
+      };
+      const closeStep = step => {
+        if (!step || step.status !== 'running') return;
+        step.status = 'done';
+        step.endAt = Date.now();
+        step.duration = `${((step.endAt - step.startAt) / 1000).toFixed(3)}s`;
+      };
+      // 未命中兜底：首个 CONTENT 到达时关闭所有检索卡片（qa_search / knowledge_search）
+      const ensureSearchStepClosed = () => {
+        ['qa_search', 'knowledge_search'].forEach(t => {
+          const s = findStep(t);
+          if (s && s.status === 'running') closeStep(s);
+        });
+      };
+      // 错误/结束兜底：任何还 running 的步骤都关闭
+      const closeAllRunning = () => {
+        ragSteps.forEach(s => {
+          if (s.status === 'running') closeStep(s);
+        });
+      };
+      // knowledge_search 步骤改为懒创建：等后端 CUSTOM(rag_knowledge_start) 明确告知
+      // "即将进入知识库检索"再建卡片。问答库命中场景后端不发该事件，卡片不出现。
+
+      // 公共数据基础（response/searchList 由各事件处理器动态填充）
+      const commonData = {
+        ...this.sseParams,
+        query: prompt,
+        fileList: this.fileList,
+        response: '',
+        requestFileUrls: '',
+        gen_file_url_list: [],
+        searchList: [],
+        thinkText: i18n.t('sse.thinkingText'),
+        isOpen: true,
+        citations: [],
+      };
+
+      // 初始渲染：进入 loading 态（ragSteps 初始为空，等后端信号决定是否建检索卡片）
+      // finish:0 必须显式传：否则 replaceLastData 会把空 response 兜底成"无响应数据"
+      sessionCom.replaceLastData(lastIndex, {
+        ...commonData,
+        responseLoading: true,
+        finish: 0,
+        ragSteps: [...ragSteps],
+      });
+
+      /**
+       * doRender — 统一渲染回调，供 _dispatchReasoningOrOutput 内部调用
+       * field: 'main' | 'reasoning'
+       * _sl 参数来自 Print 回调，此处忽略，改用 currentSearchList 闭包值
+       */
+      const doRender = (worldObj, _sl, field) => {
+        // 用户已主动停止：不要再把状态拉回 0，也不再继续渲染，
+        // 否则停止按钮会被 reasoning 打字机的残余帧反复拉回显示。
+        if (this.getCurrentSessionStatus() === -1) return;
+        this.setStoreSessionStatus(0);
+        if (field === 'main') {
+          processor.updateSearchList(currentSearchList);
+          processor.append(worldObj.world);
+        } else {
+          reasoningProcessor.updateSearchList(currentSearchList);
+          reasoningProcessor.append(worldObj.world);
+        }
+
+        const renderResult = processor.getRenderResult();
+        const reasoningRenderResult = reasoningProcessor.getRenderResult();
+
+        const fillData = {
+          ...commonData,
+          ...renderResult,
+          activeReasoning: reasoningRenderResult.activeResponse || '',
+          stableReasoningChunks: reasoningRenderResult.stableChunks || [],
+          finish: worldObj.finish,
+          searchList: currentSearchList,
+          qaSearchList: currentQASearchList,
+          ragSteps: [...ragSteps],
+        };
+
+        sessionCom.replaceLastData(lastIndex, fillData);
+        this.$nextTick(() => sessionCom.scrollBottom());
+
+        if (worldObj.isEnd && worldObj.finish === 1) {
+          this.setStoreSessionStatus(-1);
+        }
+      };
+
+      // maxHistory 只用于前端裁剪 history，不是后端请求字段，需剔除。
+      const { maxHistory: _maxHistory, ...ragSseParams } = this.sseParams;
+      this.eventSource = this.fetchEventSource(
+        this.rag_sseApi,
+        { ...ragSseParams, history },
+        {
+          onopen: async e => {
+            if (e.status !== 200) {
+              // 克隆一份响应：e.json() 会消费 body，catch 里再对 e.text() 会抛
+              // "body stream already read"；_e 是抛出的 Error，不是 Response，
+              // 原来的 `_e.text()` 必然 TypeError。
+              const errClone = e.clone();
+              try {
+                const errorData = await e.json();
+                sessionCom.replaceLastData(lastIndex, {
+                  ...commonData,
+                  response: errorData.msg,
+                });
+              } catch (_e) {
+                let text = '';
+                try {
+                  text = await errClone.text();
+                } catch (_e2) {
+                  // 兜底：body 读不出来就用 i18n 通用错误
+                }
+                this.$message.error(text || i18n.t('sse.error'));
+              }
+              this.stopEventSource();
+              this.setStoreSessionStatus(-1);
+            }
+          },
+          onmessage: e => {
+            if (!e?.data) return;
+            let data;
+            try {
+              data = JSON.parse(e.data);
+            } catch (_err) {
+              return;
+            }
+
+            switch (data.type) {
+              // ── 运行生命周期 ─────────────────────────────────────
+              case 'RUN_STARTED':
+                // 流已建立，状态已在 setStoreSessionStatus(0) 时设置，无需额外操作
+                break;
+
+              case 'RUN_FINISHED': {
+                // 兜底：关闭所有还在 running 的过程卡片
+                closeAllRunning();
+
+                // Fast-forward：后端已声明运行结束，把两个打字机队列里的剩余内容
+                // 一次性灌进 processor，并停止动画。
+                // 不这样做会导致：SSE 瞬间收完几万字，打字机按 ~30 char/s 慢慢播，
+                //   - reasoning 卡在"还在打字"状态 → 用户看到思考卡片不动
+                //   - output 被压在 pendingQueue，等 reasoning 打字机 drain 后才开始
+                //   - 整体感知"后端明明返回完了，前端还在慢吞吞"
+                // 该操作不影响正常流式体验（流未结束前不会走到这里）。
+                //
+                // 注：临时读 Print 私有字段 sentenceArr/sIndex/looper.index
+                //     属于技术债（见 review P1-4），后续推动 Print 暴露 flush()
+                //     公有方法后应重构。
+                const drainPrint = printInstance => {
+                  if (!printInstance) return '';
+                  let remaining = '';
+                  const curSent = printInstance.sentenceArr
+                    ? printInstance.sentenceArr[printInstance.sIndex]
+                    : null;
+                  if (curSent) {
+                    const curText = curSent.response || '';
+                    const typedIdx =
+                      printInstance.looper &&
+                      typeof printInstance.looper.index === 'number'
+                        ? Math.min(printInstance.looper.index, curText.length)
+                        : 0;
+                    remaining += curText.slice(typedIdx);
+                  }
+                  if (printInstance.sentenceArr) {
+                    for (
+                      let i = printInstance.sIndex + 1;
+                      i < printInstance.sentenceArr.length;
+                      i++
+                    ) {
+                      remaining +=
+                        (printInstance.sentenceArr[i] &&
+                          printInstance.sentenceArr[i].response) ||
+                        '';
+                    }
+                  }
+                  printInstance.stop();
+                  return remaining;
+                };
+
+                // 1) reasoning 打字机剩余内容 → reasoningProcessor
+                const remainingReasoning = drainPrint(this._reasoningPrint);
+                if (remainingReasoning) {
+                  reasoningProcessor.updateSearchList(currentSearchList);
+                  reasoningProcessor.append(remainingReasoning);
+                }
+
+                // 2) pendingOutputQueue 里堆积的 output（等 reasoning 打完才准备播的）
+                //    直接拼成整段文本喂给主 processor，跳过打字机
+                if (this._pendingOutputQueue && this._pendingOutputQueue.length) {
+                  let pendingText = '';
+                  this._pendingOutputQueue.forEach(item => {
+                    pendingText +=
+                      (item.sentence && item.sentence.response) || '';
+                  });
+                  this._pendingOutputQueue = [];
+                  if (pendingText) {
+                    processor.updateSearchList(currentSearchList);
+                    processor.append(pendingText);
+                  }
+                }
+                this._isInReasoning = false;
+                this._reasoningSSEDone = true;
+
+                // 3) 主打字机剩余内容 → processor
+                const remainingMain = drainPrint(this._print);
+                if (remainingMain) {
+                  processor.updateSearchList(currentSearchList);
+                  processor.append(remainingMain);
+                }
+
+                // 4) 最终渲染 + 收尾
+                this.setStoreSessionStatus(-1);
+                const renderResult = processor.getRenderResult();
+                const reasoningRenderResult = reasoningProcessor.getRenderResult();
+                sessionCom.replaceLastData(lastIndex, {
+                  ...commonData,
+                  ...renderResult,
+                  activeReasoning: reasoningRenderResult.activeResponse || '',
+                  stableReasoningChunks:
+                    reasoningRenderResult.stableChunks || [],
+                  searchList: currentSearchList,
+                  qaSearchList: currentQASearchList,
+                  ragSteps: [...ragSteps],
+                  finish: 1,
+                });
+                this.$nextTick(() => sessionCom.scrollBottom());
+                break;
+              }
+
+              case 'RUN_ERROR': {
+                this.setStoreSessionStatus(-1);
+                closeAllRunning();
+                // response: 面向用户的短文案（走 i18n 错误码表），作为错误卡片标题；
+                // errorDetail: 后端 data.message 原文（含上游具体原因），作为副标题展示，
+                //   便于用户/排查人员看到真实原因，而不只是"未知错误"四个字。
+                const i18nKey = data.code && RAG_ERROR_CODE_I18N[data.code];
+                const errText = i18nKey ? i18n.t(i18nKey) : i18n.t('sse.error');
+                sessionCom.replaceLastData(lastIndex, {
+                  ...commonData,
+                  response: errText,
+                  errorDetail: data.message || '',
+                  error: true,
+                  ragSteps: [...ragSteps],
+                });
+                this.stopEventSource();
+                break;
+              }
+
+              // ── CUSTOM 事件（rag_qa_start / rag_qa_search_list / rag_knowledge_start / rag_search_list）──
+              case 'CUSTOM':
+                if (data.name === CUSTOM_EVENT_QA_START) {
+                  // 后端通知即将进入问答库检索：懒创建卡片
+                  if (!findStep('qa_search')) createStep('qa_search');
+                  sessionCom.replaceLastData(lastIndex, {
+                    ...commonData,
+                    responseLoading: true,
+                    finish: 0,
+                    searchList: currentSearchList,
+                    qaSearchList: currentQASearchList,
+                    ragSteps: [...ragSteps],
+                  });
+                } else if (data.name === CUSTOM_EVENT_QA_SEARCH_LIST) {
+                  // 问答库检索完成（命中或未命中都发；未命中 value=[]）
+                  currentQASearchList = (data.value || []).map(n => {
+                    // QA 条目没有 snippet，用 question+answer 合成
+                    const qaSnippet =
+                      n.question || n.answer
+                        ? `**Q:** ${n.question || ''}\n\n**A:** ${n.answer || ''}`
+                        : '';
+                    const raw = n.snippet || qaSnippet;
+                    return {
+                      ...n,
+                      // QA 卡片优先显示知识库名（user_kb_name），不要用泛称 title="问答库"
+                      title: n.user_kb_name || n.title || '',
+                      snippet: raw ? md.render(raw) : '',
+                    };
+                  });
+                  closeStep(findStep('qa_search'));
+                  sessionCom.replaceLastData(lastIndex, {
+                    ...commonData,
+                    responseLoading: true,
+                    finish: 0,
+                    searchList: currentSearchList,
+                    qaSearchList: currentQASearchList,
+                    ragSteps: [...ragSteps],
+                  });
+                  this.$nextTick(() => sessionCom.scrollBottom());
+                } else if (data.name === CUSTOM_EVENT_KNOWLEDGE_START) {
+                  // 后端通知即将进入知识库检索：懒创建卡片（幂等，重复帧不重复建）
+                  if (!findStep('knowledge_search')) createStep('knowledge_search');
+                  sessionCom.replaceLastData(lastIndex, {
+                    ...commonData,
+                    responseLoading: true,
+                    finish: 0,
+                    searchList: currentSearchList,
+                    qaSearchList: currentQASearchList,
+                    ragSteps: [...ragSteps],
+                  });
+                } else if (data.name === CUSTOM_EVENT_SEARCH_LIST) {
+                  currentSearchList = (data.value || []).map(n => ({
+                    ...n,
+                    snippet: n.snippet ? md.render(n.snippet) : '',
+                  }));
+                  // 命中结果到达：关闭 knowledge_search 步骤（若存在）
+                  closeStep(findStep('knowledge_search'));
+                  // 在流式文字开始之前先把引用来源渲染到 UI
+                  sessionCom.replaceLastData(lastIndex, {
+                    ...commonData,
+                    responseLoading: true,
+                    finish: 0,
+                    searchList: currentSearchList,
+                    qaSearchList: currentQASearchList,
+                    ragSteps: [...ragSteps],
+                  });
+                  this.$nextTick(() => sessionCom.scrollBottom());
+                }
+                break;
+
+              // ── 推理内容（reasoning）────────────────────────────
+              case 'REASONING_MESSAGE_START':
+                this._isInReasoning = true;
+                break;
+
+              case 'REASONING_MESSAGE_CONTENT': {
+                streamHasContent = true;
+                const reasoning = data.delta || '';
+                if (!reasoning) break;
+                // 未命中兜底：没有 CUSTOM 也要关闭检索卡片
+                ensureSearchStepClosed();
+                // 首个 reasoning_content 到达才创建思考卡片（有些模型无推理过程）
+                if (!findStep('thinking')) createStep('thinking');
+                this._dispatchReasoningOrOutput({
+                  reasoning,
+                  output: '',
+                  finish: 0,
+                  commonData,
+                  doRenderReasoning: (wo, sl) => doRender(wo, sl, 'reasoning'),
+                  doRenderMain: (wo, sl) => doRender(wo, sl, 'main'),
+                });
+                break;
+              }
+
+              case 'REASONING_MESSAGE_END':
+                // 关闭思考卡片（如已创建）
+                closeStep(findStep('thinking'));
+                // 服务端推理阶段结束；若打字机已空载则立即触发 output 队列 flush
+                if (!this._reasoningSSEDone) {
+                  this._reasoningSSEDone = true;
+                  if (
+                    this._isInReasoning &&
+                    this._reasoningPrint &&
+                    this._reasoningPrint.sIndex >= this._reasoningPrint.sentenceArr.length &&
+                    this._reasoningPrint.printStatus === 0
+                  ) {
+                    this._flushPendingOutput();
+                  }
+                }
+                break;
+
+              // ── 正文内容（text output）───────────────────────────
+              case 'TEXT_MESSAGE_START':
+                // 正文流即将开始，无需特殊处理
+                break;
+
+              case 'TEXT_MESSAGE_CONTENT': {
+                streamHasContent = true;
+                const output = data.delta || '';
+                if (!output) break;
+                // 未命中兜底：没有 CUSTOM、也没有 reasoning，正文到达也要关闭检索卡片
+                ensureSearchStepClosed();
+                // 非推理模型不会发 REASONING_MESSAGE_END；正文到达即视为思考阶段结束
+                closeStep(findStep('thinking'));
+                this._dispatchReasoningOrOutput({
+                  reasoning: '',
+                  output,
+                  finish: 0,
+                  commonData,
+                  doRenderReasoning: (wo, sl) => doRender(wo, sl, 'reasoning'),
+                  doRenderMain: (wo, sl) => doRender(wo, sl, 'main'),
+                });
+                break;
+              }
+
+              case 'TEXT_MESSAGE_END':
+                // 发送 finish=1 信号给 Print；Print 动画结束时调用 doRender，
+                // doRender 在 worldObj.isEnd && worldObj.finish===1 时调用 setStoreSessionStatus(-1)
+                this._dispatchReasoningOrOutput({
+                  reasoning: '',
+                  output: '',
+                  finish: 1,
+                  commonData,
+                  doRenderReasoning: (wo, sl) => doRender(wo, sl, 'reasoning'),
+                  doRenderMain: (wo, sl) => doRender(wo, sl, 'main'),
+                });
+                break;
+
+              default:
+                break;
+            }
+          },
+        },
+      );
+    },
+
     doSend(params) {
       this.stopBtShow = true;
       this.isStoped = false;
@@ -1350,6 +1895,53 @@ export default {
       }
     },
     preStop() {
+      // 立即置 -1：隐藏停止按钮，避免重复点击触发多次 abort
+      this.setStoreSessionStatus(-1);
+      // 立刻同步断流 + 停掉两个打字机，不等 sseOnCloseCallBack 的异步链路。
+      // 这样"点一次停止，字立刻停"：在 reasoning 阶段也不会被残余帧拉回。
+      this.ctrlAbort && this.ctrlAbort.abort();
+      // 置 null：避免 stopEventSource / handleComplete 里再次 abort 同一个
+      // AbortController（虽然幂等，但能让"已经停过了"这件事显式化）。
+      this.ctrlAbort = null;
+      this._print && this._print.stop();
+      this._reasoningPrint && this._reasoningPrint.stop();
+      // 强制关闭最后一条消息里所有还在 running 的 ragSteps
+      // （思考卡片计时器 / 齿轮动画 / 左侧 running 徽标同时停下）
+      // 注意：step 对象必须"原地" mutate，不能 map 出新对象 —— 因为
+      // sendRagEventSource 的闭包 ragSteps 与 lastItem.ragSteps 共享 step
+      // 引用，如果晚到的 SSE 帧再次 replaceLastData({ ragSteps: [...ragSteps] })
+      // 用的还是闭包里的旧对象；原地改才能让两边都看到 done。
+      // 下面再 new 一个外层数组只是为了触发 Vue 响应式，和 step 原地修改并不矛盾。
+      try {
+        const sessionCom = this.sessionComRef || this.$refs['session-com'];
+        if (sessionCom) {
+          const history = sessionCom.getSessionData().history;
+          const lastIndex = history.length - 1;
+          const lastItem = history[lastIndex];
+          if (lastItem && Array.isArray(lastItem.ragSteps)) {
+            const now = Date.now();
+            lastItem.ragSteps.forEach(s => {
+              if (s && s.status === 'running') {
+                s.status = 'done';
+                s.endAt = now;
+                s.duration = `${((now - (s.startAt || now)) / 1000).toFixed(3)}s`;
+              }
+            });
+            // 新建数组引用以触发 Vue 响应式（对象内部已被原地改）
+            // 不能简单改 finish=2：replaceLastData 对 finish!==0 且 response 空时
+            // 会兜底写成"无响应数据"，正文尚未开始时会把思考卡片下方糊上那行字。
+            // 底部三点加载动画由 `sessionStatus==0` 控制，此处只需保证
+            // responseLoading:false + ragSteps:done 即可。
+            sessionCom.replaceLastData(lastIndex, {
+              ...lastItem,
+              responseLoading: false,
+              ragSteps: [...lastItem.ragSteps],
+            });
+          }
+        }
+      } catch (_e) {
+        // 静默：停止按钮的兜底逻辑不应阻断 abort 主流程
+      }
       //获取已经拿到的全部回答,一次性回显出来
       this.sseOnCloseCallBack(true);
     },
@@ -1414,6 +2006,10 @@ export default {
       let endResponse = this._print.getAllworld();
 
       this._print && this._print.stop();
+      // RAG 流还有一个独立的思考打字机，必须一并停掉，否则它会继续
+      // 触发 doRender(field='reasoning') → setStoreSessionStatus(0) →
+      // 停止按钮被反复拉回可见。
+      this._reasoningPrint && this._reasoningPrint.stop();
 
       setTimeout(() => {
         this.setStoreSessionStatus(-1);

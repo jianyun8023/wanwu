@@ -1809,6 +1809,21 @@ export default {
       apiRootUrl: 'API根地址',
       apiKey: 'API密钥',
     },
+    step: {
+      qaSearch: 'QA Search',
+      knowledgeSearch: 'Knowledge Search',
+      thinking: 'Thinking',
+      running: 'Running',
+      completed: 'Completed',
+      noHit: 'No matching content',
+    },
+    answerFailed: 'Answer failed',
+    citation: {
+      source: 'Source',
+      viewSource: 'Click to view source →',
+      close: 'Close',
+      openInNewTab: 'Open in new tab',
+    },
   },
   app: {
     modelTips: '暂不支持选择图文问答类模型',
