@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/UnicomAI/wanwu/pkg/util"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	agent_util "github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"github.com/UnicomAI/wanwu/internal/agent-service/service/agent-message-flow/prompt"
 	minio_service "github.com/UnicomAI/wanwu/internal/agent-service/service/minio-service"
+	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/cloudwego/eino/schema"
 )
 
