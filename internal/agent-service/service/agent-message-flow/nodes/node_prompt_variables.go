@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/UnicomAI/wanwu/pkg/util"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -196,7 +196,7 @@ func replaceURLDomainAndMergePath(originalURL, newBaseURL string) (string, error
 // buildFileMessage 构建文件消息
 func buildFileMessage(minioFilePath string) (*schema.MessageInputPart, error) {
 	//1.下载压缩文件到本地
-	var localFilePath = agent_util.BuildFilePath(config.GetConfig().AgentFileConfig.LocalFilePath, filepath.Ext(minioFilePath))
+	var localFilePath = agent_util.BuildFilePath(config.GetConfig().AgentFileConfig.LocalFilePath, util.ExtractExtension(minioFilePath))
 	err := minio_service.DownloadFileToLocal(context.Background(), minioFilePath, localFilePath)
 	if err != nil {
 		return nil, err
