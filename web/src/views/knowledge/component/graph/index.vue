@@ -4,7 +4,7 @@
       ref="graphMap"
       :data="graphData"
       :knowledge-id="knowledgeId"
-      @goBack="goBack(`/knowledge/doclist/${knowledgeId}`)"
+      @goBack="goTo(`/knowledge/doclist/${knowledgeId}`)"
       @refresh="handleRefresh"
     />
   </div>
@@ -12,7 +12,7 @@
 
 <script>
 import { getGraphDetail } from '@/api/knowledge';
-import { goBack } from '@/utils/util';
+import { goTo } from '@/utils/util';
 import graphMap from '@/components/graphMap.vue';
 
 export default {
@@ -38,7 +38,7 @@ export default {
     this.getGraphData();
   },
   methods: {
-    goBack,
+    goTo,
     getGraphData() {
       if (!this.knowledgeId) return;
 
