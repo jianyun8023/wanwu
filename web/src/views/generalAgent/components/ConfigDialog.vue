@@ -13,8 +13,7 @@
       </div>
 
       <div class="dialog-body">
-        <div class="drawer-section">
-          <!-- 切换按钮组 -->
+        <div class="top-area">
           <div class="tab-buttons">
             <div
               v-if="hasTools"
@@ -23,147 +22,126 @@
             >
               {{ $t('generalAgent.config.tools') }}
             </div>
-            <!-- MCP 选择 -->
+            <template v-for="type in availableResourceTypes">
+              <div
+                :key="type"
+                v-if="shouldShowTab(type)"
+                :class="['tab-btn', { active: activeTab === type }]"
+                @click="activeTab = type"
+              >
+                {{ getTabLabel(type) }}
+              </div>
+            </template>
+          </div>
+          <div v-if="activeTab !== 'tools'" class="search-box">
+            <el-input
+              v-model="searchKeyword"
+              :placeholder="$t('common.input.searchPlaceholder')"
+              prefix-icon="el-icon-search"
+              clearable
+              size="small"
+            />
+          </div>
+        </div>
+        <div class="config-content">
+          <div v-if="activeTab === 'tools'" class="tool-categories">
             <div
-              v-if="hasMcp"
-              :class="['tab-btn', { active: activeTab === 'mcp' }]"
-              @click="activeTab = 'mcp'"
+              v-for="(category, categoryIndex) in toolList"
+              :key="category.category"
+              class="tool-category"
+              :class="{
+                'validation-error': validationErrors.has(categoryIndex),
+              }"
             >
-              {{ $t('generalAgent.config.mcp') }}
-            </div>
-            <!-- 工作流选择 -->
-            <div
-              v-if="hasWorkflows"
-              :class="['tab-btn', { active: activeTab === 'workflows' }]"
-              @click="activeTab = 'workflows'"
-            >
-              {{ $t('generalAgent.config.workflows') }}
-            </div>
-            <!-- Skills选择 -->
-            <div
-              v-if="hasSkills"
-              :class="['tab-btn', { active: activeTab === 'skills' }]"
-              @click="activeTab = 'skills'"
-            >
-              {{ $t('generalAgent.config.skills') }}
-            </div>
-            <!-- 智能体选择 -->
-            <div
-              v-if="hasAgents"
-              :class="['tab-btn', { active: activeTab === 'assistants' }]"
-              @click="activeTab = 'assistants'"
-            >
-              {{ $t('generalAgent.config.agents') }}
+              <div class="category-header">
+                <span class="category-name">{{ category.category }}</span>
+                <span
+                  v-if="validationErrors.has(categoryIndex)"
+                  class="error-tip"
+                >
+                  {{ $t('generalAgent.config.validationError') }}
+                </span>
+                <el-tag
+                  size="mini"
+                  :type="getConditionType(category.condition)"
+                >
+                  {{ getConditionLabel(category.condition) }}
+                </el-tag>
+              </div>
+              <div class="resource-list">
+                <div
+                  v-for="tool in category.toolList"
+                  :key="tool.toolId"
+                  :class="[
+                    'item-item',
+                    {
+                      selected: isItemSelected(tool.toolId),
+                    },
+                  ]"
+                  @click="handleToggleItem(tool)"
+                >
+                  <div class="item-avatar">
+                    <img
+                      v-if="tool.avatar?.path"
+                      :src="avatarSrc(tool.avatar.path)"
+                    />
+                    <i v-else class="el-icon-setting"></i>
+                  </div>
+                  <div class="item-info">
+                    <div class="item-name">{{ tool.toolName }}</div>
+                    <div class="item-desc">{{ tool.desc }}</div>
+                    <div v-if="needsApiKeyReminder(tool)" class="api-key-tip">
+                      <i class="el-icon-warning"></i>
+                      {{ $t('generalAgent.config.needApiKey') }}
+                    </div>
+                  </div>
+                  <el-checkbox
+                    :value="isItemSelected(tool.toolId)"
+                    @click.native.stop
+                    @change="handleToggleItem(tool)"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="config-content">
-            <!-- 工具列表 - 按分类展示 -->
-            <div v-if="activeTab === 'tools'" class="tool-categories">
-              <div
-                v-for="(category, categoryIndex) in toolList"
-                :key="category.category"
-                class="tool-category"
-                :class="{
-                  'validation-error': validationErrors.has(categoryIndex),
-                }"
-              >
-                <div class="category-header">
-                  <span class="category-name">{{ category.category }}</span>
-                  <span
-                    v-if="validationErrors.has(categoryIndex)"
-                    class="error-tip"
-                  >
-                    {{ $t('generalAgent.config.validationError') }}
-                  </span>
-                  <el-tag
-                    size="mini"
-                    :type="getConditionType(category.condition)"
-                  >
-                    {{ getConditionLabel(category.condition) }}
-                  </el-tag>
-                </div>
-                <div class="tool-list">
-                  <div
-                    v-for="tool in category.toolList"
-                    :key="tool.toolId"
-                    :class="[
-                      'tool-item',
-                      {
-                        selected: isItemSelected(tool.toolId),
-                      },
-                    ]"
-                    @click="handleToggleItem(tool)"
-                  >
-                    <div class="tool-avatar">
-                      <img
-                        v-if="tool.avatar?.path"
-                        :src="avatarSrc(tool.avatar.path)"
-                      />
-                      <i v-else class="el-icon-setting"></i>
-                    </div>
-                    <div class="tool-info">
-                      <div class="tool-name">{{ tool.toolName }}</div>
-                      <div class="tool-desc">{{ tool.desc }}</div>
-                      <!-- API Key 提示 -->
-                      <div
-                        v-if="
-                          tool.needApiKeyInput &&
-                          (!tool.apiKey || tool.apiKey === '')
-                        "
-                        class="api-key-tip"
-                      >
-                        <i class="el-icon-warning"></i>
-                        {{ $t('generalAgent.config.needApiKey') }}
-                      </div>
-                    </div>
-                    <el-checkbox
-                      :value="isItemSelected(tool.toolId)"
-                      @click.native.stop
-                      @change="handleToggleItem(tool)"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- MCP/工作流/智能体列表 - 统一渲染 -->
+          <div v-else-if="activeTab !== 'tools'" class="resource-list">
             <div
-              v-else-if="activeTab !== 'tools'"
-              :class="currentListConfig.className"
+              v-for="item in filteredList"
+              :key="item.id"
+              :class="[
+                'item-item',
+                {
+                  selected: isItemSelected(item.id),
+                },
+              ]"
+              @click="handleToggleItem(item)"
             >
-              <div
-                v-for="item in currentListConfig.list"
-                :key="item[currentListConfig.idField]"
-                :class="[
-                  'tool-item',
-                  {
-                    selected: isItemSelected(item[currentListConfig.idField]),
-                  },
-                ]"
-                @click="handleToggleItem(item)"
-              >
-                <div class="tool-avatar">
-                  <img
-                    v-if="item.avatar?.path"
-                    :src="avatarSrc(item.avatar.path)"
-                  />
-                  <i v-else :class="currentListConfig.iconClass"></i>
-                </div>
-                <div class="tool-info">
-                  <div class="tool-name">
-                    {{ item[currentListConfig.nameField] }}
-                  </div>
-                  <div class="tool-desc">
-                    {{ item[currentListConfig.descField] }}
-                  </div>
-                </div>
-                <el-checkbox
-                  :value="isItemSelected(item[currentListConfig.idField])"
-                  @click.native.stop
-                  @change="handleToggleItem(item)"
+              <div class="item-avatar">
+                <img
+                  v-if="item.avatar?.path"
+                  :src="avatarSrc(item.avatar.path)"
                 />
               </div>
+              <div class="item-info">
+                <div class="item-name">
+                  {{ item.name }}
+                </div>
+                <div v-if="item.author" class="item-desc">
+                  作者：{{ item.author }}
+                </div>
+                <div class="item-desc">
+                  {{ item.desc }}
+                </div>
+              </div>
+              <el-checkbox
+                :value="isItemSelected(item.id)"
+                @click.native.stop
+                @change="handleToggleItem(item)"
+              />
+            </div>
+            <div v-if="filteredList.length === 0" class="empty-tip">
+              {{ $t('common.noData') }}
             </div>
           </div>
         </div>
@@ -179,19 +157,18 @@
       </div>
     </el-dialog>
 
-    <!-- API Key 输入弹窗 -->
     <el-dialog
       :visible.sync="apiKeyModalVisible"
       width="500px"
       custom-class="api-key-dialog"
       :close-on-click-modal="false"
-      title="请输入 API Key"
+      :title="$t('generalAgent.config.apiKeyTitle')"
       @close="handleApiKeyModalClose"
     >
       <div class="api-key-input-container">
         <el-input
           v-model="apiKeyValue"
-          placeholder="请输入 API Key"
+          :placeholder="$t('generalAgent.config.apiKeyPlaceholder')"
           size="large"
           @keyup.enter.native="handleApiKeySubmit"
         />
@@ -216,10 +193,7 @@
 import { avatarSrc } from '@/utils/util';
 import {
   getGeneralAgentToolSelect,
-  getGeneralAgentAssistantSelect,
-  getGeneralAgentMcpSelect,
-  getGeneralAgentWorkflowSelect,
-  getGeneralAgentSkillSelect,
+  getGeneralAgentResourceSelect,
   updateGeneralAgentGlobalConfig,
   getGeneralAgentGlobalConfig,
 } from '@/api/generalAgent';
@@ -240,23 +214,17 @@ export default {
   data() {
     return {
       dialogVisible: this.visible,
-      activeTab: 'tools', // 当前激活的tab: tools | mcp | workflows | skills | assistants
+      activeTab: 'tools',
       toolList: [],
-      mcpList: [],
-      workflowList: [],
-      skillList: [],
-      assistantList: [],
+      resourceList: {},
       selectedTools: [],
-      selectedMcps: [],
-      selectedWorkflows: [],
-      selectedSkills: [],
-      selectedAssistants: [],
+      selectedResources: {},
       validationErrors: new Set(),
-      // API Key 弹窗相关状态
       apiKeyModalVisible: false,
       currentTool: null,
       apiKeyValue: '',
       submitting: false,
+      searchKeyword: '',
     };
   },
   mounted() {
@@ -275,59 +243,39 @@ export default {
     hasTools() {
       return this.toolList.length > 0;
     },
-    // 判断是否有 MCP 数据
-    hasMcp() {
-      return this.mcpList.length > 0;
-    },
-    // 判断是否有工作流数据
-    hasWorkflows() {
-      return this.workflowList.length > 0;
-    },
-    // 判断是否有Skills数据
-    hasSkills() {
-      return this.skillList.length > 0;
-    },
-    // 判断是否有智能体数据
-    hasAgents() {
-      return this.assistantList.length > 0;
+    // 动态获取所有可用的资源类型
+    availableResourceTypes() {
+      return Object.keys(this.resourceList).filter(
+        type => this.resourceList[type] && this.resourceList[type].length > 0,
+      );
     },
     // 当前列表配置（根据 activeTab 动态返回）
     currentListConfig() {
-      const configs = {
-        mcp: {
-          list: this.mcpList,
-          idField: 'mcpId',
-          nameField: 'name',
-          descField: 'description',
-          iconClass: 'el-icon-connection',
-          className: 'mcp-list',
-        },
-        workflows: {
-          list: this.workflowList,
-          idField: 'appId',
-          nameField: 'name',
-          descField: 'desc',
-          iconClass: 'el-icon-share',
-          className: 'workflow-list',
-        },
-        skills: {
-          list: this.skillList,
-          idField: 'skillId',
-          nameField: 'name',
-          descField: 'desc',
-          iconClass: 'el-icon-document',
-          className: 'skill-list',
-        },
-        assistants: {
-          list: this.assistantList,
-          idField: 'appId',
-          nameField: 'name',
-          descField: 'desc',
-          iconClass: 'el-icon-user',
-          className: 'assistant-list',
-        },
+      if (this.activeTab === 'tools') {
+        return {};
+      }
+
+      // 直接使用 activeTab 作为资源类型
+      const resourceType = this.activeTab;
+      if (!this.resourceList[resourceType]) {
+        return {};
+      }
+
+      return {
+        list: this.resourceList[resourceType],
+        type: resourceType,
       };
-      return configs[this.activeTab] || {};
+    },
+    // 过滤后的列表（支持搜索）
+    filteredList() {
+      if (!this.searchKeyword) {
+        return this.currentListConfig.list || [];
+      }
+      const keyword = this.searchKeyword.toLowerCase();
+      return (this.currentListConfig.list || []).filter(item => {
+        const name = item.name?.toLowerCase() || '';
+        return name.includes(keyword);
+      });
     },
   },
   methods: {
@@ -335,74 +283,73 @@ export default {
     async fetchAllData() {
       await Promise.allSettled([
         this.fetchToolList(),
-        this.fetchMcpList(),
-        this.fetchWorkflowList(),
-        this.fetchSkillList(),
-        this.fetchAssistantList(),
+        this.fetchResourceList(),
         this.fetchGlobalConfig(),
       ]);
-      // 加载完成后,自动选中第一个有数据的tab
       this.selectFirstAvailableTab();
     },
     // 自动选择第一个有数据的tab
     selectFirstAvailableTab() {
-      const tabs = ['tools', 'mcp', 'workflows', 'skills', 'assistants'];
-      for (const tab of tabs) {
-        if (this[`has${tab.charAt(0).toUpperCase() + tab.slice(1)}`]) {
-          this.activeTab = tab;
-          return;
-        }
+      // 如果有工具，优先选择 tools
+      if (this.hasTools) {
+        this.activeTab = 'tools';
+        return;
       }
+
+      // 否则选择第一个可用的资源类型
+      if (this.availableResourceTypes.length > 0) {
+        this.activeTab = this.availableResourceTypes[0];
+      }
+    },
+    // 判断是否应该显示某个 tab
+    shouldShowTab(resourceType) {
+      return (
+        this.resourceList[resourceType] &&
+        this.resourceList[resourceType].length > 0
+      );
+    },
+    // 获取 tab 标签文本
+    getTabLabel(resourceType) {
+      return this.$t(`generalAgent.config.${resourceType}`);
     },
     async fetchToolList() {
       const res = await getGeneralAgentToolSelect({ agentId: this.agentId });
       this.toolList = res?.data?.list || [];
     },
-    async fetchMcpList() {
-      const res = await getGeneralAgentMcpSelect();
-      this.mcpList = res?.data?.list || [];
-    },
-    async fetchWorkflowList() {
-      const res = await getGeneralAgentWorkflowSelect();
-      this.workflowList = res?.data?.list || [];
-    },
-    async fetchSkillList() {
-      const res = await getGeneralAgentSkillSelect();
-      this.skillList = res?.data?.list || [];
-    },
-    async fetchAssistantList() {
-      const res = await getGeneralAgentAssistantSelect();
-      this.assistantList = res?.data?.list || [];
+    async fetchResourceList() {
+      const res = await getGeneralAgentResourceSelect();
+      if (res?.data && Array.isArray(res.data)) {
+        this.resourceList = {};
+        this.selectedResources = {};
+
+        res.data.forEach(item => {
+          const { listType, list } = item;
+          if (listType && Array.isArray(list)) {
+            this.resourceList[listType] = list.map(resource => ({
+              ...resource,
+              resourceType: listType,
+            }));
+            this.selectedResources[listType] = [];
+          }
+        });
+      }
     },
     async fetchGlobalConfig() {
       const res = await getGeneralAgentGlobalConfig();
       if (res.data) {
-        // 初始化已选中的工具
         this.selectedTools = (res.data.toolList || []).map(tool => ({
           toolId: tool.toolId,
           toolType: tool.toolType,
         }));
-        // 初始化已选中的 MCP
-        this.selectedMcps = (res.data.mcpList || []).map(mcp => ({
-          mcpId: mcp.mcpId,
-          mcpType: mcp.toolType,
-        }));
-        // 初始化已选中的工作流
-        this.selectedWorkflows = (res.data.workflowList || []).map(
-          workflow => ({
-            workflowId: workflow.workflowId,
-          }),
-        );
-        // 初始化已选中的Skills
-        this.selectedSkills = (res.data.skillList || []).map(skill => ({
-          skillId: skill.skillId,
-        }));
-        // 初始化已选中的智能体
-        this.selectedAssistants = (res.data.assistantList || []).map(
-          assistant => ({
-            assistantId: assistant.assistantId,
-          }),
-        );
+
+        Object.keys(this.resourceList).forEach(type => {
+          const listKey = `${type}List`;
+          this.selectedResources[type] = (res.data[listKey] || []).map(
+            item => ({
+              id: item.id,
+            }),
+          );
+        });
       }
     },
     handleClose() {
@@ -410,7 +357,6 @@ export default {
       this.$emit('update:visible', false);
     },
 
-    // 验证工具选择并处理错误状态
     validateTools() {
       if (!this.hasTools) {
         this.validationErrors.clear();
@@ -419,14 +365,12 @@ export default {
 
       const errors = new Set();
 
-      // 验证每个分类的选择条件
       this.toolList.forEach((category, index) => {
         const selectedInCategory = category.toolList.filter(tool =>
           this.isItemSelected(tool.toolId, 'tools'),
         ).length;
         const totalInCategory = category.toolList.length;
 
-        // 验证 condition
         if (
           (category.condition === 'required' &&
             selectedInCategory !== totalInCategory) ||
@@ -436,7 +380,6 @@ export default {
         }
       });
 
-      // 处理验证结果
       if (errors.size > 0) {
         this.activeTab = 'tools';
         this.validationErrors = errors;
@@ -444,7 +387,6 @@ export default {
         return false;
       }
 
-      // 验证通过，清除错误状态
       this.validationErrors.clear();
       return true;
     },
@@ -454,15 +396,13 @@ export default {
         return;
       }
 
-      // 收集所有选中的工具（遍历所有分类）
       const allSelectedTools = [];
-      const toolsWithoutApiKey = []; // 记录没有 API Key 的工具
+      const toolsWithoutApiKey = [];
 
       this.toolList.forEach(category => {
         category.toolList.forEach(tool => {
           if (this.isItemSelected(tool.toolId, 'tools')) {
-            // 检查需要 API Key 的工具是否已配置
-            if (tool.needApiKeyInput && (!tool.apiKey || tool.apiKey === '')) {
+            if (this.needsApiKeyReminder(tool)) {
               toolsWithoutApiKey.push(tool.toolName);
             } else {
               allSelectedTools.push({
@@ -474,7 +414,6 @@ export default {
         });
       });
 
-      // 如果有工具缺少 API Key，提醒用户
       if (toolsWithoutApiKey.length > 0) {
         this.$message.warning(
           this.$t('generalAgent.config.missingApiKey', {
@@ -484,66 +423,31 @@ export default {
         return;
       }
 
-      // 收集所有选中的 MCP
-      const allSelectedMcps = [];
-      this.mcpList.forEach(mcp => {
-        if (this.isItemSelected(mcp.mcpId, 'mcp')) {
-          allSelectedMcps.push({
-            mcpId: mcp.mcpId,
-            mcpType: mcp.toolType,
-          });
-        }
+      const selectedResourcesMap = {};
+      Object.keys(this.resourceList).forEach(type => {
+        const selectedList = [];
+        this.resourceList[type].forEach(item => {
+          if (this.isItemSelected(item.id, type)) {
+            selectedList.push({
+              id: item.id,
+            });
+          }
+        });
+        selectedResourcesMap[type] = selectedList;
       });
 
-      // 收集所有选中的工作流
-      const allSelectedWorkflows = [];
-      this.workflowList.forEach(workflow => {
-        if (this.isItemSelected(workflow.appId, 'workflows')) {
-          allSelectedWorkflows.push({
-            workflowId: workflow.appId,
-          });
-        }
-      });
-
-      // 收集所有选中的Skills
-      const allSelectedSkills = [];
-      this.skillList.forEach(skill => {
-        if (this.isItemSelected(skill.skillId, 'skills')) {
-          allSelectedSkills.push({
-            skillId: skill.skillId,
-          });
-        }
-      });
-
-      // 收集所有选中的智能体
-      const allSelectedAssistants = [];
-      this.assistantList.forEach(assistant => {
-        const assistantId = assistant.appId;
-        if (this.isItemSelected(assistantId, 'assistants')) {
-          allSelectedAssistants.push({
-            assistantId: assistantId,
-          });
-        }
-      });
-
-      const res = await updateGeneralAgentGlobalConfig({
+      const submitData = {
         toolList: allSelectedTools,
-        mcpList: allSelectedMcps,
-        workflowList: allSelectedWorkflows,
-        skillList: allSelectedSkills,
-        assistantList: allSelectedAssistants,
-      });
+        mcpList: selectedResourcesMap.mcp || [],
+        workflowList: selectedResourcesMap.workflow || [],
+        skillList: selectedResourcesMap.skill || [],
+        assistantList: selectedResourcesMap.assistant || [],
+      };
+
+      const res = await updateGeneralAgentGlobalConfig(submitData);
 
       if (res.code === 0) {
         this.$message.success(this.$t('generalAgent.config.saveSuccess'));
-        // 触发确认事件,传递选中的工具和智能体列表
-        this.$emit('confirm', {
-          tools: allSelectedTools,
-          mcps: allSelectedMcps,
-          workflows: allSelectedWorkflows,
-          skills: allSelectedSkills,
-          assistants: allSelectedAssistants,
-        });
         this.handleClose();
       } else {
         this.$message.error(res.msg);
@@ -555,49 +459,32 @@ export default {
       if (itemType === 'tools') {
         return this.selectedTools.some(t => t.toolId === itemId);
       }
-      if (itemType === 'mcp') {
-        return this.selectedMcps.some(m => m.mcpId === itemId);
+      if (this.selectedResources[itemType]) {
+        return this.selectedResources[itemType].some(r => r.id === itemId);
       }
-      if (itemType === 'workflows') {
-        return this.selectedWorkflows.some(w => w.workflowId === itemId);
-      }
-      if (itemType === 'skills') {
-        return this.selectedSkills.some(s => s.skillId === itemId);
-      }
-      // 智能体的选中状态判断
-      return this.selectedAssistants.some(a => a.assistantId === itemId);
+      return false;
     },
 
     handleToggleItem(item) {
       if (this.activeTab === 'tools') {
         this.handleToggleTool(item);
-      } else if (this.activeTab === 'mcp') {
-        this.handleToggleMcp(item);
-      } else if (this.activeTab === 'workflows') {
-        this.handleToggleWorkflow(item);
-      } else if (this.activeTab === 'skills') {
-        this.handleToggleSkill(item);
       } else {
-        this.handleToggleAssistant(item);
+        this.handleToggleResource(item, this.currentListConfig.type);
       }
     },
 
     handleToggleTool(tool) {
-      // 如果需要 API Key（apiKey 为空），则弹出输入框
-      if (tool.needApiKeyInput && (!tool.apiKey || tool.apiKey === '')) {
+      if (this.needsApiKeyReminder(tool)) {
         this.currentTool = tool;
         this.apiKeyModalVisible = true;
         this.apiKeyValue = '';
         return;
       }
 
-      // 在选中状态中切换
       const index = this.selectedTools.findIndex(t => t.toolId === tool.toolId);
       if (index > -1) {
-        // 已选中，取消选中
         this.selectedTools.splice(index, 1);
       } else {
-        // 未选中，添加选中
         this.selectedTools.push({
           toolId: tool.toolId,
           toolType: tool.toolType,
@@ -619,13 +506,11 @@ export default {
 
       this.submitting = true;
       try {
-        // 调用更新 API Key 的接口
         await changeApiKey({
           apiKey: this.apiKeyValue,
           toolSquareId: toolId,
         });
 
-        // 更新工具列表中的 apiKey
         this.updateToolApiKeyInList(toolId, this.apiKeyValue);
 
         this.$message.success(this.$t('generalAgent.config.apiKeySaveSuccess'));
@@ -633,7 +518,6 @@ export default {
         this.currentTool = null;
         this.apiKeyValue = '';
 
-        // API Key 设置成功后，自动选中该工具
         const index = this.selectedTools.findIndex(t => t.toolId === toolId);
         if (index === -1) {
           this.selectedTools.push({
@@ -651,69 +535,16 @@ export default {
       }
     },
 
-    handleToggleAssistant(assistant) {
-      // 智能体使用 appId 作为标识
-      const assistantId = assistant.appId;
-      // 在选中状态中切换
-      const index = this.selectedAssistants.findIndex(
-        a => a.assistantId === assistantId,
-      );
-      if (index > -1) {
-        // 已选中，取消选中
-        this.selectedAssistants.splice(index, 1);
-      } else {
-        // 未选中，添加选中
-        this.selectedAssistants.push({
-          assistantId: assistantId,
-        });
-      }
-    },
+    handleToggleResource(item, resourceType) {
+      const itemId = item.id;
+      const selectedList = this.selectedResources[resourceType];
 
-    handleToggleMcp(mcp) {
-      // 在选中状态中切换
-      const index = this.selectedMcps.findIndex(m => m.mcpId === mcp.mcpId);
+      const index = selectedList.findIndex(r => r.id === itemId);
       if (index > -1) {
-        // 已选中，取消选中
-        this.selectedMcps.splice(index, 1);
+        selectedList.splice(index, 1);
       } else {
-        // 未选中，添加选中
-        this.selectedMcps.push({
-          mcpId: mcp.mcpId,
-          mcpType: mcp.toolType,
-        });
-      }
-    },
-
-    handleToggleWorkflow(workflow) {
-      // 工作流使用 appId 作为标识
-      const workflowId = workflow.appId;
-      // 在选中状态中切换
-      const index = this.selectedWorkflows.findIndex(
-        w => w.workflowId === workflowId,
-      );
-      if (index > -1) {
-        // 已选中，取消选中
-        this.selectedWorkflows.splice(index, 1);
-      } else {
-        // 未选中，添加选中
-        this.selectedWorkflows.push({
-          workflowId: workflowId,
-        });
-      }
-    },
-
-    handleToggleSkill(skill) {
-      // Skills使用 skillId 作为标识
-      const skillId = skill.skillId;
-      // 在选中状态中切换
-      const index = this.selectedSkills.findIndex(s => s.skillId === skillId);
-      if (index > -1) {
-        // 已选中，取消选中
-        this.selectedSkills.splice(index, 1);
-      } else {
-        // 未选中，添加选中
-        this.selectedSkills.push({
-          skillId: skillId,
+        selectedList.push({
+          id: itemId,
         });
       }
     },
@@ -787,63 +618,67 @@ export default {
   }
 
   .dialog-body {
-    overflow-y: auto;
-    padding: 16px 20px;
+    padding: 16px 20px 0 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .top-area {
+      background: #fff;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .tab-buttons {
+        display: flex;
+        gap: 12px;
+
+        .tab-btn {
+          padding: 8px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          color: #666;
+          background: #fff;
+          border: 1px solid #e4e7ed;
+          cursor: pointer;
+          transition: all 0.2s;
+          user-select: none;
+
+          &:hover {
+            border-color: #409eff;
+            color: #409eff;
+          }
+
+          &.active {
+            background: #409eff;
+            border-color: #409eff;
+            color: #fff;
+            font-weight: 500;
+          }
+        }
+      }
+
+      .search-box {
+        margin-left: auto;
+
+        .el-input {
+          max-width: 300px;
+        }
+      }
+    }
+    .config-content {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
   }
 
   .dialog-footer {
+    padding-top: 16px;
     text-align: right;
-    padding: 16px 20px;
     border-top: 1px solid #e5e5e5;
-  }
-
-  .drawer-section {
-    margin-bottom: 24px;
-
-    .tab-buttons {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-
-      .tab-btn {
-        padding: 8px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        color: #666;
-        background: #fff;
-        border: 1px solid #e4e7ed;
-        cursor: pointer;
-        transition: all 0.2s;
-        user-select: none;
-
-        &:hover {
-          border-color: #409eff;
-          color: #409eff;
-        }
-
-        &.active {
-          background: #409eff;
-          border-color: #409eff;
-          color: #fff;
-          font-weight: 500;
-        }
-      }
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #1a1a1a;
-
-      i {
-        font-size: 16px;
-        color: #10a37f;
-      }
-    }
   }
 
   .tool-categories {
@@ -881,18 +716,20 @@ export default {
     }
   }
 
-  // 合并所有列表样式（工具、MCP、工作流、Skills、智能体）
-  .tool-list,
-  .mcp-list,
-  .workflow-list,
-  .skill-list,
-  .assistant-list {
+  .resource-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    .empty-tip {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 13px;
+    }
   }
 
-  .tool-item {
+  .item-item {
     display: flex;
     align-items: center;
     padding: 10px 12px;
@@ -911,7 +748,7 @@ export default {
       border-color: rgba(16, 163, 127, 0.2);
     }
 
-    .tool-avatar {
+    .item-avatar {
       width: 36px;
       height: 36px;
       border-radius: 8px;
@@ -935,18 +772,18 @@ export default {
       }
     }
 
-    .tool-info {
+    .item-info {
       flex: 1;
       min-width: 0;
 
-      .tool-name {
+      .item-name {
         font-size: 14px;
         font-weight: 500;
         color: #1a1a1a;
         margin-bottom: 2px;
       }
 
-      .tool-desc {
+      .item-desc {
         font-size: 12px;
         color: #666;
         overflow: hidden;
@@ -977,37 +814,7 @@ export default {
   }
 }
 
-.tool-tooltip-popper {
-  max-width: 360px !important;
-  padding: 0 !important;
-  border: 1px solid #e4e7ed !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-  border-radius: 8px !important;
-}
 
-.tool-detail-tooltip {
-  padding: 12px 14px;
-
-  .tooltip-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .tooltip-desc {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-}
-
-// API Key 弹窗样式
 .api-key-dialog {
   .el-dialog__body {
     padding: 20px;

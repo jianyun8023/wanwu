@@ -5,20 +5,6 @@ import { store } from '@/store';
 // 基础路径
 const BASE_URL = `${SERVICE_API}/general/agent`;
 
-// ==================== 智能体选择 ====================
-
-/**
- * 获取智能体选择列表
- * @param {string} name - 智能体名称（可选）
- */
-export const getGeneralAgentAssistantSelect = params => {
-  return service({
-    url: `${BASE_URL}/assistant/select`,
-    method: 'get',
-    params,
-  });
-};
-
 // ==================== 工具选择 ====================
 
 /**
@@ -42,6 +28,29 @@ export const getGeneralAgentToolSelect = params => {
 export const getGeneralAgentToolInfo = params => {
   return service({
     url: `${BASE_URL}/tool/info`,
+    method: 'get',
+    params,
+  });
+};
+
+/**
+ * 获取全局配置选择列表
+ */
+export const getGeneralAgentResourceSelect = params => {
+  return service({
+    url: `${BASE_URL}/resource/select`,
+    method: 'get',
+    params,
+  });
+};
+
+/**
+ * 获取智能体选择列表
+ * @param {string} name - 智能体名称（可选）
+ */
+export const getGeneralAgentAssistantSelect = params => {
+  return service({
+    url: `${BASE_URL}/assistant/select`,
     method: 'get',
     params,
   });
