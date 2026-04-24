@@ -179,16 +179,17 @@ func ChatRag(ctx *gin.Context) {
 	userID := getUserID(ctx)
 	orgID := getOrgID(ctx)
 
-	// 流式
+	// 流式 —— openapi 固定走 legacy 格式（原 rag-service SSE JSON 透传），
+	// 不跟随 web 的 AG-UI 协议改造，避免破坏外部集成方的解析逻辑
 	if req.Stream {
-		if err := service.ChatRagStream(ctx, userID, orgID, request.ChatRagRequest{RagID: req.UUID, Question: req.Query, History: req.History}, true, constant.AppStatisticSourceOpenAPI); err != nil {
+		if err := service.ChatRagStreamLegacy(ctx, userID, orgID, request.ChatRagRequest{RagID: req.UUID, Question: req.Query, History: req.History}, true, constant.AppStatisticSourceOpenAPI); err != nil {
 			gin_util.Response(ctx, nil, err)
 		}
 		return
 	}
 	// 非流式
 	startTime := time.Now()
-	chatCh, err := service.CallRagChatStream(ctx, userID, orgID, request.ChatRagRequest{RagID: req.UUID, Question: req.Query, History: req.History}, true)
+	chatCh, _, err := service.CallRagChatStream(ctx, userID, orgID, request.ChatRagRequest{RagID: req.UUID, Question: req.Query, History: req.History}, true)
 	if err != nil {
 		service.RecordAppStatistic(ctx.Request.Context(), userID, orgID, req.UUID, constant.AppTypeRag, false, false, 0, 0, constant.AppStatisticSourceOpenAPI)
 		gin_util.Response(ctx, nil, err)
