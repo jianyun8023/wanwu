@@ -58,12 +58,12 @@ func FileExt(filePath string) string {
 }
 
 func NewRandomFile(fileName string) string {
-	extension := extractExtension(fileName)
+	extension := ExtractExtension(fileName)
 	return uuid.New().String() + extension
 }
 
-// extractExtension 从路径或 URL 中安全提取扩展名（包含点号）
-func extractExtension(raw string) string {
+// ExtractExtension 从路径或 URL 中安全提取扩展名（包含点号）
+func ExtractExtension(raw string) string {
 	// 1. 尝试解析为 URL
 	u, err := url.Parse(raw)
 	if err == nil && (u.Scheme != "" || u.Host != "" || strings.Contains(raw, "?")) {
