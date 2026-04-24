@@ -86,6 +86,9 @@ func Init(r *gin.Engine) {
 	// exploration.template
 	mid.Sub("exploration").NewSub("template", "模板广场", route.PermNeedCheck, true, true)
 
+	// exploration.skill
+	mid.Sub("exploration").NewSub("skill", "Skill广场", route.PermNeedCheck, true, true)
+
 	// --- operation ---
 	mid.NewSub("operation", "运营管理", route.PermNeedCheck, true, true, JWTUser, CheckUserPerm)
 

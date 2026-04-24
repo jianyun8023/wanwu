@@ -20,8 +20,8 @@ func (s *Service) CustomSkillCreate(ctx context.Context, req *mcp_service.Custom
 		Markdown:   req.Markdown,
 		SaveId:     req.SaveId,
 		SourceType: req.SourceType,
-		UserId:     req.Identity.UserId,
-		OrgId:      req.Identity.OrgId,
+		UserID:     req.Identity.UserId,
+		OrgID:      req.Identity.OrgId,
 	})
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)

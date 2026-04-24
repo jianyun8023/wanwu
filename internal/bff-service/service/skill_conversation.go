@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -377,7 +378,8 @@ func buildSkillChatDoneProcessor(ctx *gin.Context, userId, orgId string, req req
 			return err
 		}
 		// 构建文件访问路径并添加到响应中
-		fileUrl, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, minio.DirFileExpire, fileName)
+		objectPath := path.Join(minio.BucketFileUpload, minio.DirFileExpire, fileName)
+		fileUrl, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, objectPath)
 		lastSSE.ResponseFiles = append(lastSSE.ResponseFiles, &response.AssistantResponseFile{
 			FileName: fileName,
 			FileSize: int64(len(zipBytes)),
