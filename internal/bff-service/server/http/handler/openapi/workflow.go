@@ -99,6 +99,58 @@ func GetConversationMessageList(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, nil)
 }
 
+// DeleteChatflowConversation
+//
+//	@Tags			openapi
+//	@Summary		对话流删除会话OpenAPI
+//	@Description	对话流删除会话OpenAPI
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.OpenAPIChatflowDeleteConversationRequest	true	"请求参数"
+//	@Success		200		{object}	response.Response{}
+//	@Router			/chatflow/conversation [delete]
+func DeleteChatflowConversation(ctx *gin.Context) {
+	var req request.OpenAPIChatflowDeleteConversationRequest
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	userID := getUserID(ctx)
+	orgID := getOrgID(ctx)
+
+	err := service.DeleteChatflowConversationByConvId(ctx, userID, orgID, req.UUID, req.ConversationId)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	gin_util.Response(ctx, nil, nil)
+}
+
+// GetChatflowConversationList
+//
+//	@Tags			openapi
+//	@Summary		对话流获取会话列表OpenAPI
+//	@Description	对话流获取会话列表OpenAPI
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.OpenAPIChatflowGetConversationListRequest	true	"请求参数"
+//	@Success		200		{object}	response.Response{data=response.OpenAPIChatflowConversationListResponse}
+//	@Router			/chatflow/conversation/list [post]
+func GetChatflowConversationList(ctx *gin.Context) {
+	var req request.OpenAPIChatflowGetConversationListRequest
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	userID := getUserID(ctx)
+	orgID := getOrgID(ctx)
+
+	resp, err := service.GetChatflowConversationList(ctx, userID, orgID, req.UUID)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	gin_util.Response(ctx, resp, nil)
+}
+
 // ChatflowChat
 //
 //	@Tags			openapi

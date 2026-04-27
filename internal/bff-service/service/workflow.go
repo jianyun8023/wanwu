@@ -680,9 +680,14 @@ type workflowImportData struct {
 }
 
 func workflowHttpReqHeader(ctx *gin.Context) map[string]string {
+	// X-Org-Id 优先从 gin.Context 读取（中间件已设置），如果没有则从 header 读取
+	orgID := ctx.GetString(gin_util.X_ORG_ID)
+	if orgID == "" {
+		orgID = ctx.GetHeader(gin_util.X_ORG_ID)
+	}
 	return map[string]string{
 		"Authorization": ctx.GetHeader("Authorization"),
-		"X-Org-Id":      ctx.GetHeader(gin_util.X_ORG_ID),
+		"X-Org-Id":      orgID,
 		"X-User-Id":     ctx.GetString(gin_util.USER_ID),
 		"Content-Type":  "application/json",
 	}

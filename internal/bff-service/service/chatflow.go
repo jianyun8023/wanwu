@@ -55,6 +55,28 @@ func CreateChatflow(ctx *gin.Context, orgID, name, desc, iconUri string) (*respo
 func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, conversationName string) (*response.OpenAPIChatflowCreateConversationResponse, error) {
 	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.CreateChatflowConversationUri)
 	ret := &response.CozeCreateConversationResponse{}
+
+	// 1. 先查询是否已有 appId
+	appInfo, _ := app.GetChatflowApplication(ctx, &app_service.GetChatflowApplicationReq{
+		OrgId:      orgId,
+		UserId:     userId,
+		WorkflowId: workflowId,
+	})
+
+	// 2. 构建请求
+	body := map[string]any{
+		"conversation_name": conversationName,
+		"connector_id":      "1024",
+		"draft_mode":        false,
+		"get_or_create":     true,
+		"workflow_id":       workflowId,
+	}
+
+	// 3. 如果已有 appId，传给接口复用
+	if appInfo.ApplicationId != "" {
+		body["app_id"] = appInfo.ApplicationId
+	}
+
 	if resp, err := resty.New().
 		R().
 		SetContext(ctx).
@@ -64,13 +86,7 @@ func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, con
 		SetQueryParams(map[string]string{
 			"space_id": orgId,
 		}).
-		SetBody(map[string]any{
-			"conversation_name": conversationName,
-			"connector_id":      "1024",
-			"draft_mode":        false,
-			"get_or_create":     true,
-			"workflow_id":       workflowId,
-		}).
+		SetBody(body).
 		SetResult(ret).
 		Post(url); err != nil {
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_chatflow_conversation_create", err.Error())
@@ -79,8 +95,11 @@ func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, con
 	} else if ret.Code != 0 {
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_chatflow_conversation_create", fmt.Sprintf("code %v msg %v", ret.Code, ret.Msg))
 	}
+
+	appId := ret.ConversationData.MetaData["appId"]
+
 	_, err := app.CreateConversation(ctx, &app_service.CreateConversationReq{
-		AppId:            ret.ConversationData.MetaData["appId"],
+		AppId:            appId,
 		AppType:          constant.AppTypeChatflow,
 		ConversationId:   strconv.Itoa(int(ret.ConversationData.Id)),
 		ConversationName: conversationName,
@@ -90,6 +109,20 @@ func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, con
 	if err != nil {
 		return nil, err
 	}
+
+	// 4. 首次创建时保存 workflowId 和 appId 的关联关系
+	if appInfo.ApplicationId == "" {
+		_, err = app.CreateChatflowApplication(ctx, &app_service.CreateChatflowApplicationReq{
+			WorkflowId:    workflowId,
+			ApplicationId: appId,
+			UserId:        userId,
+			OrgId:         orgId,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &response.OpenAPIChatflowCreateConversationResponse{
 		ConversationId: strconv.Itoa(int(ret.ConversationData.Id)),
 	}, nil
@@ -393,6 +426,102 @@ func DeleteChatflowConversation(ctx *gin.Context, orgId, projectId, uniqueId str
 		return nil
 	}
 	return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_delete_chatflow_conversation", "delete chatflow conversation failed")
+}
+
+func GetProjectConversationList(ctx *gin.Context, orgId, projectId string) ([]*response.CozeProjectConversationItem, error) {
+	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.ListProjectConversationUri)
+	ret := &response.CozeListProjectConversationResponse{}
+	if resp, err := resty.New().
+		R().
+		SetContext(ctx).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeaders(workflowHttpReqHeader(ctx)).
+		SetQueryParams(map[string]string{
+			"project_id":    projectId,
+			"create_method": "2",
+			"create_env":    "2",
+			"limit":         "1000",
+			"connector_id":  "1024",
+			"space_id":      orgId,
+		}).
+		SetResult(ret).
+		Get(url); err != nil {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", err.Error())
+	} else if resp.StatusCode() >= 300 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("[%v] code %v msg %v", resp.StatusCode(), ret.Code, ret.Msg))
+	} else if ret.Code != 0 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("code %v msg %v", ret.Code, ret.Msg))
+	}
+	return ret.Data, nil
+}
+
+func DeleteChatflowConversationByConvId(ctx *gin.Context, userId, orgId, workflowId, conversationId string) error {
+	// 1. 获取 applicationId (projectId)
+	appInfo, err := app.GetChatflowApplication(ctx, &app_service.GetChatflowApplicationReq{
+		OrgId:      orgId,
+		UserId:     userId,
+		WorkflowId: workflowId,
+	})
+	if err != nil {
+		return err
+	}
+	if appInfo.ApplicationId == "" {
+		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_delete_chatflow_conversation_by_conv_id", "application not found")
+	}
+
+	// 2. 获取会话列表，通过 conversationId 找到 uniqueId
+	conversations, err := GetProjectConversationList(ctx, orgId, appInfo.ApplicationId)
+	if err != nil {
+		return err
+	}
+
+	var uniqueId string
+	for _, conv := range conversations {
+		if conv.ConversationID == conversationId {
+			uniqueId = conv.UniqueID
+			break
+		}
+	}
+	if uniqueId == "" {
+		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_delete_chatflow_conversation_by_conv_id", "conversation not found")
+	}
+
+	// 3. 调用删除接口
+	return DeleteChatflowConversation(ctx, orgId, appInfo.ApplicationId, uniqueId)
+}
+
+func GetChatflowConversationList(ctx *gin.Context, userId, orgId, workflowId string) (*response.OpenAPIChatflowConversationListResponse, error) {
+	// 1. 获取 applicationId (projectId)
+	appInfo, err := app.GetChatflowApplication(ctx, &app_service.GetChatflowApplicationReq{
+		OrgId:      orgId,
+		UserId:     userId,
+		WorkflowId: workflowId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if appInfo.ApplicationId == "" {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_chatflow_conversation_list", "application not found")
+	}
+
+	// 2. 获取会话列表
+	conversations, err := GetProjectConversationList(ctx, orgId, appInfo.ApplicationId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 转换为 OpenAPI 响应格式
+	result := &response.OpenAPIChatflowConversationListResponse{
+		Conversations: make([]*response.OpenAPIChatflowConversationItem, 0, len(conversations)),
+	}
+	for _, conv := range conversations {
+		result.Conversations = append(result.Conversations, &response.OpenAPIChatflowConversationItem{
+			ConversationID:   conv.ConversationID,
+			ConversationName: conv.ConversationName,
+		})
+	}
+	return result, nil
 }
 
 // --- internal ---

@@ -287,6 +287,7 @@ workflow:
   get_project_conversation_def: /api/workflow_api/project_conversation/create_by_wanwu
   get_conversation_message_list_uri: /v1/conversation/message/list_by_wanwu
   delete_conversation_uri: /api/workflow_api/project_conversation/delete_by_wanwu
+  list_project_conversation_uri: /api/workflow_api/project_conversation/list
   # upload
   upload_action_uri: /api/common/upload/apply_upload_action
   upload_common_uri: /api/common/upload

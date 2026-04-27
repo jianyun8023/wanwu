@@ -240,6 +240,7 @@ type WorkflowServiceConfig struct {
 	GetDraftIntelligenceInfoUri   string `json:"get_draft_intelligence_info_uri" mapstructure:"get_draft_intelligence_info_uri"`
 	DeleteConversationUri         string `json:"delete_conversation_uri" mapstructure:"delete_conversation_uri"`
 	GetProjectConversationDef     string `json:"get_project_conversation_def" mapstructure:"get_project_conversation_def"`
+	ListProjectConversationUri    string `json:"list_project_conversation_uri" mapstructure:"list_project_conversation_uri"`
 	// upload
 	UploadActionUri string `json:"upload_action_uri" mapstructure:"upload_action_uri"`
 	UploadCommonUri string `json:"upload_common_uri" mapstructure:"upload_common_uri"`
