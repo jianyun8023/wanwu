@@ -181,6 +181,28 @@
                   </div>
                 </el-descriptions-item>
                 <el-descriptions-item
+                  v-if="graphLlmModel"
+                  :label="$t('knowledgeManage.graph.graphModel')"
+                  labelStyle="width: 120px"
+                >
+                  <div class="keyword-tags">
+                    {{ graphLlmModel.displayName }}
+                    <template
+                      v-if="graphLlmModel.tags && graphLlmModel.tags.length > 0"
+                    >
+                      <el-tag
+                        v-for="(item, index) in graphLlmModel.tags"
+                        :key="index"
+                        class="keyword-tag"
+                        color="#E6F0FF"
+                        size="small"
+                      >
+                        {{ item.text }}
+                      </el-tag>
+                    </template>
+                  </div>
+                </el-descriptions-item>
+                <el-descriptions-item
                   :label="$t('knowledgeManage.keyWordConfig')"
                   labelStyle="width: 120px"
                 >
@@ -485,6 +507,7 @@ import {
 import exportRecord from '@/views/knowledge/qaDatabase/exportRecord.vue';
 import CopyIcon from '@/components/copyIcon.vue';
 import createKnowledge from '@/views/knowledge/component/create.vue';
+import { selectModelList } from '@/api/modelAccess';
 
 export default {
   components: {
@@ -507,6 +530,7 @@ export default {
       embeddingModel: {},
       keywords: [],
       llmModelId: '',
+      graphLlmModel: null, // 知识图谱解析模型信息
       loading: false,
       tableLoading: false,
       docQuery: {
@@ -1012,9 +1036,23 @@ export default {
         this.embeddingModel = tableInfo.docKnowledgeInfo.embeddingModel;
         this.keywords = tableInfo.docKnowledgeInfo.keywords;
         this.llmModelId = tableInfo.docKnowledgeInfo.llmModelId;
+        // 如果开启了知识图谱且有大模型ID，则查询模型详情
+        if (this.graphSwitch && this.llmModelId) {
+          selectModelList().then(res => {
+            if (res.code === 0 && res.data.list) {
+              const model = res.data.list.find(
+                item => item.modelId === this.llmModelId,
+              );
+              this.graphLlmModel = model || null;
+            }
+          });
+        } else {
+          this.graphLlmModel = null;
+        }
       } else {
         this.graphSwitch = false;
         this.showGraphReport = false;
+        this.graphLlmModel = null;
       }
     },
   },
