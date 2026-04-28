@@ -26,17 +26,17 @@ func GetSquareSkillList(ctx *gin.Context, userId, orgId, name string) (*response
 		skillsCfgList = append(skillsCfgList, skillsCfg)
 	}
 
-	// 查询当前用户已添加的 joiner skill，计算 isShared
+	// 查询当前用户已添加的 acquired skill，计算 isShared
 	sharedMap := make(map[string]bool)
 	if len(skillsCfgList) > 0 {
-		joinerResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
+		acquiredResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
 			Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 		})
 		if err != nil {
 			return nil, err
 		}
-		if joinerResp != nil {
-			for _, skill := range joinerResp.List {
+		if acquiredResp != nil {
+			for _, skill := range acquiredResp.List {
 				sharedMap[skill.SquareSkillId] = true
 			}
 		}
@@ -107,14 +107,14 @@ func GetSquareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*res
 
 	// 查询当前用户是否已添加该skill
 	isShared := false
-	joinerResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
+	acquiredResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
 		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if joinerResp != nil {
-		for _, skill := range joinerResp.List {
+	if acquiredResp != nil {
+		for _, skill := range acquiredResp.List {
 			if skill.SquareSkillId == skillId {
 				isShared = true
 				break
