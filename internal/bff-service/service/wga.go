@@ -73,68 +73,82 @@ func buildGeneralAgentUploadLimit(fileType, extStr string, maxSize int) *respons
 }
 
 func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
-	// 校验 assistant 配置
-	assistantList := make([]*assistant_service.WgaConfigAssistant, 0, len(req.AssistantList))
-	for _, a := range req.AssistantList {
+	// 解析请求，转换为内部格式
+	var assistantList []*assistant_service.WgaConfigAssistant
+	var toolList []*assistant_service.WgaConfigTool
+	var mcpList []*assistant_service.WgaConfigMcp
+	var workflowList []*assistant_service.WgaConfigWorkflow
+	var skillList []*assistant_service.WgaConfigSkill
+	var toolIds []string
+
+	// 处理 assistant
+	for _, item := range req.Assistant {
 		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
-			AssistantId:   a.AssistantID,
+			AssistantId:   item.ID,
 			AssistantType: util.Int2Str(constant.AgentCategorySingle), // 默认单智能体
 		})
 	}
+
+	// 处理 tool
+	for _, item := range req.Tool {
+		toolList = append(toolList, &assistant_service.WgaConfigTool{
+			ToolId:   item.ID,
+			ToolType: item.Type,
+		})
+		if item.Type == constant.ToolTypeBuiltIn {
+			toolIds = append(toolIds, item.ID)
+		}
+	}
+
+	// 处理 mcp
+	for _, item := range req.Mcp {
+		mcpList = append(mcpList, &assistant_service.WgaConfigMcp{
+			McpId:   item.ID,
+			McpType: item.Type,
+		})
+	}
+
+	// 处理 workflow
+	for _, item := range req.Workflow {
+		workflowList = append(workflowList, &assistant_service.WgaConfigWorkflow{
+			WorkflowId: item.ID,
+		})
+	}
+
+	// 处理 skill
+	for _, item := range req.Skill {
+		skillList = append(skillList, &assistant_service.WgaConfigSkill{
+			SkillId:   item.ID,
+			SkillType: constant.SkillTypeCustom, // 默认自定义技能,
+		})
+	}
+
+	// 校验 assistant 配置
 	if err := checkWgaAssistantConfig(ctx, userId, orgId, assistantList); err != nil {
 		return err
 	}
 
 	// 校验 tool 配置
-	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
-	toolIds := make([]string, 0, len(req.ToolList))
-	for _, t := range req.ToolList {
-		toolList = append(toolList, &assistant_service.WgaConfigTool{
-			ToolId:   t.ToolID,
-			ToolType: t.ToolType,
-		})
-		if t.ToolType == constant.ToolTypeBuiltIn {
-			toolIds = append(toolIds, t.ToolID)
-		}
-	}
 	validToolIds, _ := getValidToolIds(ctx, userId, orgId, toolIds)
-	for _, t := range req.ToolList {
-		if !validToolIds[t.ToolID] {
-			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found or invalid: %s", t.ToolID))
+	for _, t := range toolList {
+		if t.ToolType == constant.ToolTypeBuiltIn {
+			if !validToolIds[t.ToolId] {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found or invalid: %s", t.ToolId))
+			}
 		}
 	}
 
 	// 校验 mcp 配置
-	mcpList := make([]*assistant_service.WgaConfigMcp, 0, len(req.MCPList))
-	for _, m := range req.MCPList {
-		mcpList = append(mcpList, &assistant_service.WgaConfigMcp{
-			McpId:   m.MCPID,
-			McpType: m.MCPType,
-		})
-	}
 	if err := checkWgaMCPConfig(ctx, userId, orgId, mcpList); err != nil {
 		return err
 	}
 
 	// 校验 workflow 配置
-	workflowList := make([]*assistant_service.WgaConfigWorkflow, 0, len(req.WorkflowList))
-	for _, w := range req.WorkflowList {
-		workflowList = append(workflowList, &assistant_service.WgaConfigWorkflow{
-			WorkflowId: w.WorkflowID,
-		})
-	}
 	if err := checkWgaWorkflowConfig(ctx, userId, orgId, workflowList); err != nil {
 		return err
 	}
 
 	// 校验 skill 配置
-	skillList := make([]*assistant_service.WgaConfigSkill, 0, len(req.SkillList))
-	for _, s := range req.SkillList {
-		skillList = append(skillList, &assistant_service.WgaConfigSkill{
-			SkillId:   s.SkillID,
-			SkillType: constant.SkillTypeCustom, // 固定为自定义技能
-		})
-	}
 	if err := checkWgaSkillConfig(ctx, userId, orgId, skillList); err != nil {
 		return err
 	}
@@ -153,7 +167,7 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	return err
 }
 
-func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.GetGeneralAgentConfigResp, error) {
+func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.GetGeneralAgentConfigResp, error) {
 	resp, err := assistant.GetWgaConfig(ctx.Request.Context(), &assistant_service.GetWgaConfigReq{
 		Identity: &assistant_service.Identity{
 			UserId: userId,
@@ -164,7 +178,7 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		return nil, err
 	}
 
-	result := &response.GetGeneralAgentConfigResp{}
+	result := make(response.GetGeneralAgentConfigResp, 0)
 
 	// 过滤存在的 tool
 	toolIds := make([]string, 0, len(resp.Config.ToolList))
@@ -174,15 +188,22 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		}
 	}
 	validToolIds, _ := getValidToolIds(ctx, userId, orgId, toolIds)
+	var toolItems []*response.GeneralAgentConfigToolItem
 	for _, t := range resp.Config.ToolList {
 		if t.ToolType == constant.ToolTypeBuiltIn {
 			if validToolIds[t.ToolId] {
-				result.ToolList = append(result.ToolList, request.ToolSelected{
-					ToolID:   t.ToolId,
-					ToolType: t.ToolType,
+				toolItems = append(toolItems, &response.GeneralAgentConfigToolItem{
+					ID:   t.ToolId,
+					Type: t.ToolType,
 				})
 			}
 		}
+	}
+	if len(toolItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "tool",
+			List:     toolItems,
+		})
 	}
 
 	// 过滤存在的 assistant
@@ -191,12 +212,20 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		assistantIds = append(assistantIds, a.AssistantId)
 	}
 	validAssistantIds, _, _ := getValidAssistantIds(ctx, userId, orgId, assistantIds)
+	var assistantItems []*response.GeneralAgentConfigItem
 	for _, a := range resp.Config.AssistantList {
 		if validAssistantIds[a.AssistantId] {
-			result.AssistantList = append(result.AssistantList, request.AssistantSelected{
-				AssistantID: a.AssistantId,
+			assistantItems = append(assistantItems, &response.GeneralAgentConfigItem{
+				ID:   a.AssistantId,
+				Type: a.AssistantType,
 			})
 		}
+	}
+	if len(assistantItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "assistant",
+			List:     assistantItems,
+		})
 	}
 
 	// 过滤存在的 mcp
@@ -210,14 +239,21 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		}
 	}
 	validMcpIds, mcpTypes, _ := getValidMcpIds(ctx, mcpCustomIds, mcpServerIds)
+	var mcpItems []*response.GeneralAgentConfigItem
 	for _, m := range resp.Config.McpList {
 		// 验证 MCP 存在且类型匹配
 		if validMcpIds[m.McpId] && mcpTypes[m.McpId] == m.McpType {
-			result.MCPList = append(result.MCPList, request.MCPSelected{
-				MCPID:   m.McpId,
-				MCPType: m.McpType,
+			mcpItems = append(mcpItems, &response.GeneralAgentConfigItem{
+				ID:   m.McpId,
+				Type: m.McpType,
 			})
 		}
+	}
+	if len(mcpItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "mcp",
+			List:     mcpItems,
+		})
 	}
 
 	// 过滤存在的 workflow
@@ -226,12 +262,19 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		workflowIds = append(workflowIds, w.WorkflowId)
 	}
 	validWorkflowIds, _ := getValidWorkflowIds(ctx, workflowIds)
+	var workflowItems []*response.GeneralAgentConfigItem
 	for _, w := range resp.Config.WorkflowList {
 		if validWorkflowIds[w.WorkflowId] {
-			result.WorkflowList = append(result.WorkflowList, request.WorkflowSelected{
-				WorkflowID: w.WorkflowId,
+			workflowItems = append(workflowItems, &response.GeneralAgentConfigItem{
+				ID: w.WorkflowId,
 			})
 		}
+	}
+	if len(workflowItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "workflow",
+			List:     workflowItems,
+		})
 	}
 
 	// 过滤存在的 skill
@@ -240,12 +283,20 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 		customSkillIds = append(customSkillIds, s.SkillId)
 	}
 	validSkillIds, _ := getValidSkillIds(ctx, customSkillIds)
+	var skillItems []*response.GeneralAgentConfigItem
 	for _, s := range resp.Config.SkillList {
 		if validSkillIds[s.SkillId] {
-			result.SkillList = append(result.SkillList, request.SkillSelected{
-				SkillID: s.SkillId,
+			skillItems = append(skillItems, &response.GeneralAgentConfigItem{
+				ID:   s.SkillId,
+				Type: s.SkillType,
 			})
 		}
+	}
+	if len(skillItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "skill",
+			List:     skillItems,
+		})
 	}
 
 	return result, nil

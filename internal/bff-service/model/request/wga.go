@@ -1,27 +1,27 @@
 package request
 
+// UpdateGeneralAgentConfigReq 更新通用智能体配置请求
 type UpdateGeneralAgentConfigReq struct {
-	ToolList      []ToolSelected      `json:"toolList"`      // 工具列表
-	AssistantList []AssistantSelected `json:"assistantList"` // 智能体列表
-	MCPList       []MCPSelected       `json:"mcpList"`       // MCP列表
-	WorkflowList  []WorkflowSelected  `json:"workflowList"`  // 工作流列表
-	SkillList     []SkillSelected     `json:"skillList"`     // 自定义skill列表
+	Mcp       []GeneralAgentConfigItem     `json:"mcp"`
+	Workflow  []GeneralAgentConfigItem     `json:"workflow"`
+	Skill     []GeneralAgentConfigItem     `json:"skill"`
+	Assistant []GeneralAgentConfigItem     `json:"assistant"`
+	Tool      []GeneralAgentConfigToolItem `json:"tool"`
+}
+
+// GeneralAgentConfigItem 配置项（带type）
+type GeneralAgentConfigItem struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
+// GeneralAgentConfigToolItem tool配置项
+type GeneralAgentConfigToolItem struct {
+	ID   string `json:"toolId"`
+	Type string `json:"toolType"`
 }
 
 func (c *UpdateGeneralAgentConfigReq) Check() error { return nil }
-
-type MCPSelected struct {
-	MCPID   string `json:"mcpId" validate:"required"`   // MCP ID
-	MCPType string `json:"mcpType" validate:"required"` // MCP类型 mcp/mcpserver
-}
-
-type WorkflowSelected struct {
-	WorkflowID string `json:"workflowId" validate:"required"` // 工作流ID
-}
-
-type SkillSelected struct {
-	SkillID string `json:"skillId" validate:"required"` // skill ID
-}
 
 type GetGeneralAgentConversationConfigReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID

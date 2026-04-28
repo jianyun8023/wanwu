@@ -5,12 +5,25 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 )
 
-type GetGeneralAgentConfigResp struct {
-	ToolList      []request.ToolSelected      `json:"toolList"`      // 工具列表
-	AssistantList []request.AssistantSelected `json:"assistantList"` // 智能体列表
-	MCPList       []request.MCPSelected       `json:"mcpList"`       // MCP列表
-	WorkflowList  []request.WorkflowSelected  `json:"workflowList"`  // 工作流列表
-	SkillList     []request.SkillSelected     `json:"skillList"`     // 技能列表
+// GetGeneralAgentConfigResp 通用智能体配置响应
+type GetGeneralAgentConfigResp []*GeneralAgentConfigList
+
+// GeneralAgentConfigList 配置列表
+type GeneralAgentConfigList struct {
+	ListType string      `json:"listType"` // 类型: mcp, workflow, skill, assistant, tool
+	List     interface{} `json:"list"`     // 列表项
+}
+
+// GeneralAgentConfigItem 配置项（mcp/assistant/skill/workflow 用）
+type GeneralAgentConfigItem struct {
+	ID   string `json:"id"`   // ID
+	Type string `json:"type"` // 类型
+}
+
+// GeneralAgentConfigToolItem tool配置项
+type GeneralAgentConfigToolItem struct {
+	ID   string `json:"toolId"`   // 工具ID
+	Type string `json:"toolType"` // 工具类型
 }
 
 type WgaAgentInfo struct {
