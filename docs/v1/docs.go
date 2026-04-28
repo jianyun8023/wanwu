@@ -6192,7 +6192,10 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/response.GetGeneralAgentConfigResp"
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/response.GeneralAgentConfigList"
+                                            }
                                         }
                                     }
                                 }
@@ -19921,18 +19924,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.AssistantSelected": {
-            "type": "object",
-            "required": [
-                "assistantId"
-            ],
-            "properties": {
-                "assistantId": {
-                    "description": "智能体ID",
-                    "type": "string"
-                }
-            }
-        },
         "request.AssistantSkillAddRequest": {
             "type": "object",
             "required": [
@@ -21875,6 +21866,28 @@ const docTemplate = `{
                 }
             }
         },
+        "request.GeneralAgentConfigItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentConfigToolItem": {
+            "type": "object",
+            "properties": {
+                "toolId": {
+                    "type": "string"
+                },
+                "toolType": {
+                    "type": "string"
+                }
+            }
+        },
         "request.GeneralAgentConversationChatReq": {
             "type": "object",
             "required": [
@@ -22499,23 +22512,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "mcpId": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.MCPSelected": {
-            "type": "object",
-            "required": [
-                "mcpId",
-                "mcpType"
-            ],
-            "properties": {
-                "mcpId": {
-                    "description": "MCP ID",
-                    "type": "string"
-                },
-                "mcpType": {
-                    "description": "MCP类型 mcp/mcpserver",
                     "type": "string"
                 }
             }
@@ -23582,35 +23578,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.SkillSelected": {
-            "type": "object",
-            "required": [
-                "skillId"
-            ],
-            "properties": {
-                "skillId": {
-                    "description": "skill ID",
-                    "type": "string"
-                }
-            }
-        },
-        "request.ToolSelected": {
-            "type": "object",
-            "required": [
-                "toolId",
-                "toolType"
-            ],
-            "properties": {
-                "toolId": {
-                    "description": "工具ID",
-                    "type": "string"
-                },
-                "toolType": {
-                    "description": "工具类型",
-                    "type": "string"
-                }
-            }
-        },
         "request.ToolSquareAPIKeyReq": {
             "type": "object",
             "required": [
@@ -23804,39 +23771,34 @@ const docTemplate = `{
         "request.UpdateGeneralAgentConfigReq": {
             "type": "object",
             "properties": {
-                "assistantList": {
-                    "description": "智能体列表",
+                "assistant": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.AssistantSelected"
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 },
-                "mcpList": {
-                    "description": "MCP列表",
+                "mcp": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.MCPSelected"
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 },
-                "skillList": {
-                    "description": "自定义skill列表",
+                "skill": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.SkillSelected"
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 },
-                "toolList": {
-                    "description": "工具列表",
+                "tool": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ToolSelected"
+                        "$ref": "#/definitions/request.GeneralAgentConfigToolItem"
                     }
                 },
-                "workflowList": {
-                    "description": "工作流列表",
+                "workflow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.WorkflowSelected"
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 }
             }
@@ -24383,18 +24345,6 @@ const docTemplate = `{
                     "additionalProperties": {}
                 },
                 "workflow_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.WorkflowSelected": {
-            "type": "object",
-            "required": [
-                "workflowId"
-            ],
-            "properties": {
-                "workflowId": {
-                    "description": "工作流ID",
                     "type": "string"
                 }
             }
@@ -26849,6 +26799,18 @@ const docTemplate = `{
                 }
             }
         },
+        "response.GeneralAgentConfigList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "列表项"
+                },
+                "listType": {
+                    "description": "类型: mcp, workflow, skill, assistant, tool",
+                    "type": "string"
+                }
+            }
+        },
         "response.GeneralAgentConversationDetailInfo": {
             "type": "object",
             "properties": {
@@ -27118,46 +27080,6 @@ const docTemplate = `{
                 "type": {
                     "description": "文档类型",
                     "type": "string"
-                }
-            }
-        },
-        "response.GetGeneralAgentConfigResp": {
-            "type": "object",
-            "properties": {
-                "assistantList": {
-                    "description": "智能体列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.AssistantSelected"
-                    }
-                },
-                "mcpList": {
-                    "description": "MCP列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.MCPSelected"
-                    }
-                },
-                "skillList": {
-                    "description": "技能列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.SkillSelected"
-                    }
-                },
-                "toolList": {
-                    "description": "工具列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.ToolSelected"
-                    }
-                },
-                "workflowList": {
-                    "description": "工作流列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.WorkflowSelected"
-                    }
                 }
             }
         },

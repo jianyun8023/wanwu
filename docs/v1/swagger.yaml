@@ -1485,14 +1485,6 @@ definitions:
     - mcpId
     - mcpType
     type: object
-  request.AssistantSelected:
-    properties:
-      assistantId:
-        description: 智能体ID
-        type: string
-    required:
-    - assistantId
-    type: object
   request.AssistantSkillAddRequest:
     properties:
       assistantId:
@@ -2813,6 +2805,20 @@ definitions:
     required:
     - threadId
     type: object
+  request.GeneralAgentConfigItem:
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  request.GeneralAgentConfigToolItem:
+    properties:
+      toolId:
+        type: string
+      toolType:
+        type: string
+    type: object
   request.GeneralAgentConversationChatReq:
     properties:
       agentId:
@@ -3244,18 +3250,6 @@ definitions:
         type: string
     required:
     - mcpId
-    type: object
-  request.MCPSelected:
-    properties:
-      mcpId:
-        description: MCP ID
-        type: string
-      mcpType:
-        description: MCP类型 mcp/mcpserver
-        type: string
-    required:
-    - mcpId
-    - mcpType
     type: object
   request.MCPServerCreateReq:
     properties:
@@ -3984,26 +3978,6 @@ definitions:
     - conversationId
     - skillSaveId
     type: object
-  request.SkillSelected:
-    properties:
-      skillId:
-        description: skill ID
-        type: string
-    required:
-    - skillId
-    type: object
-  request.ToolSelected:
-    properties:
-      toolId:
-        description: 工具ID
-        type: string
-      toolType:
-        description: 工具类型
-        type: string
-    required:
-    - toolId
-    - toolType
-    type: object
   request.ToolSquareAPIKeyReq:
     properties:
       apiKey:
@@ -4136,30 +4110,25 @@ definitions:
     type: object
   request.UpdateGeneralAgentConfigReq:
     properties:
-      assistantList:
-        description: 智能体列表
+      assistant:
         items:
-          $ref: '#/definitions/request.AssistantSelected'
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
-      mcpList:
-        description: MCP列表
+      mcp:
         items:
-          $ref: '#/definitions/request.MCPSelected'
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
-      skillList:
-        description: 自定义skill列表
+      skill:
         items:
-          $ref: '#/definitions/request.SkillSelected'
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
-      toolList:
-        description: 工具列表
+      tool:
         items:
-          $ref: '#/definitions/request.ToolSelected'
+          $ref: '#/definitions/request.GeneralAgentConfigToolItem'
         type: array
-      workflowList:
-        description: 工作流列表
+      workflow:
         items:
-          $ref: '#/definitions/request.WorkflowSelected'
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
     type: object
   request.UpdateGeneralAgentConversationConfigReq:
@@ -4540,14 +4509,6 @@ definitions:
         type: string
     required:
     - workflow_id
-    type: object
-  request.WorkflowSelected:
-    properties:
-      workflowId:
-        description: 工作流ID
-        type: string
-    required:
-    - workflowId
     type: object
   response.APIKeyDetailResponse:
     properties:
@@ -6169,6 +6130,14 @@ definitions:
           $ref: '#/definitions/response.GeneralAgentToolCategories'
         type: array
     type: object
+  response.GeneralAgentConfigList:
+    properties:
+      list:
+        description: 列表项
+      listType:
+        description: '类型: mcp, workflow, skill, assistant, tool'
+        type: string
+    type: object
   response.GeneralAgentConversationDetailInfo:
     properties:
       createdAt:
@@ -6354,34 +6323,6 @@ definitions:
       type:
         description: 文档类型
         type: string
-    type: object
-  response.GetGeneralAgentConfigResp:
-    properties:
-      assistantList:
-        description: 智能体列表
-        items:
-          $ref: '#/definitions/request.AssistantSelected'
-        type: array
-      mcpList:
-        description: MCP列表
-        items:
-          $ref: '#/definitions/request.MCPSelected'
-        type: array
-      skillList:
-        description: 技能列表
-        items:
-          $ref: '#/definitions/request.SkillSelected'
-        type: array
-      toolList:
-        description: 工具列表
-        items:
-          $ref: '#/definitions/request.ToolSelected'
-        type: array
-      workflowList:
-        description: 工作流列表
-        items:
-          $ref: '#/definitions/request.WorkflowSelected'
-        type: array
     type: object
   response.GetGeneralAgentConversationConfigResp:
     properties:
@@ -12290,7 +12231,9 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/response.GetGeneralAgentConfigResp'
+                  items:
+                    $ref: '#/definitions/response.GeneralAgentConfigList'
+                  type: array
               type: object
       security:
       - JWT: []
