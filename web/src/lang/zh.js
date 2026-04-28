@@ -264,6 +264,7 @@ export default {
       copyText: '副本',
       copySuccess: '复制成功',
     },
+    catalogue: '目 录',
     required: '必填',
     noData: '暂无数据',
     noBindEmail: '暂无邮箱',
