@@ -54,10 +54,9 @@ func GetUserPermission(ctx *gin.Context, userID, orgID string) (*response.UserPe
 		return nil, err
 	}
 	return &response.UserPermission{
+		UserInfo:         *toUserInfo(ctx, user),
 		OrgPermission:    toOrgPermission(ctx, resp),
-		Language:         getLanguageByCode(user.Language),
 		IsUpdatePassword: resp.LastUpdatePasswordAt != 0,
-		Avatar:           cacheUserAvatar(ctx, user.AvatarPath),
 	}, nil
 }
 

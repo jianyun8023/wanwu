@@ -1,7 +1,5 @@
 package response
 
-import "github.com/UnicomAI/wanwu/internal/bff-service/model/request"
-
 type Response struct {
 	Code int64       `json:"code"`
 	Data interface{} `json:"data"`
@@ -26,10 +24,9 @@ type IDName struct {
 }
 
 type UserPermission struct {
+	UserInfo
 	OrgPermission    UserOrgPermission `json:"orgPermission"`    // 用户所在组织权限
-	Language         Language          `json:"language"`         // 语言
 	IsUpdatePassword bool              `json:"isUpdatePassword"` // 是否已更新密码
-	Avatar           request.Avatar    `json:"avatar"`           // 用户头像信息
 }
 
 type UserOrgPermission struct {

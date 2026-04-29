@@ -8486,20 +8486,45 @@ definitions:
   response.UserPermission:
     properties:
       avatar:
+        $ref: '#/definitions/request.Avatar'
+      company:
+        type: string
+      createdAt:
+        type: string
+      creator:
         allOf:
-        - $ref: '#/definitions/request.Avatar'
-        description: 用户头像信息
+        - $ref: '#/definitions/response.IDName'
+        description: 创建人
+      email:
+        type: string
+      gender:
+        type: string
       isUpdatePassword:
         description: 是否已更新密码
         type: boolean
       language:
-        allOf:
-        - $ref: '#/definitions/response.Language'
-        description: 语言
+        $ref: '#/definitions/response.Language'
+      nickname:
+        type: string
       orgPermission:
         allOf:
         - $ref: '#/definitions/response.UserOrgPermission'
         description: 用户所在组织权限
+      orgs:
+        description: 用户的组织角色列表
+        items:
+          $ref: '#/definitions/response.OrgRole'
+        type: array
+      phone:
+        type: string
+      remark:
+        type: string
+      status:
+        type: boolean
+      userId:
+        type: string
+      username:
+        type: string
     type: object
   response.VisionConfig:
     properties:

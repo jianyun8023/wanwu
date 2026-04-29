@@ -30302,24 +30302,37 @@
             "type": "object",
             "properties": {
                 "avatar": {
-                    "description": "用户头像信息",
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "company": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "creator": {
+                    "description": "创建人",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/request.Avatar"
+                            "$ref": "#/definitions/response.IDName"
                         }
                     ]
+                },
+                "email": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
                 },
                 "isUpdatePassword": {
                     "description": "是否已更新密码",
                     "type": "boolean"
                 },
                 "language": {
-                    "description": "语言",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/response.Language"
-                        }
-                    ]
+                    "$ref": "#/definitions/response.Language"
+                },
+                "nickname": {
+                    "type": "string"
                 },
                 "orgPermission": {
                     "description": "用户所在组织权限",
@@ -30328,6 +30341,28 @@
                             "$ref": "#/definitions/response.UserOrgPermission"
                         }
                     ]
+                },
+                "orgs": {
+                    "description": "用户的组织角色列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.OrgRole"
+                    }
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "boolean"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
