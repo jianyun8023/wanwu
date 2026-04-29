@@ -10,7 +10,7 @@
     </div>
     <div class="session-error-body">
       <div class="session-error-title">
-        {{ title || $t('rag.answerFailed') }}
+        {{ title }}
       </div>
     </div>
   </div>

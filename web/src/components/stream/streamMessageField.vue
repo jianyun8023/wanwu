@@ -588,7 +588,7 @@
 
               <!-- 整个回答下方的兜底主错误卡片 -->
               <ErrorMsgCard
-                v-if="n.error"
+                v-if="n.error && n.errResponse"
                 :title="n.errResponse || n.response"
                 :desc="n.errorDetail"
               />
@@ -1518,9 +1518,6 @@ export default {
       this.scrollBottom();
     },
     replaceLastData(index, data) {
-      if (!data.response && data.finish !== 0) {
-        data.response = this.$t('app.noResponse');
-      }
       this.$set(this.session_data.history, index, data);
       this.scrollBottom();
       this.codeScrollBottom();

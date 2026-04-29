@@ -611,11 +611,15 @@ export default {
         ? data.map((n, index) => {
             const sequence = [];
             let fullResponse = '';
+            let hasHistoryError = false;
 
             // 处理主智能体片段 (responseList)
             if (n.responseList && n.responseList.length) {
               n.responseList.forEach(item => {
                 fullResponse += item.response || '';
+                if (item.errMessage || item.errResponse) {
+                  hasHistoryError = true;
+                }
 
                 sequence.push({
                   type: 'main',
@@ -628,7 +632,7 @@ export default {
                       index,
                     ),
                   ),
-                  errMsg: item.errMsg,
+                  errMsg: item.errMessage,
                   errResponse: item.errResponse,
                 });
               });
@@ -745,6 +749,7 @@ export default {
             sequence.sort((a, b) => (a.order || 0) - (b.order || 0));
             const r = {
               ...n,
+              error: n.error || hasHistoryError,
               query: n.prompt,
               finish: 1, //兼容流式问答
               response: md.render(
