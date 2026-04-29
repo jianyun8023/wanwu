@@ -698,6 +698,9 @@ func buildWgaMentionResourcesMessage(resources *wgaMentionResources) *schema.Mes
 	for _, item := range resources.AssistantItems {
 		lines = append(lines, fmt.Sprintf("- @%s (assistant) %s", item.Name, item.Desc))
 	}
+	for _, item := range resources.KnowledgeItems {
+		lines = append(lines, fmt.Sprintf("- @%s (knowledge) %s", item.Name, item.Desc))
+	}
 
 	return &schema.Message{
 		Role:    schema.System,

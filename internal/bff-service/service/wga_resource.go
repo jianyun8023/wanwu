@@ -1,23 +1,15 @@
 package service
 
 import (
-	"fmt"
 	"regexp"
 	"sync"
 
-	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
-	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
-	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
-	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/pkg/constant"
-	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
-	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
-	"github.com/UnicomAI/wanwu/pkg/wga"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,114 +17,6 @@ import (
 // 格式: @name，支持中文、英文字母、数字、下划线和连字符。
 // 例如: "@工具名"、"@workflow-1"、"@skill_2"
 var wgaResourceNameRegex = regexp.MustCompile(`@([\p{Han}a-zA-Z0-9_-]+)`)
-
-func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId, agentId string) (*response.ListResult, error) {
-	toolResp, err := mcp.GetToolSelect(ctx.Request.Context(), &mcp_service.GetToolSelectReq{
-		Identity: &mcp_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	toolNameToInfo := make(map[string]*mcp_service.GetToolItem)
-	for _, item := range toolResp.List {
-		if item.ToolType == constant.ToolTypeBuiltIn {
-			toolNameToInfo[item.ToolName] = item
-		}
-	}
-
-	// 获取全量工具列表
-	toolCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
-	if err != nil {
-		return nil, err
-	}
-	// 对全量工具列表进行条件覆盖，默认不限制工具选择
-	for _, toolCategory := range toolCategories {
-		toolCategory.Condition = "none"
-	}
-	// 如果agentId不为空，则根据agentId获取工具选择条件进行覆盖，限制工具选择
-	if agentId != "" {
-		agentToolCategories, err := wga.GetAgentToolCategories(agentId)
-		if err != nil {
-			return nil, err
-		}
-		for _, toolCategory := range toolCategories {
-			for _, agentToolCategory := range agentToolCategories {
-				if toolCategory.Category == agentToolCategory.Category {
-					toolCategory.Condition = agentToolCategory.Condition
-					break
-				}
-			}
-		}
-	}
-
-	result := make([]response.GetGeneralAgentToolSelectResp, 0, len(toolCategories))
-	for _, tc := range toolCategories {
-		categoryResp := response.GetGeneralAgentToolSelectResp{
-			Category:  gin_util.I18nKey(ctx, string(tc.Category)),
-			Condition: string(tc.Condition),
-			ToolList:  []response.ToolInfo{},
-		}
-
-		for _, t := range tc.Tools {
-			if item, ok := toolNameToInfo[t.Doc.Info.Title]; ok {
-				categoryResp.ToolList = append(categoryResp.ToolList, response.ToolInfo{
-					ToolId:          item.ToolId,
-					ToolName:        item.ToolName,
-					ToolType:        item.ToolType,
-					Desc:            item.Desc,
-					NeedApiKeyInput: item.NeedApiKeyInput,
-					APIKey:          item.ApiKey,
-					Avatar:          cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, item.AvatarPath),
-				})
-			}
-		}
-
-		result = append(result, categoryResp)
-	}
-
-	return &response.ListResult{
-		List:  result,
-		Total: int64(len(result)),
-	}, nil
-
-}
-
-func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
-	resp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-		ToolSquareId: toolId,
-		Identity: &mcp_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	if err != nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found: %s", toolId))
-	}
-
-	var actions []*protocol.Tool
-	if resp.BuiltInTools != nil {
-		for _, tool := range resp.BuiltInTools.Tools {
-			actions = append(actions, toToolAction(tool))
-		}
-	}
-
-	return &response.GeneralAgentToolInfoResp{
-		Actions: actions,
-		ToolInfo: response.ToolInfo{
-			ToolId:          resp.Info.ToolSquareId,
-			ToolName:        resp.Info.Name,
-			ToolType:        constant.ToolTypeBuiltIn,
-			Desc:            resp.Info.Desc,
-			NeedApiKeyInput: resp.BuiltInTools.NeedApiKeyInput,
-			APIKey:          resp.BuiltInTools.ApiAuth.ApiKeyValue,
-			Avatar:          cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, resp.Info.AvatarPath),
-		},
-	}, nil
-}
 
 func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name string) ([]*response.GeneralAgentResourceSelectList, error) {
 	result := make([]*response.GeneralAgentResourceSelectList, 0, 5)
@@ -313,7 +197,7 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 				Name:   item.Name,
 				Desc:   item.Description,
 				Avatar: item.Avatar,
-				Type:   constant.AppTypeWorkflow,
+				Type:   "knowledge",
 			})
 		}
 	}
