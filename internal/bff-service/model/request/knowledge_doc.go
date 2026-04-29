@@ -256,6 +256,14 @@ func (c *DocImportReq) Check() error {
 			return errors.New("url文件仅可上传一个")
 		}
 	}
+
+	if len(c.DocInfo) > 0 {
+		for _, doc := range c.DocInfo {
+			if IsMaliciousFilename(doc.DocName) {
+				return errors.New("文件名非法，请不要包含|等特殊字符")
+			}
+		}
+	}
 	return nil
 }
 
