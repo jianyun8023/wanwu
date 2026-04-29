@@ -6646,6 +6646,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/knowledge/select": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体知识库下拉接口列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge"
+                ],
+                "summary": "通用智能体知识库下拉接口列表",
+                "parameters": [
+                    {
+                        "description": "查询知识库列表",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.KnowledgeSelectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.KnowledgeListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/mcp/select": {
             "get": {
                 "security": [
@@ -11713,7 +11764,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -23630,6 +23680,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 },
+                "knowledge": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
+                    }
+                },
                 "mcp": {
                     "type": "array",
                     "items": {
@@ -26793,7 +26849,7 @@ const docTemplate = `{
                     }
                 },
                 "listType": {
-                    "description": "列表类型: mcp, workflow, skill, assistant",
+                    "description": "列表类型: mcp, workflow, skill, assistant, knowledge",
                     "type": "string"
                 }
             }

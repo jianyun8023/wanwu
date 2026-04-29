@@ -135,15 +135,16 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType s
 }
 
 func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name string) ([]*response.GeneralAgentResourceSelectList, error) {
-	result := make([]*response.GeneralAgentResourceSelectList, 0, 4)
+	result := make([]*response.GeneralAgentResourceSelectList, 0, 5)
 
-	// 并发获取四种资源列表
+	// 并发获取五种资源列表
 	var wg sync.WaitGroup
-	var mcpErr, workflowErr, skillErr, assistantErr error
+	var mcpErr, workflowErr, skillErr, assistantErr, knowledgeErr error
 	var mcpList []response.MCPSelect
 	var workflowList []*response.ExplorationAppInfo
 	var skillList []*response.SkillInfo
 	var assistantList []*response.ExplorationAppInfo
+	var knowledgeList *response.KnowledgeListResp
 
 	// 获取 MCP 列表
 	wg.Add(1)
@@ -205,6 +206,19 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 		}
 	}()
 
+	// 获取 Knowledge 列表
+	wg.Add(1)
+	go func() {
+		defer util.PrintPanicStack()
+		defer wg.Done()
+		resp, err := SelectKnowledgeList(ctx, userId, orgId, &request.KnowledgeSelectReq{Name: name})
+		if err != nil {
+			knowledgeErr = err
+			return
+		}
+		knowledgeList = resp
+	}()
+
 	wg.Wait()
 
 	// 检查错误
@@ -219,6 +233,9 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	}
 	if assistantErr != nil {
 		return nil, assistantErr
+	}
+	if knowledgeErr != nil {
+		return nil, knowledgeErr
 	}
 
 	// 构建 MCP 列表
@@ -286,6 +303,25 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 		List:     assistantItems,
 	})
 
+	// 构建 Knowledge 列表
+	knowledgeItems := make([]*response.GeneralAgentResourceSelectItem, 0)
+	if knowledgeList != nil {
+		knowledgeItems = make([]*response.GeneralAgentResourceSelectItem, 0, len(knowledgeList.KnowledgeList))
+		for _, item := range knowledgeList.KnowledgeList {
+			knowledgeItems = append(knowledgeItems, &response.GeneralAgentResourceSelectItem{
+				ID:     item.KnowledgeId,
+				Name:   item.Name,
+				Desc:   item.Description,
+				Avatar: item.Avatar,
+				Type:   constant.AppTypeWorkflow,
+			})
+		}
+	}
+	result = append(result, &response.GeneralAgentResourceSelectList{
+		ListType: "knowledge",
+		List:     knowledgeItems,
+	})
+
 	return result, nil
 }
 
@@ -333,11 +369,13 @@ type wgaMentionResources struct {
 	WorkflowList  []*assistant_service.WgaConfigWorkflow
 	SkillList     []*assistant_service.WgaConfigSkill
 	AssistantList []*assistant_service.WgaConfigAssistant
+	KnowledgeList []*assistant_service.WgaConfigKnowledge
 	// 用于构建系统消息
 	McpItems       []*response.GeneralAgentResourceSelectItem
 	WorkflowItems  []*response.GeneralAgentResourceSelectItem
 	SkillItems     []*response.GeneralAgentResourceSelectItem
 	AssistantItems []*response.GeneralAgentResourceSelectItem
+	KnowledgeItems []*response.GeneralAgentResourceSelectItem
 }
 
 // hasResources 检查是否有任何资源
@@ -345,7 +383,8 @@ func (r *wgaMentionResources) hasResources() bool {
 	return len(r.McpItems) > 0 ||
 		len(r.WorkflowItems) > 0 ||
 		len(r.SkillItems) > 0 ||
-		len(r.AssistantItems) > 0
+		len(r.AssistantItems) > 0 ||
+		len(r.KnowledgeItems) > 0
 }
 
 // fetchWgaMentionResources 获取@提及的资源列表
@@ -356,10 +395,12 @@ func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNam
 		WorkflowList:   make([]*assistant_service.WgaConfigWorkflow, 0),
 		SkillList:      make([]*assistant_service.WgaConfigSkill, 0),
 		AssistantList:  make([]*assistant_service.WgaConfigAssistant, 0),
+		KnowledgeList:  make([]*assistant_service.WgaConfigKnowledge, 0),
 		McpItems:       make([]*response.GeneralAgentResourceSelectItem, 0),
 		WorkflowItems:  make([]*response.GeneralAgentResourceSelectItem, 0),
 		SkillItems:     make([]*response.GeneralAgentResourceSelectItem, 0),
 		AssistantItems: make([]*response.GeneralAgentResourceSelectItem, 0),
+		KnowledgeItems: make([]*response.GeneralAgentResourceSelectItem, 0),
 	}
 
 	if len(mentionNames) == 0 {
@@ -407,6 +448,13 @@ func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNam
 						AssistantType: util.Int2Str(constant.AgentCategorySingle),
 					})
 					result.AssistantItems = append(result.AssistantItems, item)
+				}
+			case "knowledge":
+				for _, item := range group.List {
+					result.KnowledgeList = append(result.KnowledgeList, &assistant_service.WgaConfigKnowledge{
+						KnowledgeId: item.ID,
+					})
+					result.KnowledgeItems = append(result.KnowledgeItems, item)
 				}
 			}
 		}

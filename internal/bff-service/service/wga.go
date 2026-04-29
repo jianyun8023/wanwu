@@ -13,6 +13,7 @@ import (
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
+	knowledgebase_service "github.com/UnicomAI/wanwu/api/proto/knowledgebase-service"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
@@ -79,6 +80,7 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	var mcpList []*assistant_service.WgaConfigMcp
 	var workflowList []*assistant_service.WgaConfigWorkflow
 	var skillList []*assistant_service.WgaConfigSkill
+	var knowledgeList []*assistant_service.WgaConfigKnowledge
 	var toolIds []string
 
 	// 处理 assistant
@@ -112,6 +114,13 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	for _, item := range req.Workflow {
 		workflowList = append(workflowList, &assistant_service.WgaConfigWorkflow{
 			WorkflowId: item.ID,
+		})
+	}
+
+	// 处理 knowledge
+	for _, item := range req.Knowledge {
+		knowledgeList = append(knowledgeList, &assistant_service.WgaConfigKnowledge{
+			KnowledgeId: item.ID,
 		})
 	}
 
@@ -153,12 +162,18 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 		return err
 	}
 
+	// 校验 knowledge 配置
+	if err := checkWgaKnowledgeConfig(ctx, userId, orgId, knowledgeList); err != nil {
+		return err
+	}
+
 	_, err := assistant.UpdateWgaConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConfigReq{
 		ToolList:      toolList,
 		AssistantList: assistantList,
 		McpList:       mcpList,
 		WorkflowList:  workflowList,
 		SkillList:     skillList,
+		KnowledgeList: knowledgeList,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -296,6 +311,27 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 		result = append(result, &response.GeneralAgentConfigList{
 			ListType: "skill",
 			List:     skillItems,
+		})
+	}
+
+	// 过滤存在的 knowledge
+	knowledgeIds := make([]string, 0, len(resp.Config.KnowledgeList))
+	for _, k := range resp.Config.KnowledgeList {
+		knowledgeIds = append(knowledgeIds, k.KnowledgeId)
+	}
+	validKnowledgeIds, _ := getValidKnowledgeIds(ctx, userId, orgId, knowledgeIds)
+	var knowledgeItems []*response.GeneralAgentConfigItem
+	for _, k := range resp.Config.KnowledgeList {
+		if validKnowledgeIds[k.KnowledgeId] {
+			knowledgeItems = append(knowledgeItems, &response.GeneralAgentConfigItem{
+				ID: k.KnowledgeId,
+			})
+		}
+	}
+	if len(knowledgeItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "knowledge",
+			List:     knowledgeItems,
 		})
 	}
 
@@ -961,6 +997,62 @@ func getValidSkillIds(ctx *gin.Context, skillIds []string) (map[string]bool, err
 		validIds[s.SkillId] = true
 	}
 	return validIds, nil
+}
+
+// --- internal wga knowledge ---
+
+// checkWgaKnowledgeConfig 校验wga Knowledge配置（用于更新配置）
+func checkWgaKnowledgeConfig(ctx *gin.Context, userId, orgId string, knowledgeList []*assistant_service.WgaConfigKnowledge) error {
+	if len(knowledgeList) == 0 {
+		return nil
+	}
+
+	knowledgeIds := make([]string, 0, len(knowledgeList))
+	for _, k := range knowledgeList {
+		knowledgeIds = append(knowledgeIds, k.KnowledgeId)
+	}
+
+	validIds, err := getValidKnowledgeIds(ctx, userId, orgId, knowledgeIds)
+	if err != nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "knowledge not found")
+	}
+
+	for _, k := range knowledgeList {
+		if !validIds[k.KnowledgeId] {
+			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("knowledge not found: %s", k.KnowledgeId))
+		}
+	}
+	return nil
+}
+
+// getValidKnowledgeIds 批量获取有效的Knowledge ID映射
+func getValidKnowledgeIds(ctx *gin.Context, userId, orgId string, knowledgeIds []string) (map[string]bool, error) {
+	if len(knowledgeIds) == 0 {
+		return make(map[string]bool), nil
+	}
+	resp, err := knowledgeBase.SelectKnowledgeListByIdList(ctx.Request.Context(), &knowledgebase_service.BatchKnowledgeSelectReq{
+		UserId:          userId,
+		KnowledgeIdList: knowledgeIds,
+	})
+	if err != nil {
+		return nil, err
+	}
+	validIds := make(map[string]bool)
+	for _, k := range resp.KnowledgeList {
+		validIds[k.KnowledgeId] = true
+	}
+	return validIds, nil
+}
+
+// buildWgaKnowledgeOptions 构建Knowledge配置选项
+// TODO: 实现知识库选项构建逻辑
+func buildWgaKnowledgeOptions(ctx *gin.Context, userId, orgId, threadId, runId string, knowledgeList []*assistant_service.WgaConfigKnowledge) ([]wga_option.Option, error) {
+	if len(knowledgeList) == 0 {
+		return nil, nil
+	}
+	// TODO: 实现知识库选项构建逻辑
+	// 目前返回空选项，后续需要对接知识库检索功能
+	return nil, nil
 }
 
 // --- internal wga workspace ---
