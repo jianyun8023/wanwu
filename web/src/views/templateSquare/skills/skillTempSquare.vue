@@ -39,8 +39,8 @@ import SkillCard from './card.vue';
 import { directDownload } from '@/utils/util';
 import SearchInput from '@/components/searchInput.vue';
 import {
-  getJoinerSkillList,
-  deleteJoinerSkill,
+  getAcquiredSkillList,
+  deleteAcquiredSkill,
 } from '@/api/skillResource/added';
 
 export default {
@@ -66,7 +66,7 @@ export default {
         name: searchInput.value,
       };
 
-      getJoinerSkillList(params)
+      getAcquiredSkillList(params)
         .then(res => {
           const { list } = res.data || {};
           this.list = list || [];
@@ -81,7 +81,7 @@ export default {
     },
     async handleDelete(info) {
       try {
-        await deleteJoinerSkill({ skillId: info.skillId });
+        await deleteAcquiredSkill({ skillId: info.skillId });
         this.doGetSkillTempList();
       } catch (error) {
         console.error('Error deleting skill:', error);
