@@ -317,6 +317,7 @@ type agentSensitiveService struct {
 	currentOrder     int
 	currentEventType int
 	currentEventData *agentEventData
+	currentDetailId  string
 }
 
 type agentEventData struct {
@@ -343,6 +344,7 @@ func (s *agentSensitiveService) parseContent(raw string) (id, content string) {
 	}
 	resp := struct {
 		MsgID     string          `json:"msg_id"`
+		DetailId  string          `json:"detailId"`
 		Response  string          `json:"response"`
 		EventType int             `json:"eventType"`
 		Order     int             `json:"order"`
@@ -354,6 +356,7 @@ func (s *agentSensitiveService) parseContent(raw string) (id, content string) {
 	s.currentOrder = resp.Order
 	s.currentEventType = resp.EventType
 	s.currentEventData = resp.EventData
+	s.currentDetailId = resp.DetailId
 	return resp.MsgID, resp.Response
 }
 
@@ -367,12 +370,13 @@ func (s *agentSensitiveService) buildSensitiveResp(id string, content string) []
 		"code":              0,
 		"message":           "success",
 		"response":          content,
+		"detailId":          s.currentDetailId,
 		"eventType":         s.currentEventType,
 		"order":             s.currentOrder,
 		"eventData":         data,
 		"gen_file_url_list": []interface{}{},
 		"history":           []interface{}{},
-		"finish":            1, // Note: The original JSON has "finish" misspelled as "finish"
+		"finish":            1,
 		"usage": map[string]interface{}{
 			"prompt_tokens":     0,
 			"completion_tokens": 0,
