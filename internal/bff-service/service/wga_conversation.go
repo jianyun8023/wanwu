@@ -8,14 +8,12 @@ import (
 	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
-	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
-	wga_persistent "github.com/UnicomAI/wanwu/pkg/wga-persistent"
 	wga_option "github.com/UnicomAI/wanwu/pkg/wga/wga-option"
 	"github.com/gin-gonic/gin"
 )
@@ -58,15 +56,12 @@ func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 	}
 
 	// 同步删除 workspace
-	cfg := config.WgaCfg()
-	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
 	if err != nil {
-		log.Errorf("[wga] thread %v delete persistent store err: %v", req.ThreadID, err)
+		log.Errorf("[wga] thread %v create persistent store err: %v", req.ThreadID, err)
 	} else {
-		if threadDir := store.GetThreadDir().Dir; threadDir != "" {
-			if err := util.DeleteDir(threadDir); err != nil {
-				log.Errorf("[wga] thread %v delete persistent dir err: %v", req.ThreadID, err)
-			}
+		if err := CleanupWgaWorkspace(store); err != nil {
+			log.Errorf("[wga] thread %v delete persistent dir err: %v", req.ThreadID, err)
 		}
 	}
 

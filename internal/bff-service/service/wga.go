@@ -3,9 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
@@ -17,11 +14,9 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/pkg/constant"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
-	"github.com/UnicomAI/wanwu/pkg/log"
 	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
 	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
 	"github.com/UnicomAI/wanwu/pkg/util"
-	wga_persistent "github.com/UnicomAI/wanwu/pkg/wga-persistent"
 	wga_option "github.com/UnicomAI/wanwu/pkg/wga/wga-option"
 	"github.com/gin-gonic/gin"
 )
@@ -333,127 +328,49 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 }
 
 func GeneralAgentWorkspaceDownload(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspaceDownloadReq) (string, []byte, error) {
-	cfg := config.WgaCfg()
-	if !cfg.Persistent.Enabled {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
-	}
-
-	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
 	if err != nil {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
+		return "", nil, err
 	}
-
-	ok, info, err := store.GetRunDir(req.RunID)
+	result, err := DownloadWgaWorkspace(store, req.RunID, req.Path)
 	if err != nil {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
+		return "", nil, err
 	}
-	if !ok {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "run directory not found")
-	}
-
-	workDir := info.Dir
-	targetPath := workDir
-	if req.Path != "" {
-		targetPath = filepath.Join(workDir, req.Path)
-	}
-
-	fi, err := os.Stat(targetPath)
-	if err != nil {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("path not found: %v", err))
-	}
-
-	if fi.IsDir() {
-		zipName := fmt.Sprintf("workspace_%s_%s.zip", req.RunID, filepath.Base(req.Path))
-		zipData, err := util.ZipDir(targetPath + "/.")
-		if err != nil {
-			return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to create zip: %v", err))
-		}
-		return zipName, zipData, nil
-	}
-
-	fileName := filepath.Base(req.Path)
-	fileData, err := os.ReadFile(targetPath)
-	if err != nil {
-		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to read file: %v", err))
-	}
-	return fileName, fileData, nil
+	return result.FileName, result.Data, nil
 }
 
 func GeneralAgentWorkspacePreview(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspacePreviewReq) (string, []byte, string, error) {
-	cfg := config.WgaCfg()
-	if !cfg.Persistent.Enabled {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
-	}
-
-	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
 	if err != nil {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
+		return "", nil, "", err
 	}
-
-	ok, info, err := store.GetRunDir(req.RunID)
+	result, err := PreviewWgaWorkspace(store, req.RunID, req.Path)
 	if err != nil {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
+		return "", nil, "", err
 	}
-	if !ok {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, "run directory not found")
-	}
-
-	workDir := info.Dir
-	targetPath := filepath.Join(workDir, req.Path)
-
-	fi, err := os.Stat(targetPath)
-	if err != nil {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("path not found: %v", err))
-	}
-	if fi.IsDir() {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, "path is a directory, not a file")
-	}
-
-	fileName := filepath.Base(req.Path)
-	fileData, err := os.ReadFile(targetPath)
-	if err != nil {
-		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to read file: %v", err))
-	}
-
-	contentType := http.DetectContentType(fileData)
-	return fileName, fileData, contentType, nil
+	return result.FileName, result.Data, result.ContentType, nil
 }
 
 func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspaceReq) (*response.GeneralAgentWorkspaceResp, error) {
-	cfg := config.WgaCfg()
-	if !cfg.Persistent.Enabled {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
-	}
-
-	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
 	if err != nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
+		return nil, err
 	}
-
-	ok, info, err := store.GetRunDir(req.RunID)
+	result, err := GetWgaWorkspaceTree(store, req.RunID)
 	if err != nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
-	}
-	if !ok {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "run directory not found")
-	}
-
-	workDir := info.Dir
-	files, err := buildWgaFileTree(workDir, "")
-	if err != nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to read directory: %v", err))
+		return nil, err
 	}
 
 	return &response.GeneralAgentWorkspaceResp{
 		GeneralAgentConversationWorkspaceInfo: response.GeneralAgentConversationWorkspaceInfo{
 			ThreadID:  req.ThreadID,
 			RunID:     req.RunID,
-			FileCount: int32(len(files)),
-			TotalSize: calculateWgaFileTreeTotalSize(files),
+			FileCount: int32(result.FileCount),
+			TotalSize: result.TotalSize,
 			IsDisplay: true,
 		},
 		Path:  "",
-		Files: files,
+		Files: result.Files,
 	}, nil
 }
 
@@ -553,61 +470,4 @@ func buildWgaModelOption(ctx *gin.Context, modelConfig *common.AppModelConfig) (
 		ModelName:    modelConfig.Model,
 		Params:       modelParams,
 	}), nil
-}
-
-// --- internal wga workspace ---
-
-func buildWgaFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo, error) {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var files []response.GeneralAgentFileInfo
-	for _, entry := range entries {
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-
-		filePath := filepath.Join(parentPath, entry.Name())
-		fileInfo := response.GeneralAgentFileInfo{
-			Name: entry.Name(),
-		}
-
-		if entry.IsDir() {
-			fileInfo.Type = "directory"
-			children, err := buildWgaFileTree(filepath.Join(dirPath, entry.Name()), filePath)
-			if err == nil {
-				fileInfo.Children = children
-			}
-		} else {
-			fileInfo.Type = "file"
-			fileInfo.Size = info.Size()
-			fullPath := filepath.Join(dirPath, entry.Name())
-			if data, err := os.ReadFile(fullPath); err == nil {
-				fileInfo.MimeType = http.DetectContentType(data)
-			}
-			if fileInfo.MimeType == "" {
-				log.Warnf("file %s has empty mime type", filePath)
-				fileInfo.MimeType = "application/octet-stream"
-			}
-		}
-
-		files = append(files, fileInfo)
-	}
-
-	return files, nil
-}
-
-func calculateWgaFileTreeTotalSize(files []response.GeneralAgentFileInfo) int64 {
-	var total int64
-	for _, f := range files {
-		if f.Type == "directory" {
-			total += calculateWgaFileTreeTotalSize(f.Children)
-		} else {
-			total += f.Size
-		}
-	}
-	return total
 }

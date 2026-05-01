@@ -26807,30 +26807,6 @@ const docTemplate = `{
                 }
             }
         },
-        "response.GeneralAgentFileInfo": {
-            "type": "object",
-            "properties": {
-                "children": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.GeneralAgentFileInfo"
-                    }
-                },
-                "mimeType": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "size": {
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "\"file\" or \"directory\"",
-                    "type": "string"
-                }
-            }
-        },
         "response.GeneralAgentResourceSelectItem": {
             "type": "object",
             "properties": {
@@ -26995,7 +26971,7 @@ const docTemplate = `{
                 "files": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.GeneralAgentFileInfo"
+                        "$ref": "#/definitions/response.WgaFileNode"
                     }
                 },
                 "isDisplay": {
@@ -30228,6 +30204,30 @@ const docTemplate = `{
                 },
                 "placeholder": {
                     "description": "占位提示文本",
+                    "type": "string"
+                }
+            }
+        },
+        "response.WgaFileNode": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.WgaFileNode"
+                    }
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "\"file\" or \"directory\"",
                     "type": "string"
                 }
             }

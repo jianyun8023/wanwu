@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,7 +14,6 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
-	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
@@ -68,19 +65,24 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	// 获取上一次输出的目录信息（如果存在）
 	var lastWorkspaceTotalSize int64
 	var lastWorkspaceFileCount int
+	var workspaceStore *wga_persistent.Store
 	if config.WgaCfg().Persistent.Enabled {
-		store, err := wga_persistent.NewStore(wga_persistent.Mode(config.WgaCfg().Persistent.Mode), config.WgaCfg().Persistent.BaseDir, req.ThreadID)
+		store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
 		if err != nil {
 			log.Errorf("[wga] thread %v failed to create persistent store: %v", req.ThreadID, err)
 		} else {
-			ok, info, err := store.GetLastRunDir()
+			workspaceStore = store
+			lastRunDir, err := GetWgaWorkspaceLastRunDir(store)
 			if err != nil {
 				log.Errorf("[wga] thread %v failed to get last run dir: %v", req.ThreadID, err)
 			}
-			if ok {
-				lastWorkspaceTotalSize, lastWorkspaceFileCount, err = getWgaWorkspaceInfo(info.Dir)
+			if lastRunDir != "" {
+				wsInfo, err := GetWgaWorkspaceInfo(lastRunDir)
 				if err != nil {
 					log.Errorf("[wga] thread %v failed to get last workspace info: %v", req.ThreadID, err)
+				} else {
+					lastWorkspaceTotalSize = wsInfo.TotalSize
+					lastWorkspaceFileCount = wsInfo.FileCount
 				}
 			}
 		}
@@ -144,8 +146,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 
 	// 保存智能体返回的消息
 	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, userId, orgId, req.ThreadID, runID,
-		config.WgaCfg().Persistent.BaseDir,
-		config.WgaCfg().Persistent.Enabled,
+		workspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
@@ -155,8 +156,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		processedEventCh,
 		req.ThreadID,
 		runID,
-		config.WgaCfg().Persistent.BaseDir,
-		config.WgaCfg().Persistent.Enabled,
+		workspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
@@ -471,27 +471,24 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 
 	// 持久化存储
 	if config.WgaCfg().Persistent.Enabled {
-		var inputDir string
-		mode := wga_persistent.ModeVersioned
-		if config.WgaCfg().Persistent.Mode == string(wga_persistent.ModeOverwrite) {
-			mode = wga_persistent.ModeOverwrite
-		}
-		store, err := wga_persistent.NewStore(mode, config.WgaCfg().Persistent.BaseDir, threadID)
-		if err == nil {
-			// 创建目录并从上一次输出复制
-			_, info, err := store.GetRunDir(runID, wga_persistent.WithMkdir(true))
-			if err == nil {
-				inputDir = info.Dir
+		store, err := NewGeneralAgentWorkspaceStore(threadID)
+		if err != nil {
+			log.Errorf("[wga] thread %v create persistent store err: %v", threadID, err)
+		} else {
+			dirs, err := PrepareWgaWorkspaceDirs(store, runID, true)
+			if err != nil {
+				log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
+			} else {
 				opts = append(opts,
-					wga_option.WithInputDir(filepath.Clean(info.Dir)+"/."),
-					wga_option.WithOutputDir(info.Dir),
+					wga_option.WithInputDir(dirs.InputDir),
+					wga_option.WithOutputDir(dirs.OutputDir),
 				)
-			}
-		}
-		// 下载用户消息中的URL文件到inputDir
-		if urls := userInputMessage.GetURLs(); len(urls) > 0 {
-			if err := downloadURLsToDir(urls, inputDir); err != nil {
-				log.Errorf("download URLs %+v to inputDir %v failed: %v", urls, inputDir, err)
+				// 下载用户消息中的URL文件到inputDir
+				if urls := userInputMessage.GetURLs(); len(urls) > 0 {
+					if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
+						log.Errorf("download URLs %+v to inputDir %v failed: %v", urls, dirs.OutputDir, err)
+					}
+				}
 			}
 		}
 	}
@@ -514,16 +511,22 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 func saveWgaChatHistoryEvent(
 	ctx context.Context,
 	historyEventCh <-chan aguievents.Event,
-	userId, orgId, threadId, runId, baseDir string,
-	persistentEnabled bool,
+	userId, orgId, threadId, runId string,
+	workspaceStore *wga_persistent.Store,
 	lastWorkspaceTotalSize int64,
 	lastWorkspaceFileCount int) {
 	defer util.PrintPanicStack()
 
 	var events []aguievents.Event
 	for event := range historyEventCh {
-		if persistentEnabled && event.Type() == aguievents.EventTypeRunFinished {
-			if wsEvent := buildWgaWorkspaceEvent(threadId, runId, baseDir, lastWorkspaceTotalSize, lastWorkspaceFileCount); wsEvent != nil {
+		// inject workspace activity event when run finished, to trigger AG-UI to fetch workspace info and update workspace activity card
+		if workspaceStore != nil && event.Type() == aguievents.EventTypeRunFinished {
+			if wsEvent, _ := BuildWgaWorkspaceEvent(workspaceStore, &WgaWorkspaceEventConfig{
+				ThreadID:           threadId,
+				RunID:              runId,
+				LastWorkspaceSize:  lastWorkspaceTotalSize,
+				LastWorkspaceCount: lastWorkspaceFileCount,
+			}); wsEvent != nil {
 				events = append(events, wsEvent)
 			}
 		}
@@ -558,8 +561,8 @@ func saveWgaChatHistoryEvent(
 func processWgaEvent2OutputCh(
 	ctx context.Context,
 	eventCh <-chan aguievents.Event,
-	threadID, runID, baseDir string,
-	persistentEnabled bool,
+	threadID, runID string,
+	workspaceStore *wga_persistent.Store,
 	lastWorkspaceTotalSize int64,
 	lastWorkspaceFileCount int,
 ) <-chan string {
@@ -578,8 +581,13 @@ func processWgaEvent2OutputCh(
 				}
 
 				// inject workspace activity event when run finished, to trigger AG-UI to fetch workspace info and update workspace activity card
-				if persistentEnabled && evt.Type() == aguievents.EventTypeRunFinished {
-					if wsEvent := buildWgaWorkspaceEvent(threadID, runID, baseDir, lastWorkspaceTotalSize, lastWorkspaceFileCount); wsEvent != nil {
+				if workspaceStore != nil && evt.Type() == aguievents.EventTypeRunFinished {
+					if wsEvent, _ := BuildWgaWorkspaceEvent(workspaceStore, &WgaWorkspaceEventConfig{
+						ThreadID:           threadID,
+						RunID:              runID,
+						LastWorkspaceSize:  lastWorkspaceTotalSize,
+						LastWorkspaceCount: lastWorkspaceFileCount,
+					}); wsEvent != nil {
 						if data, err := json.Marshal(wsEvent); err == nil {
 							select {
 							case out <- string(data):
@@ -601,84 +609,6 @@ func processWgaEvent2OutputCh(
 		}
 	}()
 	return out
-}
-
-func buildWgaWorkspaceEvent(threadID, runID, baseDir string, lastWorkspaceTotalSize int64, lastWorkspaceFileCount int) aguievents.Event {
-	store, err := wga_persistent.NewStore(wga_persistent.ModeVersioned, baseDir, threadID)
-	if err != nil {
-		return nil
-	}
-
-	ok, info, err := store.GetRunDir(runID)
-	if err != nil || !ok {
-		return nil
-	}
-
-	statInfo, err := os.Stat(info.Dir)
-	if err != nil || !statInfo.IsDir() {
-		return nil
-	}
-
-	totalSize, fileCount, err := getWgaWorkspaceInfo(info.Dir)
-	if err != nil || fileCount == 0 {
-		return nil
-	}
-
-	if totalSize == lastWorkspaceTotalSize && fileCount == lastWorkspaceFileCount {
-		// 工作空间内容未变化，不发送事件
-		return nil
-	}
-
-	return aguievents.NewActivitySnapshotEvent(
-		aguievents.GenerateStepID(),
-		ag_ui_util.ActivityTypeWorkspace,
-		&ag_ui_util.WorkspaceActivityContent{
-			RunID:     runID,
-			ThreadID:  threadID,
-			FileCount: fileCount,
-			TotalSize: totalSize,
-			Timestamp: time.Now().UnixMilli(),
-		},
-	)
-}
-
-func getWgaWorkspaceInfo(currentDir string) (int64, int, error) {
-	entries, err := os.ReadDir(currentDir)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var totalSize int64
-	var fileCount int
-
-	for _, entry := range entries {
-		// 跳过隐藏文件
-		if strings.HasPrefix(entry.Name(), ".") {
-			continue
-		}
-
-		currentPath := filepath.Join(currentDir, entry.Name())
-		info, err := entry.Info()
-		if err != nil {
-			log.Warnf("[wga] failed to get file info: %s: %v", currentPath, err)
-			continue
-		}
-
-		if entry.IsDir() {
-			dirSize, dirFileCount, err := getWgaWorkspaceInfo(currentPath)
-			if err != nil {
-				log.Warnf("[wga] failed to build file tree for dir: %s: %v", currentPath, err)
-				continue
-			}
-			totalSize += dirSize
-			fileCount += dirFileCount
-		} else {
-			totalSize += info.Size()
-			fileCount++
-		}
-	}
-
-	return totalSize, fileCount, nil
 }
 
 // buildWgaMentionResourcesMessage 构建 @ 资源提示消息
@@ -793,30 +723,4 @@ func convertWgaMessageInputPart(m map[string]interface{}) schema.MessageInputPar
 		}
 	}
 	return part
-}
-
-func downloadURLsToDir(urls map[string]string, dir string) error {
-	if len(urls) == 0 {
-		return nil
-	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("[downloadURLsToDir] create dir %s failed: %w", dir, err)
-	}
-	for fileName, urlStr := range urls {
-		log.Infof("[downloadURLsToDir] downloading URL %s to %s", urlStr, dir)
-		body, err := http_client.Default().Get(context.Background(), &http_client.HttpRequestParams{
-			Url: urlStr,
-		})
-		if err != nil {
-			log.Errorf("[downloadURLsToDir] download URL %s failed: %v", urlStr, err)
-			continue
-		}
-		filePath := filepath.Join(dir, fileName)
-		if err := os.WriteFile(filePath, body, 0644); err != nil {
-			log.Errorf("[downloadURLsToDir] save file %s failed: %v", filePath, err)
-			continue
-		}
-		log.Infof("[downloadURLsToDir] downloaded URL %s to %s, size: %d bytes", urlStr, filePath, len(body))
-	}
-	return nil
 }

@@ -6198,22 +6198,6 @@ definitions:
         description: 对话标题
         type: string
     type: object
-  response.GeneralAgentFileInfo:
-    properties:
-      children:
-        items:
-          $ref: '#/definitions/response.GeneralAgentFileInfo'
-        type: array
-      mimeType:
-        type: string
-      name:
-        type: string
-      size:
-        type: integer
-      type:
-        description: '"file" or "directory"'
-        type: string
-    type: object
   response.GeneralAgentResourceSelectItem:
     properties:
       author:
@@ -6326,7 +6310,7 @@ definitions:
         type: integer
       files:
         items:
-          $ref: '#/definitions/response.GeneralAgentFileInfo'
+          $ref: '#/definitions/response.WgaFileNode'
         type: array
       isDisplay:
         type: boolean
@@ -8484,6 +8468,22 @@ definitions:
         description: logo
       placeholder:
         description: 占位提示文本
+        type: string
+    type: object
+  response.WgaFileNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/response.WgaFileNode'
+        type: array
+      mimeType:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+      type:
+        description: '"file" or "directory"'
         type: string
     type: object
   response.WorkflowTemplateDetail:

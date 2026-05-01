@@ -80,18 +80,18 @@ type GeneralAgentCheckTool struct {
 	Meet   bool   `json:"meet"`   // 是否符合要求
 }
 
-type GeneralAgentFileInfo struct {
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"` // "file" or "directory"
-	Size     int64                  `json:"size,omitempty"`
-	MimeType string                 `json:"mimeType,omitempty"`
-	Children []GeneralAgentFileInfo `json:"children,omitempty"`
+type WgaFileNode struct {
+	Name     string         `json:"name"`
+	Type     string         `json:"type"` // "file" or "directory"
+	Size     int64          `json:"size,omitempty"`
+	MimeType string         `json:"mimeType,omitempty"`
+	Children []*WgaFileNode `json:"children,omitempty"`
 }
 
 type GeneralAgentWorkspaceResp struct {
 	GeneralAgentConversationWorkspaceInfo
-	Path  string                 `json:"path"`
-	Files []GeneralAgentFileInfo `json:"files"`
+	Path  string         `json:"path"`
+	Files []*WgaFileNode `json:"files"`
 }
 
 type GeneralAgentConversationDetailInfo struct {
