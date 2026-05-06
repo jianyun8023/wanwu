@@ -152,14 +152,32 @@ func ValidateLLMModel(ctx *gin.Context, modelInfo *model_service.ModelInfo) erro
 			Stream: &stream,
 		}
 		// 执行视觉支持校验
-		llmReqVision, err := iLLM.NewReq(reqVision)
+		llmReq, err := iLLM.NewReq(reqVision)
 		if err != nil {
 			return err
 		}
-		_, _, err = iLLM.ChatCompletions(ctx.Request.Context(), llmReqVision)
+
+		resp, _, err := iLLM.ChatCompletions(ctx.Request.Context(), llmReq)
 		if err != nil {
 			return fmt.Errorf("vision validation failed: %v, maybe model does not support vision functionality", err)
 		}
+
+		openAIResp, ok := resp.ConvertResp()
+		if !ok {
+			return fmt.Errorf("vision validation: invalid response format")
+		}
+
+		if len(openAIResp.Choices) == 0 || openAIResp.Choices[0].Message == nil {
+			return fmt.Errorf("vision validation: empty response")
+		}
+
+		content := openAIResp.Choices[0].Message.Content
+		// 检查响应内容是否包含 "GPU"，确认模型能识别图片中的文字内容
+		if content == "" || !strings.Contains(content, "GPU") {
+			return fmt.Errorf("model does not support vision functionality: response indicates image was not processed")
+		}
+
+		return nil
 	}
 
 	if !toolCallFlag && !visionSupportFlag {
