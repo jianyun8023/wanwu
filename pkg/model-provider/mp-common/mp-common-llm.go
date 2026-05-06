@@ -126,9 +126,10 @@ type LLMReq struct {
 	Tools          []OpenAITool          `json:"tools,omitempty"`
 
 	// custom
-	Thinking            *Thinking              `json:"thinking,omitempty"` // 控制模型是否开启深度思考模式。
-	EnableThinking      *bool                  `json:"enable_thinking,omitempty"`
-	ChatTemplateKwargs  map[string]interface{} `json:"chat_template_kwargs,omitempty"`
+	Thinking            *Thinking              `json:"thinking,omitempty"`              // 控制模型是否开启深度思考模式。
+	EnableThinking      *bool                  `json:"enable_thinking,omitempty"`       // 控制模型是否开启深度思考模式。
+	ChatTemplateKwargs  map[string]interface{} `json:"chat_template_kwargs,omitempty"`  // 控制模型是否开启深度思考模式（元景）
+	ReasoningEffort     *string                `json:"reasoning_effort,omitempty"`      // 控制模型的推理强度（Ds）Possible values: [high, max]
 	MaxCompletionTokens *int                   `json:"max_completion_tokens,omitempty"` // 控制模型输出的最大长度[0,64k]
 	LogitBias           map[string]int         `json:"logit_bias,omitempty"`            // 调整指定 token 在模型输出内容中出现的概率
 	ToolChoice          interface{}            `json:"tool_choice,omitempty"`           // 强制指定工具调用的策略

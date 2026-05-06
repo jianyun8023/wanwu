@@ -191,6 +191,12 @@ recommend_models:
       - model: "deepseek-reasoner"
         display_name: "DeepSeek Reasoner"
         tags: ["深度思考开关", "工具调用"]
+      - model: "deepseek-v4-flash"
+        display_name: "DeepSeek-V4-Flash"
+        tags: [ "深度思考开关", "工具调用" ]
+      - model: "deepseek-v4-pro"
+        display_name: "DeepSeek-V4-Pro"
+        tags: [ "深度思考开关", "工具调用" ]
 
   - provider: "Jina"
     rerank:
