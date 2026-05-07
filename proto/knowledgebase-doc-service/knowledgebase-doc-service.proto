@@ -9,6 +9,8 @@ option go_package = "gitlab.ai-yuanjing.cn/ai-platform-private/backend-used-bff/
 service KnowledgeBaseDocService {
   // 获取文档列表
   rpc GetDocList(GetDocListReq) returns (GetDocListResp) {}
+  // 根据文档id列表获取文档列表
+  rpc GetDocListByDocIdList(GetDocListByDocIdListReq) returns (GetDocListResp) {}
   // 获取文档详情
   rpc GetDocDetail(GetDocDetailReq) returns (DocInfo) {}
   // 上传文档
@@ -78,6 +80,12 @@ message GetDocDetailReq{
   string userId = 2;
   string orgId = 3;
   bool needConfig = 4;
+}
+
+message GetDocListByDocIdListReq{
+  repeated string docIdList = 1;
+  string userId = 2;
+  string orgId = 3;
 }
 
 message GetDocListResp {

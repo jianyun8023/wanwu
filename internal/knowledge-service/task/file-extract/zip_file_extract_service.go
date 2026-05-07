@@ -8,10 +8,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
+)
+
+const (
+	MacZipSystemDir = "__MACOSX"
 )
 
 type ZipFileExtractServiceService struct {
@@ -39,6 +44,9 @@ func (t ZipFileExtractServiceService) ExtractFile(ctx context.Context, localFile
 	}()
 
 	for _, f := range fileReader.File {
+		if strings.HasPrefix(f.Name, MacZipSystemDir) { //对于mac针对压缩包内置的文件夹，跳过
+			continue
+		}
 		var decodeFileName string
 		if f.Flags == 0 { //本地编码，默认GBK，转换成UTF-8
 			i := bytes.NewReader([]byte(f.Name))

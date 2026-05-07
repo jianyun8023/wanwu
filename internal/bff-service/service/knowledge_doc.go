@@ -81,8 +81,6 @@ func GetDocConfig(ctx *gin.Context, userId, orgId string, r *request.DocConfigRe
 	data, err := knowledgeBaseDoc.GetDocDetail(ctx.Request.Context(), &knowledgebase_doc_service.GetDocDetailReq{
 		DocId:      r.DocId,
 		NeedConfig: true,
-		UserId:     userId,
-		OrgId:      orgId,
 	})
 	if err != nil {
 		return nil, err

@@ -638,7 +638,7 @@ func convertMetaValue(meta *model.KnowledgeDocMeta) (interface{}, error) {
 
 // CreateKnowledgeUrlDoc 创建知识库url文件
 func CreateKnowledgeUrlDoc(ctx context.Context, doc *model.KnowledgeDoc, importTask *model.KnowledgeImportTask) error {
-	knowledge, err := SelectKnowledgeById(ctx, doc.KnowledgeId, doc.UserId, doc.OrgId)
+	knowledge, err := SelectKnowledgeById(ctx, doc.KnowledgeId, "", "")
 	if err != nil {
 		return err
 	}
@@ -679,7 +679,7 @@ func CreateKnowledgeUrlDoc(ctx context.Context, doc *model.KnowledgeDoc, importT
 			TaskId:            doc.DocId,
 			FileName:          doc.Name,
 			Url:               url.QueryEscape(doc.FilePath),
-			UserId:            doc.UserId,
+			UserId:            knowledge.UserId,
 			Overlap:           config.Overlap,
 			SegmentSize:       config.MaxSplitter,
 			SegmentType:       service.RebuildSegmentType(config.SegmentType, config.SegmentMethod),
@@ -701,7 +701,7 @@ func CreateKnowledgeUrlDoc(ctx context.Context, doc *model.KnowledgeDoc, importT
 			DocId:                 doc.DocId,
 			KnowledgeName:         knowledge.RagName,
 			CategoryId:            knowledge.KnowledgeId,
-			UserId:                doc.UserId,
+			UserId:                knowledge.UserId,
 			Overlap:               config.Overlap,
 			SegmentSize:           config.MaxSplitter,
 			SegmentType:           service.RebuildSegmentType(config.SegmentType, config.SegmentMethod),
