@@ -946,6 +946,10 @@ export default {
     continueTips: '是否继续批量编辑其余“解析成功”的文档？',
     multimodalMixTips:
       '批量编辑分段设置，只支持相同文件类型的批量分段设置（多模态/文本表格）',
+    batchExportTips:
+      '本次共计选择{total}个文档，其中{urlCount}个文件为url类型，不支持导出。',
+    exportAllTips:
+      '已成功导出全部文件（url类型文件不支持导出），请在【导出记录】中进行下载。',
     tip: '提示',
     refreshTips:
       '您导入的文件正在异步处理中，请耐心等待，您可以尝试，刷新列表获取导入结果。',
