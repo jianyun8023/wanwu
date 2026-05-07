@@ -680,7 +680,7 @@ export default {
       exportDoc(params)
         .then(res => {
           if (res.code === 0) {
-            this.$message.success(this.$t('common.message.success'));
+            this.$message.success(this.$t('knowledgeManage.exportAllTips'));
             const data = res.data || {};
             const url = data.fileUrl || data.downloadUrl;
             if (url) {
@@ -690,7 +690,6 @@ export default {
             }
           }
         })
-        .catch(() => {})
         .finally(() => {
           this.loading = false;
         });
@@ -865,11 +864,9 @@ export default {
           cancelButtonText: this.$t('common.button.cancel'),
           type: 'warning',
         },
-      )
-        .then(() => {
-          this.handleDelete([data.docId]);
-        })
-        .catch(() => {});
+      ).then(() => {
+        this.handleDelete([data.docId]);
+      });
     },
     handleConfig(docIdList) {
       this.$router.push({
@@ -893,14 +890,40 @@ export default {
           cancelButtonText: this.$t('common.button.cancel'),
           type: 'warning',
         },
-      )
-        .then(() => {
-          this.handleDelete(this.selectedDocIds);
-        })
-        .catch(() => {});
+      ).then(() => {
+        this.handleDelete(this.selectedDocIds);
+      });
     },
     handleBatchExport() {
-      this.exportData(this.selectedDocIds);
+      // 统计URL类型文档数量
+      const urlDocs = this.selectedTableData.filter(
+        doc => doc.docType === 'url',
+      );
+      const nonUrlDocs = this.selectedTableData.filter(
+        doc => doc.docType !== 'url',
+      );
+
+      const totalCount = this.selectedTableData.length;
+      const urlCount = urlDocs.length;
+      const exportCount = nonUrlDocs.length;
+
+      this.$alert(
+        this.$t('knowledgeManage.batchExportTips', {
+          total: totalCount,
+          urlCount: urlCount,
+          exportCount: exportCount,
+        }),
+        this.$t('knowledgeManage.tip'),
+        {
+          confirmButtonText: this.$t('common.button.confirm'),
+          type: 'warning',
+        },
+      ).then(() => {
+        // 用户点击确定后，执行导出（仅当有非URL文档时）
+        if (exportCount > 0) {
+          this.exportData(nonUrlDocs.map(doc => doc.docId));
+        }
+      });
     },
     handleBatchConfig() {
       const urlDocs = this.selectedTableData.filter(
@@ -1299,6 +1322,7 @@ export default {
 
       .el-icon-success {
         display: block;
+        color: #67c23a;
       }
 
       .el-icon-error {
@@ -1331,10 +1355,6 @@ export default {
             display: none;
           }
         }
-      }
-
-      .el-icon-success {
-        color: #67c23a;
       }
 
       .result_icon {
