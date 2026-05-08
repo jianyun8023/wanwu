@@ -2,10 +2,10 @@ package model
 
 type AcquiredSkillVariable struct {
 	ID            uint32 `gorm:"primarykey"`
-	SkillID       string `gorm:"column:skill_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;comment:skill id"`
-	UserID        string `gorm:"column:user_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;comment:用户id"`
-	OrgID         string `gorm:"column:org_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;comment:组织id"`
-	Name          string `gorm:"column:name;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;comment:工具名称"`
+	SkillID       string `gorm:"column:skill_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;type:varchar(64);comment:skill id"`
+	UserID        string `gorm:"column:user_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;type:varchar(64);comment:用户id"`
+	OrgID         string `gorm:"column:org_id;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;type:varchar(64);comment:组织id"`
+	Name          string `gorm:"column:name;uniqueIndex:ux_acquired_skill_var_skill_user_org_name;type:varchar(255);comment:工具名称"`
 	Desc          string `gorm:"column:desc;type:text;comment:描述"`
 	VariableKey   string `gorm:"column:variable_key;comment:变量Key"`
 	VariableValue string `gorm:"column:variable_value;comment:变量Value"`
