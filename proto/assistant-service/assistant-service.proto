@@ -613,6 +613,8 @@ message GetConversationDetailListResp {
 message ConversationResponse {
   string response = 1;
   int32 order = 2;
+  string errResponse = 3;// 错误响应,用户可读
+  string errMessage = 4;// 错误信息，异常栈信息
 }
 
 message ConversionDetailInfo{
@@ -648,6 +650,7 @@ message SubConversation {
   string conversationType = 8;//subAgent：子智能体；agentTool：主智能体工具；subAgentTool：子智能体工具
   string parentId = 9;//需要挂载的id，为子智能体工具扩展
   int32 order = 10;//顺序
+  string errMessage = 11;//错误消息
 }
 
 message RequestFile {
@@ -976,6 +979,10 @@ message WgaConfigKnowledge {
   string knowledgeId = 1;
 }
 
+message WgaConfigOntologyKnowledge {
+  string ontologyKnowledgeId = 1;
+}
+
 message WgaConversationConfig {
   string threadId = 1;
   string title = 2;
@@ -997,6 +1004,7 @@ message WgaConfig{
   repeated WgaConfigWorkflow workflowList = 8;
   repeated WgaConfigSkill skillList = 9;
   repeated WgaConfigKnowledge knowledgeList = 10;
+  repeated WgaConfigOntologyKnowledge ontologyKnowledgeList = 11;
 }
 
 message GetWgaConversationConfigReq {
@@ -1030,4 +1038,5 @@ message UpdateWgaConfigReq {
   repeated WgaConfigWorkflow workflowList = 5;
   repeated WgaConfigSkill skillList = 6;
   repeated WgaConfigKnowledge knowledgeList = 7;
+  repeated WgaConfigOntologyKnowledge ontologyKnowledgeList = 8;
 }

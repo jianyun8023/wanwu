@@ -36,9 +36,14 @@ func (QAFinishBuilder) Build(ctx context.Context, ragContext *RagContext) *RagEv
 
 	if len(search.Data.SearchList) > 0 {
 		list := search.Data.SearchList
+		scoreList := search.Data.Score
+		scoreLen := len(scoreList)
 		searchData := list[0]
 		resultSearchList := make([]interface{}, 0, len(list))
-		for _, item := range list {
+		for index, item := range list {
+			if index < scoreLen {
+				item.Score = scoreList[index]
+			}
 			resultSearchList = append(resultSearchList, item)
 		}
 

@@ -4164,6 +4164,10 @@ definitions:
         items:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
+      ontology:
+        items:
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
+        type: array
       skill:
         items:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
@@ -5335,6 +5339,10 @@ definitions:
     type: object
   response.ConversationResponse:
     properties:
+      errMessage:
+        type: string
+      errResponse:
+        type: string
       order:
         type: integer
       response:
@@ -6198,7 +6206,7 @@ definitions:
       list:
         description: 列表项
       listType:
-        description: '类型: mcp, workflow, skill, assistant, tool'
+        description: '类型: tool, mcp, workflow, skill, assistant, knowledge'
         type: string
     type: object
   response.GeneralAgentConversationDetailInfo:
@@ -6287,7 +6295,7 @@ definitions:
           $ref: '#/definitions/response.GeneralAgentResourceSelectItem'
         type: array
       listType:
-        description: '列表类型: mcp, workflow, skill, assistant, knowledge'
+        description: '列表类型: mcp, workflow, skill, assistant, knowledge, ontology'
         type: string
     type: object
   response.GeneralAgentToolCategories:
@@ -8165,6 +8173,9 @@ definitions:
     properties:
       conversationType:
         description: subAgent：子智能体；agentTool：主智能体工具；subAgentTool：子智能体工具
+        type: string
+      errMessage:
+        description: 错误信息
         type: string
       id:
         description: 事件id
@@ -12682,7 +12693,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取通用智能体资源选择列表，包括MCP、Workflow、Skill、智能体四种类型
+      description: 获取通用智能体资源选择列表，包括MCP、Skill、Workflow、Assistant、Ontology五种类型
       produces:
       - application/json
       responses:
@@ -19027,13 +19038,12 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: 工具类型
+      - description: 工具类型，传空或不传时返回全部
         enum:
         - builtin
         - custom
         in: query
         name: toolType
-        required: true
         type: string
       - description: 工具名称
         in: query

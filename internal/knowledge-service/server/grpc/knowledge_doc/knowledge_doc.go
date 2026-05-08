@@ -90,6 +90,24 @@ func (s *Service) GetDocList(ctx context.Context, req *knowledgebase_doc_service
 	return buildDocListResp(list, importTaskList, knowledge, total, req.PageSize, req.PageNum, keywords), nil
 }
 
+func (s *Service) GetDocListByDocIdList(ctx context.Context, req *knowledgebase_doc_service.GetDocListByDocIdListReq) (*knowledgebase_doc_service.GetDocListResp, error) {
+	docList, err := orm.SelectDocByDocIdList(ctx, req.DocIdList, "", "")
+	if err != nil {
+		log.Errorf("没有操作该知识库文档的权限 参数(%v)", req)
+		return nil, err
+	}
+	var retList = make([]*knowledgebase_doc_service.DocInfo, 0)
+	if len(docList) > 0 {
+		for _, item := range docList {
+			retList = append(retList, buildDocInfo(item, make(map[string]*model.SegmentConfig), nil))
+		}
+	}
+	return &knowledgebase_doc_service.GetDocListResp{
+		Docs:  retList,
+		Total: int64(len(retList)),
+	}, nil
+}
+
 func (s *Service) GetDocDetail(ctx context.Context, req *knowledgebase_doc_service.GetDocDetailReq) (*knowledgebase_doc_service.DocInfo, error) {
 	doc, err := orm.GetDocDetail(ctx, req.UserId, req.OrgId, req.DocId)
 	if err != nil {

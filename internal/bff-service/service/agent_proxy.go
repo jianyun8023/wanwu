@@ -163,8 +163,7 @@ const proxyAgentChatOpenAPITemplate = `{
 }`
 
 func AgentChatProxy(ctx *gin.Context, assistantId string, req *request.AgentChatProxyReq) (string, error) {
-	agentConfig := config.Cfg().AgentService
-	url := fmt.Sprintf("http://%s:%d/agent/chat", agentConfig.Host, agentConfig.Port)
+	url := fmt.Sprintf("http://%s/agent/chat", config.Cfg().AgentService.Host)
 
 	agentReq := map[string]interface{}{
 		"assistantId": util.MustU32(assistantId),

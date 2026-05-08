@@ -281,6 +281,7 @@ func buildKnowledgeExportRecordRespList(ctx *gin.Context, dataList []*knowledgeb
 	authorMap := buildKnowledgeExportAuthorMap(ctx, dataList)
 	for _, data := range dataList {
 		filePath, _ := url.JoinPath(config.Cfg().Minio.DownloadURL, data.FilePath)
+		filePath = urlDecode(filePath)
 		retList = append(retList, &response.ListKnowledgeExportRecordResp{
 			ExportRecordId: data.ExportRecordId,
 			ExportTime:     data.ExportTime,
@@ -292,6 +293,19 @@ func buildKnowledgeExportRecordRespList(ctx *gin.Context, dataList []*knowledgeb
 		})
 	}
 	return retList
+}
+
+// URLDecode 对输入的字符串进行 URL 解码。
+// 参数 encodeStr 为需要解码的字符串（例如 "%E7%9F%A5%E8%AF%86%E5%BA%931.zip"）。
+// 返回解码后的字符串和可能的错误。
+func urlDecode(encodeStr string) string {
+	// 使用 QueryUnescape 可以处理 %xx 形式的编码，并且会将 '+' 还原为空格
+	decoded, err := url.QueryUnescape(encodeStr)
+	if err != nil {
+		log.Errorf("URL decode error: %v", err)
+		return encodeStr
+	}
+	return decoded
 }
 
 func buildQAPairAuthorMap(ctx *gin.Context, dataList []*knowledgebase_qa_service.QAPairInfo) map[string]string {

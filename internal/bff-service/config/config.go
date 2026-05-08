@@ -49,11 +49,12 @@ type Config struct {
 	Rag                 ServiceConfig         `json:"rag" mapstructure:"rag"`
 	Assistant           ServiceConfig         `json:"assistant" mapstructure:"assistant"`
 	Operate             ServiceConfig         `json:"operate" mapstructure:"operate"`
+	AgentService        ServiceConfig         `json:"agent-service" mapstructure:"agent-service"`
 	RagKnowledgeConfig  RagKnowledgeConfig    `json:"rag-knowledge" mapstructure:"rag-knowledge"`
 	DifyKnowledgeConfig DifyKnowledgeConfig   `json:"dify-knowledge" mapstructure:"dify-knowledge"`
 	Workflow            WorkflowServiceConfig `json:"workflow" mapstructure:"workflow"`
 	WgaSandbox          WgaSandboxConfig      `json:"wga-sandbox" mapstructure:"wga-sandbox"`
-	AgentService        AgentServiceConfig    `json:"agent-service" mapstructure:"agent-service"`
+	Ontology            OntologyServiceConfig `json:"ontology" mapstructure:"ontology"`
 }
 
 type ServerConfig struct {
@@ -117,11 +118,6 @@ type ServiceConfig struct {
 	Host string `json:"host" mapstructure:"host"`
 }
 
-type AgentServiceConfig struct {
-	Host string `json:"host" mapstructure:"host"`
-	Port int    `json:"port" mapstructure:"port"`
-}
-
 type RagKnowledgeConfig struct {
 	Endpoint               string `json:"endpoint" mapstructure:"endpoint"`
 	ChatEndpoint           string `json:"chat-endpoint" mapstructure:"chat-endpoint"`
@@ -148,6 +144,12 @@ type WgaSandboxSandboxConfig struct {
 	Type      string `json:"type" mapstructure:"type"`
 	Host      string `json:"host" mapstructure:"host"`
 	ImageName string `json:"image-name" mapstructure:"image-name"`
+}
+
+type OntologyServiceConfig struct {
+	Enable                  int    `json:"enable" mapstructure:"enable"`
+	Endpoint                string `json:"endpoint" mapstructure:"endpoint"`
+	KnowledgeNetworkListUri string `json:"knowledge_network_list_uri" mapstructure:"knowledge_network_list_uri"`
 }
 
 type WorkflowTemplatePathConfig struct {

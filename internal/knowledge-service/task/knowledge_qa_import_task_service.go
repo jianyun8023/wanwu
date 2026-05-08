@@ -175,7 +175,10 @@ func doKnowledgeQAPairImport(ctx context.Context, knowledgeBase *model.Knowledge
 			status = model.KnowledgeQAPairImportFail
 			errMsg = err.Error()
 		}
-		if successCount == 0 {
+		if lineCount == 0 {
+			status = model.KnowledgeQAPairImportFail
+			errMsg = "文件为空，无数据导入"
+		} else if successCount == 0 {
 			status = model.KnowledgeQAPairImportFail
 			errMsg = "文件所有行全部处理失败"
 		}

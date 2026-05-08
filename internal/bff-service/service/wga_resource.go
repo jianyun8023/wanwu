@@ -22,14 +22,15 @@ var wgaResourceNameRegex = regexp.MustCompile(`@([\p{Han}a-zA-Z0-9_-]+)`)
 func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name string) ([]*response.GeneralAgentResourceSelectList, error) {
 	result := make([]*response.GeneralAgentResourceSelectList, 0, 5)
 
-	// 并发获取五种资源列表
+	// 并发获取六种资源列表
 	var wg sync.WaitGroup
-	var mcpErr, workflowErr, skillErr, assistantErr, knowledgeErr error
+	var mcpErr, workflowErr, skillErr, assistantErr, knowledgeErr, ontologyErr error
 	var mcpList []response.MCPSelect
 	var workflowList []*response.ExplorationAppInfo
 	var skillList []*response.SkillInfo
 	var assistantList []*response.ExplorationAppInfo
 	var knowledgeList *response.KnowledgeListResp
+	var ontologyList []*response.GeneralAgentResourceSelectItem
 
 	// 获取 MCP 列表
 	wg.Add(1)
@@ -104,6 +105,19 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 		knowledgeList = resp
 	}()
 
+	// 获取 Ontology 列表
+	wg.Add(1)
+	go func() {
+		defer util.PrintPanicStack()
+		defer wg.Done()
+		list, err := getOntologyKnowledgeSelect(ctx, name)
+		if err != nil {
+			ontologyErr = err
+			return
+		}
+		ontologyList = list
+	}()
+
 	wg.Wait()
 
 	// 检查错误
@@ -121,6 +135,9 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	}
 	if knowledgeErr != nil {
 		return nil, knowledgeErr
+	}
+	if ontologyErr != nil {
+		return nil, ontologyErr
 	}
 
 	// 构建 MCP 列表
@@ -207,6 +224,12 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 		List:     knowledgeItems,
 	})
 
+	// 构建 Ontology 列表
+	result = append(result, &response.GeneralAgentResourceSelectList{
+		ListType: "ontology",
+		List:     ontologyList,
+	})
+
 	return result, nil
 }
 
@@ -255,12 +278,14 @@ type wgaMentionResources struct {
 	SkillList     []*assistant_service.WgaConfigSkill
 	AssistantList []*assistant_service.WgaConfigAssistant
 	KnowledgeList []*assistant_service.WgaConfigKnowledge
+	OntologyList  []*assistant_service.WgaConfigOntologyKnowledge
 	// 用于构建系统消息
 	McpItems       []*response.GeneralAgentResourceSelectItem
 	WorkflowItems  []*response.GeneralAgentResourceSelectItem
 	SkillItems     []*response.GeneralAgentResourceSelectItem
 	AssistantItems []*response.GeneralAgentResourceSelectItem
 	KnowledgeItems []*response.GeneralAgentResourceSelectItem
+	OntologyItems  []*response.GeneralAgentResourceSelectItem
 }
 
 // hasResources 检查是否有任何资源
@@ -269,7 +294,8 @@ func (r *wgaMentionResources) hasResources() bool {
 		len(r.WorkflowItems) > 0 ||
 		len(r.SkillItems) > 0 ||
 		len(r.AssistantItems) > 0 ||
-		len(r.KnowledgeItems) > 0
+		len(r.KnowledgeItems) > 0 ||
+		len(r.OntologyItems) > 0
 }
 
 // fetchWgaMentionResources 获取@提及的资源列表，一次性获取所有资源后按 mentionNames 模糊匹配过滤
@@ -327,11 +353,17 @@ func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNam
 			})
 			result.KnowledgeItems = append(result.KnowledgeItems, item)
 		},
+		"ontology": func(item *response.GeneralAgentResourceSelectItem) {
+			result.OntologyList = append(result.OntologyList, &assistant_service.WgaConfigOntologyKnowledge{
+				OntologyKnowledgeId: item.ID,
+			})
+			result.OntologyItems = append(result.OntologyItems, item)
+		},
 	}
 
 	// 各类型去重 map
 	seen := make(map[string]map[string]bool)
-	for _, t := range []string{"mcp", "workflow", "skill", "assistant", "knowledge"} {
+	for _, t := range []string{"mcp", "workflow", "skill", "assistant", "knowledge", "ontology"} {
 		seen[t] = make(map[string]bool)
 	}
 

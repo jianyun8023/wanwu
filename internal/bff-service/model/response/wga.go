@@ -10,7 +10,7 @@ type GetGeneralAgentConfigResp []*GeneralAgentConfigList
 
 // GeneralAgentConfigList 配置列表
 type GeneralAgentConfigList struct {
-	ListType string      `json:"listType"` // 类型: mcp, workflow, skill, assistant, tool
+	ListType string      `json:"listType"` // 类型: tool, mcp, workflow, skill, assistant, knowledge, ontology
 	List     interface{} `json:"list"`     // 列表项
 }
 
@@ -143,6 +143,6 @@ type GeneralAgentResourceSelectItem struct {
 }
 
 type GeneralAgentResourceSelectList struct {
-	ListType string                            `json:"listType"` // 列表类型: mcp, workflow, skill, assistant, knowledge
+	ListType string                            `json:"listType"` // 列表类型: mcp, workflow, skill, assistant, knowledge, ontology
 	List     []*GeneralAgentResourceSelectItem `json:"list"`     // 列表项
 }

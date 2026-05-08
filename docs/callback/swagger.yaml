@@ -356,11 +356,13 @@ definitions:
     properties:
       chat_template_kwargs:
         additionalProperties: true
+        description: 控制模型是否开启深度思考模式（元景）
         type: object
       do_sample:
         description: Yuanjing
         type: boolean
       enable_thinking:
+        description: 控制模型是否开启深度思考模式。
         type: boolean
       extra_body:
         allOf:
@@ -399,6 +401,9 @@ definitions:
       presence_penalty:
         description: 控制模型生成文本时的内容重复度
         type: number
+      reasoning_effort:
+        description: '控制模型的推理强度（Ds）Possible values: [high, max]'
+        type: string
       repetition_penalty:
         description: 模型生成时连续序列中的重复度
         type: number
@@ -663,6 +668,8 @@ definitions:
         $ref: '#/definitions/mp_common.FunctionCall'
       name:
         type: string
+      reasoning:
+        type: string
       reasoning_content:
         type: string
       role:
@@ -682,6 +689,8 @@ definitions:
       function_call:
         $ref: '#/definitions/mp_common.FunctionCall'
       name:
+        type: string
+      reasoning:
         type: string
       reasoning_content:
         type: string
@@ -2077,6 +2086,16 @@ definitions:
     required:
     - runId
     type: object
+  request.WgaSandboxMCP:
+    properties:
+      name:
+        type: string
+      url:
+        type: string
+    required:
+    - name
+    - url
+    type: object
   request.WgaSandboxMessage:
     properties:
       content:
@@ -2097,6 +2116,10 @@ definitions:
         type: string
       instruction:
         type: string
+      mcps:
+        items:
+          $ref: '#/definitions/request.WgaSandboxMCP'
+        type: array
       messages:
         items:
           $ref: '#/definitions/request.WgaSandboxMessage'
@@ -2128,10 +2151,44 @@ definitions:
     properties:
       dir:
         type: string
+      variables:
+        items:
+          $ref: '#/definitions/request.WgaSandboxSkillVariable'
+        type: array
     required:
     - dir
     type: object
+  request.WgaSandboxSkillVariable:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      variableKey:
+        type: string
+      variableValue:
+        type: string
+    required:
+    - name
+    - variableKey
+    - variableValue
+    type: object
   request.WgaSandboxTool:
+    properties:
+      apiAuth:
+        allOf:
+        - $ref: '#/definitions/util.ApiAuthWebRequest'
+        description: API 认证配置
+      operationIds:
+        description: 允许的 operations，空=全部允许
+        items:
+          type: string
+        type: array
+      schema:
+        description: OpenAPI 3.0 schema JSON 字符串
+        type: string
+    required:
+    - schema
     type: object
   response.CustomToolActionInfo:
     properties:
@@ -2738,50 +2795,6 @@ paths:
       summary: 获取技能详情（供workflow回调使用）
       tags:
       - skill
-  /callback/wga/sandbox/cleanup:
-    post:
-      consumes:
-      - application/json
-      description: 清理沙箱资源
-      parameters:
-      - description: 请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/request.WgaSandboxCleanupReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Response'
-      summary: WGA沙箱清理
-      tags:
-      - wga-sandbox
-  /callback/wga/sandbox/run:
-    post:
-      consumes:
-      - application/json
-      description: 在沙箱容器中执行智能体任务，SSE流式返回结果
-      parameters:
-      - description: 请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/request.WgaSandboxRunReq'
-      produces:
-      - text/event-stream
-      responses:
-        "200":
-          description: SSE流式返回
-          schema:
-            type: string
-      summary: WGA沙箱运行
-      tags:
-      - wga-sandbox
   /chatflow/list:
     get:
       consumes:
@@ -3215,6 +3228,50 @@ paths:
       summary: WGA知识库检索
       tags:
       - callback
+  /wga/sandbox/cleanup:
+    post:
+      consumes:
+      - application/json
+      description: 清理沙箱资源
+      parameters:
+      - description: 请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.WgaSandboxCleanupReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: WGA沙箱清理
+      tags:
+      - wga-sandbox
+  /wga/sandbox/run:
+    post:
+      consumes:
+      - application/json
+      description: 在沙箱容器中执行智能体任务，SSE流式返回结果
+      parameters:
+      - description: 请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.WgaSandboxRunReq'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE流式返回
+          schema:
+            type: string
+      summary: WGA沙箱运行
+      tags:
+      - wga-sandbox
   /workflow/list:
     get:
       consumes:

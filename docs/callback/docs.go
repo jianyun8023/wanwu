@@ -424,74 +424,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/callback/wga/sandbox/cleanup": {
-            "post": {
-                "description": "清理沙箱资源",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wga-sandbox"
-                ],
-                "summary": "WGA沙箱清理",
-                "parameters": [
-                    {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.WgaSandboxCleanupReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/callback/wga/sandbox/run": {
-            "post": {
-                "description": "在沙箱容器中执行智能体任务，SSE流式返回结果",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "text/event-stream"
-                ],
-                "tags": [
-                    "wga-sandbox"
-                ],
-                "summary": "WGA沙箱运行",
-                "parameters": [
-                    {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.WgaSandboxRunReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SSE流式返回",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/chatflow/list": {
             "get": {
                 "description": "根据userId和spaceId获取Chatflow",
@@ -1165,6 +1097,74 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/wga/sandbox/cleanup": {
+            "post": {
+                "description": "清理沙箱资源",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga-sandbox"
+                ],
+                "summary": "WGA沙箱清理",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.WgaSandboxCleanupReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/wga/sandbox/run": {
+            "post": {
+                "description": "在沙箱容器中执行智能体任务，SSE流式返回结果",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "wga-sandbox"
+                ],
+                "summary": "WGA沙箱运行",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.WgaSandboxRunReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE流式返回",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -1867,6 +1867,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "chat_template_kwargs": {
+                    "description": "控制模型是否开启深度思考模式（元景）",
                     "type": "object",
                     "additionalProperties": true
                 },
@@ -1875,6 +1876,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "enable_thinking": {
+                    "description": "控制模型是否开启深度思考模式。",
                     "type": "boolean"
                 },
                 "extra_body": {
@@ -1930,6 +1932,10 @@ const docTemplate = `{
                 "presence_penalty": {
                     "description": "控制模型生成文本时的内容重复度",
                     "type": "number"
+                },
+                "reasoning_effort": {
+                    "description": "控制模型的推理强度（Ds）Possible values: [high, max]",
+                    "type": "string"
                 },
                 "repetition_penalty": {
                     "description": "模型生成时连续序列中的重复度",
@@ -2319,6 +2325,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "reasoning": {
+                    "type": "string"
+                },
                 "reasoning_content": {
                     "type": "string"
                 },
@@ -2349,6 +2358,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/mp_common.FunctionCall"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "reasoning": {
                     "type": "string"
                 },
                 "reasoning_content": {
@@ -4372,6 +4384,21 @@ const docTemplate = `{
                 }
             }
         },
+        "request.WgaSandboxMCP": {
+            "type": "object",
+            "required": [
+                "name",
+                "url"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "request.WgaSandboxMessage": {
             "type": "object",
             "required": [
@@ -4404,6 +4431,12 @@ const docTemplate = `{
                 },
                 "instruction": {
                     "type": "string"
+                },
+                "mcps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.WgaSandboxMCP"
+                    }
                 },
                 "messages": {
                     "type": "array",
@@ -4451,11 +4484,63 @@ const docTemplate = `{
             "properties": {
                 "dir": {
                     "type": "string"
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.WgaSandboxSkillVariable"
+                    }
+                }
+            }
+        },
+        "request.WgaSandboxSkillVariable": {
+            "type": "object",
+            "required": [
+                "name",
+                "variableKey",
+                "variableValue"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "variableKey": {
+                    "type": "string"
+                },
+                "variableValue": {
+                    "type": "string"
                 }
             }
         },
         "request.WgaSandboxTool": {
-            "type": "object"
+            "type": "object",
+            "required": [
+                "schema"
+            ],
+            "properties": {
+                "apiAuth": {
+                    "description": "API 认证配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
+                "operationIds": {
+                    "description": "允许的 operations，空=全部允许",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "schema": {
+                    "description": "OpenAPI 3.0 schema JSON 字符串",
+                    "type": "string"
+                }
+            }
         },
         "response.CustomToolActionInfo": {
             "type": "object",

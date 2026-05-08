@@ -123,11 +123,13 @@ func (c *Client) UpdateWgaConfig(ctx context.Context, config *model.WgaConfig) *
 
 	if err == nil {
 		result := c.db.WithContext(ctx).Model(&existing).Updates(map[string]interface{}{
-			"assistant_list": config.AssistantList,
-			"tool_list":      config.ToolList,
-			"mcp_list":       config.McpList,
-			"workflow_list":  config.WorkflowList,
-			"skill_list":     config.SkillList,
+			"tool_list":               config.ToolList,
+			"mcp_list":                config.McpList,
+			"workflow_list":           config.WorkflowList,
+			"skill_list":              config.SkillList,
+			"assistant_list":          config.AssistantList,
+			"knowledge_list":          config.KnowledgeList,
+			"ontology_knowledge_list": config.OntologyKnowledgeList,
 		})
 		if result.Error != nil {
 			return toErrStatus("general_agent_tool_config_update", result.Error.Error())
