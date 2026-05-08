@@ -4164,6 +4164,10 @@ definitions:
         items:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
+      ontology:
+        items:
+          $ref: '#/definitions/request.GeneralAgentConfigItem'
+        type: array
       skill:
         items:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
@@ -6202,7 +6206,7 @@ definitions:
       list:
         description: 列表项
       listType:
-        description: '类型: mcp, workflow, skill, assistant, tool'
+        description: '类型: tool, mcp, workflow, skill, assistant, knowledge'
         type: string
     type: object
   response.GeneralAgentConversationDetailInfo:
@@ -6291,7 +6295,7 @@ definitions:
           $ref: '#/definitions/response.GeneralAgentResourceSelectItem'
         type: array
       listType:
-        description: '列表类型: mcp, workflow, skill, assistant, knowledge'
+        description: '列表类型: mcp, workflow, skill, assistant, knowledge, ontology'
         type: string
     type: object
   response.GeneralAgentToolCategories:
@@ -12689,7 +12693,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取通用智能体资源选择列表，包括MCP、Workflow、Skill、智能体四种类型
+      description: 获取通用智能体资源选择列表，包括MCP、Skill、Workflow、Assistant、Ontology五种类型
       produces:
       - application/json
       responses:
@@ -15656,6 +15660,7 @@ paths:
       description: 获取模型体验对话记录列表
       parameters:
       - description: 模型体验对话ID
+        format: int32
         in: query
         name: modelExperienceId
         required: true

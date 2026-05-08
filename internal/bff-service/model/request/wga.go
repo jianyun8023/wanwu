@@ -2,12 +2,13 @@ package request
 
 // UpdateGeneralAgentConfigReq 更新通用智能体配置请求
 type UpdateGeneralAgentConfigReq struct {
+	Tool      []GeneralAgentConfigToolItem `json:"tool"`
 	Mcp       []GeneralAgentConfigItem     `json:"mcp"`
 	Workflow  []GeneralAgentConfigItem     `json:"workflow"`
 	Skill     []GeneralAgentConfigItem     `json:"skill"`
 	Assistant []GeneralAgentConfigItem     `json:"assistant"`
 	Knowledge []GeneralAgentConfigItem     `json:"knowledge"`
-	Tool      []GeneralAgentConfigToolItem `json:"tool"`
+	Ontology  []GeneralAgentConfigItem     `json:"ontology"`
 }
 
 // GeneralAgentConfigItem 配置项（带type）

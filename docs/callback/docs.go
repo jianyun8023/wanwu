@@ -2325,6 +2325,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "reasoning": {
+                    "type": "string"
+                },
                 "reasoning_content": {
                     "type": "string"
                 },
@@ -2355,6 +2358,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/mp_common.FunctionCall"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "reasoning": {
                     "type": "string"
                 },
                 "reasoning_content": {

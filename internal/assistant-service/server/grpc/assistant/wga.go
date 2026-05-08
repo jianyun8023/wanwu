@@ -84,16 +84,18 @@ func (s *Service) UpdateWgaConfig(ctx context.Context, req *assistant_service.Up
 	workflowListJSON, _ := json.Marshal(req.WorkflowList)
 	skillListJSON, _ := json.Marshal(req.SkillList)
 	knowledgeListJSON, _ := json.Marshal(req.KnowledgeList)
+	ontologyKnowledgeListJSON, _ := json.Marshal(req.OntologyKnowledgeList)
 
 	config := &model.WgaConfig{
-		UserID:        req.Identity.UserId,
-		OrgID:         req.Identity.OrgId,
-		AssistantList: string(assistantListJSON),
-		ToolList:      string(toolListJSON),
-		McpList:       string(mcpListJSON),
-		WorkflowList:  string(workflowListJSON),
-		SkillList:     string(skillListJSON),
-		KnowledgeList: string(knowledgeListJSON),
+		UserID:                req.Identity.UserId,
+		OrgID:                 req.Identity.OrgId,
+		AssistantList:         string(assistantListJSON),
+		ToolList:              string(toolListJSON),
+		McpList:               string(mcpListJSON),
+		WorkflowList:          string(workflowListJSON),
+		SkillList:             string(skillListJSON),
+		KnowledgeList:         string(knowledgeListJSON),
+		OntologyKnowledgeList: string(ontologyKnowledgeListJSON),
 	}
 
 	status := s.cli.UpdateWgaConfig(ctx, config)
@@ -198,6 +200,17 @@ func toProtoWgaConfig(m *model.WgaConfig) *assistant_service.WgaConfig {
 			for i := range knowledges {
 				config.KnowledgeList = append(config.KnowledgeList, &assistant_service.WgaConfigKnowledge{
 					KnowledgeId: knowledges[i].KnowledgeId,
+				})
+			}
+		}
+	}
+
+	if m.OntologyKnowledgeList != "" {
+		var ontologyKnowledges []assistant_service.WgaConfigOntologyKnowledge
+		if err := json.Unmarshal([]byte(m.OntologyKnowledgeList), &ontologyKnowledges); err == nil {
+			for i := range ontologyKnowledges {
+				config.OntologyKnowledgeList = append(config.OntologyKnowledgeList, &assistant_service.WgaConfigOntologyKnowledge{
+					OntologyKnowledgeId: ontologyKnowledges[i].OntologyKnowledgeId,
 				})
 			}
 		}

@@ -241,6 +241,9 @@ knowledge:
 operate:
   host: operate-service:9797
 
+agent-service:
+  host: agent-service:8990
+
 rag-knowledge:
   endpoint: 'http://rag-wanwu:8681'
   chat-endpoint: 'http://rag-wanwu:10891'
@@ -390,6 +393,7 @@ wga-sandbox:
     host: wga-sandbox-wanwu
     image-name: ""
 
-agent-service:
-  host: agent-service
-  port: 8990
+ontology:
+  enable: 0
+  endpoint: http://vega-web:3010
+  knowledge_network_list_uri: /vega/api/ontology-manager/v1/knowledge-networks

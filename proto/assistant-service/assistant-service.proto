@@ -979,6 +979,10 @@ message WgaConfigKnowledge {
   string knowledgeId = 1;
 }
 
+message WgaConfigOntologyKnowledge {
+  string ontologyKnowledgeId = 1;
+}
+
 message WgaConversationConfig {
   string threadId = 1;
   string title = 2;
@@ -1000,6 +1004,7 @@ message WgaConfig{
   repeated WgaConfigWorkflow workflowList = 8;
   repeated WgaConfigSkill skillList = 9;
   repeated WgaConfigKnowledge knowledgeList = 10;
+  repeated WgaConfigOntologyKnowledge ontologyKnowledgeList = 11;
 }
 
 message GetWgaConversationConfigReq {
@@ -1033,4 +1038,5 @@ message UpdateWgaConfigReq {
   repeated WgaConfigWorkflow workflowList = 5;
   repeated WgaConfigSkill skillList = 6;
   repeated WgaConfigKnowledge knowledgeList = 7;
+  repeated WgaConfigOntologyKnowledge ontologyKnowledgeList = 8;
 }

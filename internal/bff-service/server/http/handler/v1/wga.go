@@ -203,7 +203,7 @@ func GetGeneralAgentKnowledgeSelect(ctx *gin.Context) {
 //
 //	@Tags			wga
 //	@Summary		通用智能体资源选择列表
-//	@Description	获取通用智能体资源选择列表，包括MCP、Workflow、Skill、智能体四种类型
+//	@Description	获取通用智能体资源选择列表，包括MCP、Skill、Workflow、Assistant、Ontology五种类型
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json

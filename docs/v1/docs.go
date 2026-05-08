@@ -6870,7 +6870,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "获取通用智能体资源选择列表，包括MCP、Workflow、Skill、智能体四种类型",
+                "description": "获取通用智能体资源选择列表，包括MCP、Skill、Workflow、Assistant、Ontology五种类型",
                 "consumes": [
                     "application/json"
                 ],
@@ -11867,6 +11867,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -23858,6 +23859,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
                 },
+                "ontology": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.GeneralAgentConfigItem"
+                    }
+                },
                 "skill": {
                     "type": "array",
                     "items": {
@@ -26913,7 +26920,7 @@ const docTemplate = `{
                     "description": "列表项"
                 },
                 "listType": {
-                    "description": "类型: mcp, workflow, skill, assistant, tool",
+                    "description": "类型: tool, mcp, workflow, skill, assistant, knowledge",
                     "type": "string"
                 }
             }
@@ -27046,7 +27053,7 @@ const docTemplate = `{
                     }
                 },
                 "listType": {
-                    "description": "列表类型: mcp, workflow, skill, assistant, knowledge",
+                    "description": "列表类型: mcp, workflow, skill, assistant, knowledge, ontology",
                     "type": "string"
                 }
             }

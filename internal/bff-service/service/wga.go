@@ -64,21 +64,14 @@ func buildGeneralAgentUploadLimit(fileType, extStr string, maxSize int) *respons
 
 func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
 	// 解析请求，转换为内部格式
-	var assistantList []*assistant_service.WgaConfigAssistant
 	var toolList []*assistant_service.WgaConfigTool
 	var mcpList []*assistant_service.WgaConfigMcp
 	var workflowList []*assistant_service.WgaConfigWorkflow
 	var skillList []*assistant_service.WgaConfigSkill
+	var assistantList []*assistant_service.WgaConfigAssistant
 	var knowledgeList []*assistant_service.WgaConfigKnowledge
+	var ontologyList []*assistant_service.WgaConfigOntologyKnowledge
 	var toolIds []string
-
-	// 处理 assistant
-	for _, item := range req.Assistant {
-		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
-			AssistantId:   item.ID,
-			AssistantType: util.Int2Str(constant.AgentCategorySingle), // 默认单智能体
-		})
-	}
 
 	// 处理 tool
 	for _, item := range req.Tool {
@@ -106,13 +99,6 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 		})
 	}
 
-	// 处理 knowledge
-	for _, item := range req.Knowledge {
-		knowledgeList = append(knowledgeList, &assistant_service.WgaConfigKnowledge{
-			KnowledgeId: item.ID,
-		})
-	}
-
 	// 处理 skill
 	for _, item := range req.Skill {
 		skillList = append(skillList, &assistant_service.WgaConfigSkill{
@@ -121,9 +107,26 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 		})
 	}
 
-	// 校验 assistant 配置
-	if err := checkWgaAssistantConfig(ctx, userId, orgId, assistantList); err != nil {
-		return err
+	// 处理 assistant
+	for _, item := range req.Assistant {
+		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
+			AssistantId:   item.ID,
+			AssistantType: util.Int2Str(constant.AgentCategorySingle), // 默认单智能体
+		})
+	}
+
+	// 处理 knowledge
+	for _, item := range req.Knowledge {
+		knowledgeList = append(knowledgeList, &assistant_service.WgaConfigKnowledge{
+			KnowledgeId: item.ID,
+		})
+	}
+
+	// 处理 ontology
+	for _, item := range req.Ontology {
+		ontologyList = append(ontologyList, &assistant_service.WgaConfigOntologyKnowledge{
+			OntologyKnowledgeId: item.ID,
+		})
 	}
 
 	// 校验 tool 配置
@@ -151,18 +154,29 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 		return err
 	}
 
+	// 校验 assistant 配置
+	if err := checkWgaAssistantConfig(ctx, userId, orgId, assistantList); err != nil {
+		return err
+	}
+
 	// 校验 knowledge 配置
 	if err := checkWgaKnowledgeConfig(ctx, userId, orgId, knowledgeList); err != nil {
 		return err
 	}
 
+	// 校验 ontology 配置
+	if err := checkWgaOntologyConfig(ctx, userId, orgId, ontologyList); err != nil {
+		return err
+	}
+
 	_, err := assistant.UpdateWgaConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConfigReq{
-		ToolList:      toolList,
-		AssistantList: assistantList,
-		McpList:       mcpList,
-		WorkflowList:  workflowList,
-		SkillList:     skillList,
-		KnowledgeList: knowledgeList,
+		ToolList:              toolList,
+		McpList:               mcpList,
+		WorkflowList:          workflowList,
+		SkillList:             skillList,
+		AssistantList:         assistantList,
+		KnowledgeList:         knowledgeList,
+		OntologyKnowledgeList: ontologyList,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -207,28 +221,6 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 		result = append(result, &response.GeneralAgentConfigList{
 			ListType: "tool",
 			List:     toolItems,
-		})
-	}
-
-	// 过滤存在的 assistant
-	assistantIds := make([]string, 0, len(resp.Config.AssistantList))
-	for _, a := range resp.Config.AssistantList {
-		assistantIds = append(assistantIds, a.AssistantId)
-	}
-	validAssistantIds, _, _ := getValidAssistantIds(ctx, userId, orgId, assistantIds)
-	var assistantItems []*response.GeneralAgentConfigItem
-	for _, a := range resp.Config.AssistantList {
-		if validAssistantIds[a.AssistantId] {
-			assistantItems = append(assistantItems, &response.GeneralAgentConfigItem{
-				ID:   a.AssistantId,
-				Type: a.AssistantType,
-			})
-		}
-	}
-	if len(assistantItems) > 0 {
-		result = append(result, &response.GeneralAgentConfigList{
-			ListType: "assistant",
-			List:     assistantItems,
 		})
 	}
 
@@ -303,6 +295,28 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 		})
 	}
 
+	// 过滤存在的 assistant
+	assistantIds := make([]string, 0, len(resp.Config.AssistantList))
+	for _, a := range resp.Config.AssistantList {
+		assistantIds = append(assistantIds, a.AssistantId)
+	}
+	validAssistantIds, _, _ := getValidAssistantIds(ctx, userId, orgId, assistantIds)
+	var assistantItems []*response.GeneralAgentConfigItem
+	for _, a := range resp.Config.AssistantList {
+		if validAssistantIds[a.AssistantId] {
+			assistantItems = append(assistantItems, &response.GeneralAgentConfigItem{
+				ID:   a.AssistantId,
+				Type: a.AssistantType,
+			})
+		}
+	}
+	if len(assistantItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "assistant",
+			List:     assistantItems,
+		})
+	}
+
 	// 过滤存在的 knowledge
 	knowledgeIds := make([]string, 0, len(resp.Config.KnowledgeList))
 	for _, k := range resp.Config.KnowledgeList {
@@ -321,6 +335,27 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 		result = append(result, &response.GeneralAgentConfigList{
 			ListType: "knowledge",
 			List:     knowledgeItems,
+		})
+	}
+
+	// 过滤存在的 ontology
+	ontologyIds := make([]string, 0, len(resp.Config.OntologyKnowledgeList))
+	for _, o := range resp.Config.OntologyKnowledgeList {
+		ontologyIds = append(ontologyIds, o.OntologyKnowledgeId)
+	}
+	validOntologyIds, _ := getValidOntologyIds(ctx, ontologyIds)
+	var ontologyItems []*response.GeneralAgentConfigItem
+	for _, o := range resp.Config.OntologyKnowledgeList {
+		if validOntologyIds[o.OntologyKnowledgeId] {
+			ontologyItems = append(ontologyItems, &response.GeneralAgentConfigItem{
+				ID: o.OntologyKnowledgeId,
+			})
+		}
+	}
+	if len(ontologyItems) > 0 {
+		result = append(result, &response.GeneralAgentConfigList{
+			ListType: "ontology",
+			List:     ontologyItems,
 		})
 	}
 

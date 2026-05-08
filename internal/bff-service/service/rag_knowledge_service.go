@@ -5,30 +5,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	knowledgebase_doc_service "github.com/UnicomAI/wanwu/api/proto/knowledgebase-doc-service"
-	"github.com/UnicomAI/wanwu/pkg/util"
+	"math"
 	"path/filepath"
 	"sort"
-
-	"math"
-
-	safe_go_util "github.com/UnicomAI/wanwu/pkg/safe-go-util"
-
-	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
-	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
-
 	"strings"
 	"time"
 
+	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
+	knowledgebase_doc_service "github.com/UnicomAI/wanwu/api/proto/knowledgebase-doc-service"
 	knowledgebase_service "github.com/UnicomAI/wanwu/api/proto/knowledgebase-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	prompt_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/prompt-util"
-	"github.com/gin-gonic/gin"
-
+	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
+	safe_go_util "github.com/UnicomAI/wanwu/pkg/safe-go-util"
+	"github.com/UnicomAI/wanwu/pkg/util"
+	"github.com/gin-gonic/gin"
 )
 
 const (
