@@ -3,6 +3,7 @@ package agent_chat_builder
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -54,7 +55,7 @@ func (*SingleAgentMessageBuilder) FilterMessage(respContext *response.AgentChatR
 	if !respContext.ContentOutput {
 		messageTool := response.CreateMessageTool(chatMessage, respContext)
 		//过滤一些只包含/n的内容
-		if len(chatMessage.ReasoningContent) == 0 && !messageTool.ToolMessage() && !stopMessage(chatMessage) {
+		if len(chatMessage.ReasoningContent) == 0 && !messageTool.ToolMessage() && !util.StopMessage(chatMessage) {
 			//本身大于0 trim之后=0
 			if len(chatMessage.Content) > 0 && len(strings.TrimSpace(strings.Trim(chatMessage.Content, "\n"))) == 0 {
 				return true
@@ -221,16 +222,12 @@ func buildNoToolContent(chatMessage *schema.Message, respContext *response.Agent
 func buildContent(chatMessage *schema.Message) []*response.AgentMessageContent {
 	var retContentList []*response.AgentMessageContent
 	//构造正常内容
-	if len(chatMessage.Content) > 0 || stopMessage(chatMessage) {
+	if len(chatMessage.Content) > 0 || util.StopMessage(chatMessage) {
 		retContentList = append(retContentList, &response.AgentMessageContent{
 			ContentList: []string{chatMessage.Content},
 		})
 	}
 	return retContentList
-}
-
-func stopMessage(chatMessage *schema.Message) bool {
-	return chatMessage.ResponseMeta != nil && chatMessage.ResponseMeta.FinishReason == "stop"
 }
 
 // buildToolContentNewStyle 构造有工具的内容输出-新样式

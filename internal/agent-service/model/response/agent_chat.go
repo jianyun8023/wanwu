@@ -3,6 +3,7 @@ package response
 import (
 	"bytes"
 	"encoding/json"
+	agent_util "github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"strings"
 
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
@@ -167,7 +168,7 @@ func buildFinish(chatMessage *schema.Message, notStop bool) int {
 	if notStop {
 		return notFinish
 	}
-	if chatMessage.ResponseMeta != nil && chatMessage.ResponseMeta.FinishReason == "stop" {
+	if agent_util.StopMessage(chatMessage) {
 		return finish
 	}
 	if chatMessage.Role == schema.Tool && chatMessage.ToolName == "exit" {

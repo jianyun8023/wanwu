@@ -13,6 +13,16 @@ const (
 	MainAgentExitLabel       = "exit"
 )
 
+var stopFinishReason = map[string]bool{
+	"stop":   true, //正常停止
+	"length": true, //截断停止
+}
+
+// StopMessage 判断是否是停止消息
+func StopMessage(chatMessage *schema.Message) bool {
+	return chatMessage.ResponseMeta != nil && stopFinishReason[chatMessage.ResponseMeta.FinishReason]
+}
+
 func BuildAssistantMessage(content string, extra map[string]any) string {
 	message := &schema.Message{
 		Role:    schema.Assistant,
