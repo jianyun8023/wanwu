@@ -88,14 +88,16 @@ func buildAgentProcessContent(req *request.AgentChatContext, respContext *respon
 		return retList, nil
 	}
 
+	var contentList []string
 	subAgentEvent := buildSubAgentEvent(req, respContext, step)
 	//错误消息重置消息状态为失败
 	if len(errMsg) > 0 {
 		subAgentEvent.ErrMessage = errMsg
 		subAgentEvent.Status = response.EventFailStatus
+		contentList = []string{errMsg}
 	}
 
-	contents := buildMessageContent(nil, subAgentEvent)
+	contents := buildMessageContent(contentList, subAgentEvent)
 	if len(contents) > 0 {
 		retList = append(retList, contents...)
 	}
