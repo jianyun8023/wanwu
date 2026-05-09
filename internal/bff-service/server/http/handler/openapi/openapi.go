@@ -76,10 +76,11 @@ func CreateAgentConversation(ctx *gin.Context) {
 		gin_util.Response(ctx, nil, err)
 		return
 	}
+	// OpenAPI 创建的对话和 web 已发布对话归到同一类型（type=published）
 	resp, err := service.ConversationCreate(ctx, userID, orgID, request.ConversationCreateRequest{
 		AssistantId: appID,
 		Prompt:      req.Title,
-	}, constant.ConversationTypeOpenAPI)
+	}, constant.ConversationTypePublished)
 	if err != nil {
 		gin_util.Response(ctx, nil, err)
 		return
@@ -255,6 +256,33 @@ func DraftChatAgent(ctx *gin.Context) {
 		gin_util.Response(ctx, nil, fmt.Errorf("大模型未配置，请先通过配置更新接口设置大模型"))
 		return
 	}
+
+	// 草稿态每个智能体仅维护一条会话
+	// 如果调用方没传conversationId，这里 get-or-create 一条 ConversationTypeDraft 会话，确保下游 ES 能落历史。
+	if req.ConversationID == "" {
+		convResp, err := service.GetDraftConversationIdByAssistantID(ctx, userID, orgID, request.ConversationGetListRequest{
+			AssistantId: appID,
+		})
+		if err != nil {
+			gin_util.Response(ctx, nil, err)
+			return
+		}
+		if convResp == nil {
+			// 草稿尚未发起过对话：自动创建一条
+			newConvResp, createErr := service.ConversationCreate(ctx, userID, orgID, request.ConversationCreateRequest{
+				AssistantId: appID,
+				Prompt:      req.Query,
+			}, constant.ConversationTypeDraft)
+			if createErr != nil {
+				gin_util.Response(ctx, nil, createErr)
+				return
+			}
+			req.ConversationID = newConvResp.ConversationId
+		} else {
+			req.ConversationID = convResp.ConversationId
+		}
+	}
+
 	if err := service.AssistantConversionStream(ctx, userID, orgID, request.ConversionStreamRequest{
 		AssistantId:    appID,
 		ConversationId: req.ConversationID,

@@ -8,6 +8,7 @@ import (
 	app_service "github.com/UnicomAI/wanwu/api/proto/app-service"
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/api/proto/common"
+	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
 	iam_service "github.com/UnicomAI/wanwu/api/proto/iam-service"
 	knowledgeBase_service "github.com/UnicomAI/wanwu/api/proto/knowledgebase-service"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
@@ -20,6 +21,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc/status"
 )
 
 func AssistantCreate(ctx *gin.Context, userId, orgId string, req request.AssistantCreateReq) (*response.AssistantCreateResp, error) {
@@ -827,11 +829,37 @@ func GetDraftConversationIdByAssistantID(ctx *gin.Context, userId, orgId string,
 		},
 	})
 	if err != nil {
+		// 空状态（草稿态尚未发起过对话）vs 系统级故障
+		if isRecordNotFoundErr(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &response.ConversationIdResp{
 		ConversationId: resp.ConversationId,
 	}, nil
+}
+
+// isRecordNotFoundErr 判定 gRPC 错误是否由 gorm.ErrRecordNotFound 引起
+func isRecordNotFoundErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		// 非 gRPC status error，兜底字符串匹配
+		return strings.Contains(err.Error(), "record not found")
+	}
+	for _, detail := range st.Details() {
+		if s, ok := detail.(*err_code.Status); ok {
+			for _, arg := range s.Args {
+				if strings.Contains(arg, "record not found") {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func DraftConversationDeleteByAssistantID(ctx *gin.Context, userId, orgId string, req request.ConversationDeleteRequest) (interface{}, error) {
@@ -845,8 +873,15 @@ func DraftConversationDeleteByAssistantID(ctx *gin.Context, userId, orgId string
 		},
 	})
 
-	if conversationIdResp == nil || err != nil {
+	if err != nil {
+		// 草稿对话尚未创建：删除请求幂等成功，不向调用方抛 5xx。其它错误原样上抛。
+		if isRecordNotFoundErr(err) {
+			return nil, nil
+		}
 		return nil, err
+	}
+	if conversationIdResp == nil {
+		return nil, nil
 	}
 
 	if req.DetailId != "" {

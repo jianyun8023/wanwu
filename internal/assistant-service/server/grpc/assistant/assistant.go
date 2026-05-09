@@ -49,6 +49,7 @@ func (s *Service) GetAssistantByIds(ctx context.Context, req *assistant_service.
 				UpdatedAt:  assistant.UpdatedAt,
 			},
 			Category: int32(assistant.Category),
+			Uuid:     assistant.UUID,
 		})
 
 	}
@@ -270,6 +271,7 @@ func (s *Service) GetAssistantListMyAll(ctx context.Context, req *assistant_serv
 				UpdatedAt:  assistant.UpdatedAt,
 			},
 			Category: int32(assistant.Category),
+			Uuid:     assistant.UUID,
 		})
 
 	}

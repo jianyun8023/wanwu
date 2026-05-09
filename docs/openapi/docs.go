@@ -80,6 +80,38 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "description": "删除指定智能体，同时删除其已发布版本。删除后不可恢复，请谨慎操作。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "删除智能体OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIAgentDeleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
             }
         },
         "/agent/chat": {
@@ -240,6 +272,325 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "description": "删除指定对话。传入 detail_id 则仅删除该条消息，不传则删除整个对话（含所有消息）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "删除智能体对话OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIAgentConversationDeleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/conversation/clear": {
+            "delete": {
+                "description": "清空指定对话的所有历史消息（ES 数据），保留对话 ID 本身，可继续发起新的问答。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "清空智能体对话历史OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIAgentConversationClearRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/conversation/detail": {
+            "get": {
+                "description": "获取指定对话的历史消息列表（问答明细），分页返回。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "智能体对话历史消息OpenAPI",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "对话ID（由创建对话接口返回）",
+                        "name": "conversation_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，从 1 开始",
+                        "name": "pageNo",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，从 1 开始",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.ConversationDetailInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/conversation/draft": {
+            "delete": {
+                "description": "删除草稿智能体对话历史。传入 detail_id 则只删除该条消息，不传则清空全部历史（会话 ID 保留）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "删除草稿态智能体对话历史OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIAgentDraftConversationDeleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/conversation/draft/detail": {
+            "get": {
+                "description": "获取指定草稿智能体的对话历史消息。草稿态每个智能体只维护一条会话，通过 uuid 定位后分页返回消息列表。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "草稿态智能体对话历史消息OpenAPI",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "智能体UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，从 1 开始",
+                        "name": "pageNo",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，从 1 开始",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.ConversationDetailInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/conversation/list": {
+            "get": {
+                "description": "获取指定智能体的已发布对话列表，按创建时间降序排列。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "智能体对话列表OpenAPI",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "智能体UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，从 1 开始",
+                        "name": "pageNo",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，从 1 开始",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.ConversationInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         },
         "/agent/info": {
@@ -283,6 +634,49 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/response.Assistant"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/list": {
+            "get": {
+                "description": "获取当前 API Key 所属用户下的全部智能体（含草稿与已发布），可按名称模糊筛选。返回的 uuid 字段可用于其他智能体接口。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "智能体列表OpenAPI",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "按名称模糊筛选（可选）",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.OpenAPIAgentListResponse"
                                         }
                                     }
                                 }
@@ -3697,6 +4091,34 @@ const docTemplate = `{
                 }
             }
         },
+        "request.OpenAPIAgentConversationClearRequest": {
+            "type": "object",
+            "required": [
+                "conversation_id"
+            ],
+            "properties": {
+                "conversation_id": {
+                    "description": "对话ID",
+                    "type": "string"
+                }
+            }
+        },
+        "request.OpenAPIAgentConversationDeleteRequest": {
+            "type": "object",
+            "required": [
+                "conversation_id"
+            ],
+            "properties": {
+                "conversation_id": {
+                    "description": "对话ID",
+                    "type": "string"
+                },
+                "detail_id": {
+                    "description": "可选：消息ID，不传则删除整个对话",
+                    "type": "string"
+                }
+            }
+        },
         "request.OpenAPIAgentCreateConversationRequest": {
             "type": "object",
             "required": [
@@ -3707,6 +4129,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.OpenAPIAgentDeleteRequest": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "智能体UUID",
                     "type": "string"
                 }
             }
@@ -3731,6 +4165,22 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.OpenAPIAgentDraftConversationDeleteRequest": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "detail_id": {
+                    "description": "可选：消息ID，不传则清空全部",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "智能体UUID",
                     "type": "string"
                 }
             }
@@ -3961,6 +4411,45 @@ const docTemplate = `{
                 }
             }
         },
+        "response.AgentFileMeta": {
+            "type": "object",
+            "properties": {
+                "createAt": {
+                    "type": "string"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AgentResponseFile": {
+            "type": "object",
+            "properties": {
+                "fileType": {
+                    "type": "string"
+                },
+                "fileUrl": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "description": "扩展信息：",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.AgentFileMeta"
+                        }
+                    ]
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.Assistant": {
             "type": "object",
             "required": [
@@ -4178,6 +4667,20 @@ const docTemplate = `{
                 }
             }
         },
+        "response.AssistantRequestFile": {
+            "type": "object",
+            "properties": {
+                "fileUrl": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.AssistantSkillInfo": {
             "type": "object",
             "required": [
@@ -4322,6 +4825,100 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ConversationDetailInfo": {
+            "type": "object",
+            "properties": {
+                "assistantId": {
+                    "type": "string"
+                },
+                "conversationId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "qa_type": {
+                    "type": "integer"
+                },
+                "requestFiles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AssistantRequestFile"
+                    }
+                },
+                "response": {
+                    "type": "string"
+                },
+                "responseFiles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AgentResponseFile"
+                    }
+                },
+                "responseList": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ConversationResponse"
+                    }
+                },
+                "searchList": {},
+                "subConversationList": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SubConversation"
+                    }
+                },
+                "sysPrompt": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.ConversationInfo": {
+            "type": "object",
+            "properties": {
+                "assistantId": {
+                    "type": "string"
+                },
+                "conversationId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ConversationResponse": {
+            "type": "object",
+            "properties": {
+                "order": {
+                    "type": "integer"
+                },
+                "response": {
                     "type": "string"
                 }
             }
@@ -5075,6 +5672,51 @@ const docTemplate = `{
                 }
             }
         },
+        "response.OpenAPIAgentBriefInfo": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "description": "头像信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "category": {
+                    "description": "1:单智能体 2:多智能体",
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "description": "创建时间",
+                    "type": "string"
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
+                },
+                "publishType": {
+                    "description": "public/organization/private，空字符串表示未发布（草稿）",
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "description": "最后更新时间",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "智能体唯一标识，供后续接口使用",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "已发布版本号，未发布时为空",
+                    "type": "string"
+                }
+            }
+        },
         "response.OpenAPIAgentChatFile": {
             "type": "object",
             "properties": {
@@ -5140,6 +5782,20 @@ const docTemplate = `{
             "properties": {
                 "conversation_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.OpenAPIAgentListResponse": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.OpenAPIAgentBriefInfo"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -5293,6 +5949,21 @@ const docTemplate = `{
                 }
             }
         },
+        "response.PageResult": {
+            "type": "object",
+            "properties": {
+                "list": {},
+                "pageNo": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.RecommendConfig": {
             "type": "object",
             "properties": {
@@ -5344,6 +6015,46 @@ const docTemplate = `{
                 },
                 "data": {},
                 "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SubConversation": {
+            "type": "object",
+            "properties": {
+                "conversationType": {
+                    "description": "subAgent：子智能体；agentTool：主智能体工具；subAgentTool：子智能体工具",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "事件id",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "事件名称",
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "parentId": {
+                    "description": "事件挂载id",
+                    "type": "string"
+                },
+                "profile": {
+                    "description": "事件头像",
+                    "type": "string"
+                },
+                "response": {
+                    "type": "string"
+                },
+                "searchList": {},
+                "status": {
+                    "description": "1:成功，2：失败",
+                    "type": "integer"
+                },
+                "timeCost": {
+                    "description": "耗时",
                     "type": "string"
                 }
             }

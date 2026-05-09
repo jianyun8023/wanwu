@@ -868,6 +868,7 @@ message MultiAgentConfigUpdateReq{
 message AssistantBrief{
   common.AppBrief info = 1;
   int32 category = 2;
+  string uuid = 3; // 智能体唯一标识，供 OpenAPI 使用
 }
 
 

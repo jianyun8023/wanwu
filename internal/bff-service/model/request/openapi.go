@@ -20,6 +20,11 @@ type OpenAPIAgentChatRequest struct {
 }
 
 func (req *OpenAPIAgentChatRequest) Check() error {
+	// file_info 字段保留 array 形态以便未来扩展多文件能力，
+	// 当前智能体一次仅支持 1 个文件，超过则显式报错避免静默截断。
+	if len(req.FileInfo) > 1 {
+		return fmt.Errorf("file_info 当前仅支持传 1 个文件")
+	}
 	return nil
 }
 
@@ -31,6 +36,9 @@ type OpenAPIAgentDraftChatRequest struct {
 }
 
 func (req *OpenAPIAgentDraftChatRequest) Check() error {
+	if len(req.FileInfo) > 1 {
+		return fmt.Errorf("file_info 当前仅支持传 1 个文件")
+	}
 	return nil
 }
 
@@ -133,3 +141,76 @@ func (req *OpenAPIAgentPublishRequest) Check() error {
 	}
 	return nil
 }
+
+// --- agent list / delete ---
+
+// OpenAPIAgentListRequest 智能体列表请求
+type OpenAPIAgentListRequest struct {
+	Name string `form:"name"` // 按名称模糊筛选，可选
+}
+
+func (req *OpenAPIAgentListRequest) Check() error { return nil }
+
+// OpenAPIAgentDeleteRequest 删除智能体请求
+type OpenAPIAgentDeleteRequest struct {
+	UUID string `form:"uuid" validate:"required"` // 智能体UUID
+}
+
+func (req *OpenAPIAgentDeleteRequest) Check() error { return nil }
+
+// --- conversation management (published) ---
+
+// OpenAPIAgentConversationListRequest 已发布智能体对话列表请求
+type OpenAPIAgentConversationListRequest struct {
+	UUID     string `form:"uuid" validate:"required"` // 智能体UUID
+	PageNo   int    `form:"pageNo" validate:"required"`
+	PageSize int    `form:"pageSize" validate:"required"`
+}
+
+func (req *OpenAPIAgentConversationListRequest) Check() error { return nil }
+
+// OpenAPIAgentConversationDetailRequest 已发布智能体对话历史消息请求
+type OpenAPIAgentConversationDetailRequest struct {
+	ConversationID string `form:"conversation_id" validate:"required"` // 对话ID（从创建对话接口获取）
+	PageNo         int    `form:"pageNo" validate:"required"`
+	PageSize       int    `form:"pageSize" validate:"required"`
+}
+
+func (req *OpenAPIAgentConversationDetailRequest) Check() error { return nil }
+
+// OpenAPIAgentConversationDeleteRequest 删除已发布智能体对话请求 删除整个对话主体（含所有消息）
+type OpenAPIAgentConversationDeleteRequest struct {
+	ConversationID string `form:"conversation_id" validate:"required"` // 对话ID
+}
+
+func (req *OpenAPIAgentConversationDeleteRequest) Check() error { return nil }
+
+// OpenAPIAgentConversationClearRequest 清空/按条删除已发布智能体对话历史（保留对话ID）
+// detail_id 不传则清空整个对话的全部消息；传值则只删除该条消息
+type OpenAPIAgentConversationClearRequest struct {
+	ConversationID string `form:"conversation_id" validate:"required"` // 对话ID
+	DetailID       string `form:"detail_id"`                           // 可选：消息ID，不传则清空全部消息
+}
+
+func (req *OpenAPIAgentConversationClearRequest) Check() error { return nil }
+
+// --- conversation management (draft) ---
+
+// OpenAPIAgentDraftConversationDetailRequest 草稿态智能体对话历史消息请求
+// 草稿态每个智能体只有一条会话，通过 uuid 定位
+type OpenAPIAgentDraftConversationDetailRequest struct {
+	UUID     string `form:"uuid" validate:"required"` // 智能体UUID
+	PageNo   int    `form:"pageNo" validate:"required"`
+	PageSize int    `form:"pageSize" validate:"required"`
+}
+
+func (req *OpenAPIAgentDraftConversationDetailRequest) Check() error { return nil }
+
+// OpenAPIAgentDraftConversationDeleteRequest 删除草稿态智能体对话请求（DELETE 走 query）
+// detail_id 不传则清空全部消息，传值则只删除该条
+type OpenAPIAgentDraftConversationDeleteRequest struct {
+	UUID     string `form:"uuid" validate:"required"` // 智能体UUID
+	DetailID string `form:"detail_id"`                // 可选：消息ID，不传则清空全部
+}
+
+func (req *OpenAPIAgentDraftConversationDeleteRequest) Check() error { return nil }
