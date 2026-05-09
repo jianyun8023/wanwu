@@ -321,7 +321,7 @@ export default {
           z-index: 9999;
           cursor: zoom-out;
         `;
-        div.onclick = () => document.body.removeChild(div);
+        div.onclick = () => div.remove();
 
         const img = document.createElement('img');
         img.src = url;
@@ -356,6 +356,7 @@ export default {
 
 <style lang="scss" scoped>
 @import '../styles/_variables.scss';
+@import '../styles/_mixins.scss';
 
 $user-gradient-start: #10a37f;
 $user-gradient-end: #0d8a6a;
@@ -384,28 +385,7 @@ $user-gradient-end: #0d8a6a;
     }
 
     .user-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      overflow: hidden;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-      img {
-        width: 100%;
-        height: 100%;
-        border-radius: 10px;
-        object-fit: cover;
-      }
-
-      i {
-        color: #fff;
-        font-size: 18px;
-      }
+      @include avatar-base;
     }
 
     .user-message-content {

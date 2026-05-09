@@ -110,6 +110,7 @@ export default {
 
 <style lang="scss" scoped>
 @import '../styles/_variables.scss';
+@import '../styles/_mixins.scss';
 
 .message-header {
   display: flex;
@@ -122,62 +123,9 @@ export default {
   }
 
   .avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include avatar-base;
     margin-right: 14px;
     font-size: 16px;
-    flex-shrink: 0;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    img {
-      width: 100%;
-      height: 100%;
-      border-radius: 10px;
-      object-fit: cover;
-    }
-
-    &.user {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
-    }
-
-    &.assistant {
-      background: linear-gradient(135deg, #10a37f 0%, #0d8a6a 100%);
-      color: #fff;
-
-      img {
-        border: 2px solid #fff;
-        background: #fff;
-      }
-    }
-
-    &.tool {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-      color: #fff;
-    }
-
-    &.system {
-      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-      color: #fff;
-    }
-
-    &.reasoning {
-      background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-      color: #fff;
-    }
   }
 
   .header-info {
