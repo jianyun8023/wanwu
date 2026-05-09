@@ -584,7 +584,7 @@ func DraftAssistantConversationDetailList(ctx *gin.Context) {
 	conversationIdResp, err := service.GetDraftConversationIdByAssistantID(ctx, userId, orgId, request.ConversationGetListRequest{
 		AssistantId: req.AssistantId,
 	})
-	if err != nil {
+	if err != nil || conversationIdResp == nil {
 		gin_util.Response(ctx, response.PageResult{List: []response.ConversationDetailInfo{}}, nil)
 		return
 	}
