@@ -57,7 +57,7 @@
         :class="['file-item', { 'is-directory': isDirectory(file) }]"
       >
         <div class="file-item-main" @click="handleFileClick(file)">
-          <i :class="getFileIconClass(file)"></i>
+          <FileIcon :type="getFileType(file)" size="18px" />
           <el-tooltip
             :content="file.name"
             placement="top"
@@ -78,10 +78,14 @@
 </template>
 
 <script>
-import { formatFileSize, getFileIconClass } from '@/utils/util';
+import { formatFileSize } from '@/utils/util';
+import FileIcon from '@/components/FileIcon.vue';
 
 export default {
   name: 'FileTree',
+  components: {
+    FileIcon,
+  },
   props: {
     files: {
       type: Array,
@@ -108,7 +112,13 @@ export default {
       return file.type === 'directory' || file.type === 'dir' || file.isDir;
     },
 
-    getFileIconClass,
+    getFileType(file) {
+      if (this.isDirectory(file)) {
+        return file.isOpen ? 'diropen' : 'dir';
+      }
+
+      return file.name ? file.name.split('.').pop().toLowerCase() : 'unknown';
+    },
 
     formatSize: formatFileSize,
 
