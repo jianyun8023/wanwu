@@ -83,6 +83,7 @@ custom-info:
   register_by_email: 0
   reset_password_by_email: 0
   login_by_email: 0
+  user_phone_required: 0
 
 default-icon:
   user: "/v1/static/icon/user-default-icon.png"

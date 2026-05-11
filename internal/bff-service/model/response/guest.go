@@ -27,15 +27,16 @@ type Captcha struct {
 }
 
 type LogoCustomInfo struct {
-	Login         CustomLogin         `json:"login"`         // 登录页标题信息
-	Home          CustomHome          `json:"home"`          // 首页标题信息
-	Tab           CustomTab           `json:"tab"`           // 标签页信息
-	About         CustomAbout         `json:"about"`         // 关于信息
-	LinkList      map[string]string   `json:"linkList"`      // 跳转链接列表,key为链接名称,value为URL
-	Register      CustomRegister      `json:"register"`      // 注册信息
-	ResetPassword CustomResetPassword `json:"resetPassword"` // 重置密码信息
-	LoginEmail    CustomLoginEmail    `json:"loginEmail"`    // 邮箱登录信息
-	DefaultIcon   CustomDefaultIcon   `json:"defaultIcon"`   // 应用默认图片
+	Login             CustomLogin         `json:"login"`             // 登录页标题信息
+	Home              CustomHome          `json:"home"`              // 首页标题信息
+	Tab               CustomTab           `json:"tab"`               // 标签页信息
+	About             CustomAbout         `json:"about"`             // 关于信息
+	LinkList          map[string]string   `json:"linkList"`          // 跳转链接列表,key为链接名称,value为URL
+	Register          CustomRegister      `json:"register"`          // 注册信息
+	ResetPassword     CustomResetPassword `json:"resetPassword"`     // 重置密码信息
+	LoginEmail        CustomLoginEmail    `json:"loginEmail"`        // 邮箱登录信息
+	DefaultIcon       CustomDefaultIcon   `json:"defaultIcon"`       // 应用默认图片
+	UserPhoneRequired bool                `json:"userPhoneRequired"` // 是否需要手机号
 }
 
 type CustomLogin struct {

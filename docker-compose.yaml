@@ -277,6 +277,7 @@ services:
       CUSTOM_INFO_LOGIN_BY_EMAIL: ${WANWU_BFF_LOGIN_BY_EMAIL}
       OAUTH_SWITCH: ${WANWU_BFF_OAUTH_SWITCH}
       ONTOLOGY_ENABLE: ${WANWU_BFF_ONTOLOGY_ENABLE}
+      CUSTOM_INFO_USER_PHONE_REQUIRED: ${WANWU_BFF_USER_PHONE_REQUIRED}
     working_dir: /app
     command: ./bin/bff-service
     healthcheck:

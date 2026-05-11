@@ -80,6 +80,7 @@ func GetLogoCustomInfo(ctx *gin.Context, mode string) (response.LogoCustomInfo, 
 				ChatflowIcon: config.Cfg().DefaultIcon.ChatflowIcon,
 				ModelIcon:    config.Cfg().DefaultIcon.ModelIcon,
 			},
+			UserPhoneRequired: config.Cfg().CustomInfo.UserPhoneRequired != 0,
 		}
 		break
 	}

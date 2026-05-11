@@ -42,6 +42,14 @@ func CreateUser(ctx *gin.Context, creatorID, orgID string, userCreate *request.U
 	if err != nil {
 		return nil, fmt.Errorf("decrypt password err: %v", err)
 	}
+	if config.Cfg().CustomInfo.UserPhoneRequired != 0 && userCreate.Phone == "" {
+		return nil, fmt.Errorf("phone is empty")
+	}
+	if userCreate.Phone != "" {
+		if err := validatePhone(userCreate.Phone); err != nil {
+			return nil, fmt.Errorf("phone %s is invalid", userCreate.Phone)
+		}
+	}
 	resp, err := iam.CreateUser(ctx.Request.Context(), &iam_service.CreateUserReq{
 		CreatorId: creatorID,
 		OrgId:     orgID,
@@ -61,6 +69,14 @@ func CreateUser(ctx *gin.Context, creatorID, orgID string, userCreate *request.U
 }
 
 func ChangeUser(ctx *gin.Context, orgID string, userUpdate *request.UserUpdate) error {
+	if config.Cfg().CustomInfo.UserPhoneRequired != 0 && userUpdate.Phone == "" {
+		return fmt.Errorf("phone is empty")
+	}
+	if userUpdate.Phone != "" {
+		if err := validatePhone(userUpdate.Phone); err != nil {
+			return fmt.Errorf("phone %s is invalid", userUpdate.Phone)
+		}
+	}
 	_, err := iam.UpdateUser(ctx.Request.Context(), &iam_service.UpdateUserReq{
 		UserId:   userUpdate.UserID,
 		OrgId:    orgID,
@@ -231,6 +247,9 @@ func CreateUserByFile(ctx *gin.Context, creatorID, orgID string) error {
 		}
 		if err := validatePassword(user.Password); err != nil {
 			return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_user_batch_import_file", fmt.Sprintf("username %s: %v", user.UserName, err))
+		}
+		if config.Cfg().CustomInfo.UserPhoneRequired != 0 && user.Phone == "" {
+			return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_user_batch_import_file", fmt.Sprintf("username %s: phone is empty", user.UserName))
 		}
 		if user.Phone != "" {
 			if err := validatePhone(user.Phone); err != nil {

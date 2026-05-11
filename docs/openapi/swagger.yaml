@@ -1370,38 +1370,11 @@ definitions:
     required:
     - assistantUuid
     type: object
-  request.OpenAPIAgentConversationClearRequest:
-    properties:
-      conversation_id:
-        description: 对话ID
-        type: string
-    required:
-    - conversation_id
-    type: object
-  request.OpenAPIAgentConversationDeleteRequest:
-    properties:
-      conversation_id:
-        description: 对话ID
-        type: string
-      detail_id:
-        description: 可选：消息ID，不传则删除整个对话
-        type: string
-    required:
-    - conversation_id
-    type: object
   request.OpenAPIAgentCreateConversationRequest:
     properties:
       title:
         type: string
       uuid:
-        type: string
-    required:
-    - uuid
-    type: object
-  request.OpenAPIAgentDeleteRequest:
-    properties:
-      uuid:
-        description: 智能体UUID
         type: string
     required:
     - uuid
@@ -1420,17 +1393,6 @@ definitions:
         type: string
     required:
     - query
-    - uuid
-    type: object
-  request.OpenAPIAgentDraftConversationDeleteRequest:
-    properties:
-      detail_id:
-        description: 可选：消息ID，不传则清空全部
-        type: string
-      uuid:
-        description: 智能体UUID
-        type: string
-    required:
     - uuid
     type: object
   request.OpenAPIAgentPublishRequest:
@@ -1910,6 +1872,10 @@ definitions:
     type: object
   response.ConversationResponse:
     properties:
+      errMessage:
+        type: string
+      errResponse:
+        type: string
       order:
         type: integer
       response:
@@ -2508,8 +2474,6 @@ definitions:
         items:
           $ref: '#/definitions/response.OpenAPIAgentBriefInfo'
         type: array
-      total:
-        type: integer
     type: object
   response.OpenAPIChatflowCreateConversationResponse:
     properties:
@@ -2661,6 +2625,9 @@ definitions:
       conversationType:
         description: subAgent：子智能体；agentTool：主智能体工具；subAgentTool：子智能体工具
         type: string
+      errMessage:
+        description: 错误信息
+        type: string
       id:
         description: 事件id
         type: string
@@ -2720,16 +2687,13 @@ paths:
       - openapi.OIDC
   /agent:
     delete:
-      consumes:
-      - application/json
       description: 删除指定智能体，同时删除其已发布版本。删除后不可恢复，请谨慎操作。
       parameters:
-      - description: 请求参数
-        in: body
-        name: data
+      - description: 智能体UUID
+        in: query
+        name: uuid
         required: true
-        schema:
-          $ref: '#/definitions/request.OpenAPIAgentDeleteRequest'
+        type: string
       produces:
       - application/json
       responses:
@@ -2842,16 +2806,13 @@ paths:
       - openapi
   /agent/conversation:
     delete:
-      consumes:
-      - application/json
-      description: 删除指定对话。传入 detail_id 则仅删除该条消息，不传则删除整个对话（含所有消息）。
+      description: 删除整个对话（含 conversation 主体及所有历史消息）。如需按条删除消息或仅清空消息保留对话 ID，请使用 /agent/conversation/clear。
       parameters:
-      - description: 请求参数
-        in: body
-        name: data
+      - description: 对话ID
+        in: query
+        name: conversation_id
         required: true
-        schema:
-          $ref: '#/definitions/request.OpenAPIAgentConversationDeleteRequest'
+        type: string
       produces:
       - application/json
       responses:
@@ -2890,16 +2851,18 @@ paths:
       - openapi
   /agent/conversation/clear:
     delete:
-      consumes:
-      - application/json
-      description: 清空指定对话的所有历史消息（ES 数据），保留对话 ID 本身，可继续发起新的问答。
+      description: 对指定对话的消息（ES 数据）进行清理：传入 detail_id 则仅删除该条消息；不传则清空整个对话的全部消息。两种情况下
+        conversation_id 均保留，可继续发起新的问答。
       parameters:
-      - description: 请求参数
-        in: body
-        name: data
+      - description: 对话ID
+        in: query
+        name: conversation_id
         required: true
-        schema:
-          $ref: '#/definitions/request.OpenAPIAgentConversationClearRequest'
+        type: string
+      - description: 消息ID（不传则清空整个对话的全部消息）
+        in: query
+        name: detail_id
+        type: string
       produces:
       - application/json
       responses:
@@ -2907,13 +2870,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/response.Response'
-      summary: 清空智能体对话历史OpenAPI
+      summary: 清空/按条删除智能体对话消息OpenAPI
       tags:
       - openapi
   /agent/conversation/detail:
     get:
-      consumes:
-      - application/json
       description: 获取指定对话的历史消息列表（问答明细），分页返回。
       parameters:
       - description: 对话ID（由创建对话接口返回）
@@ -2955,16 +2916,17 @@ paths:
       - openapi
   /agent/conversation/draft:
     delete:
-      consumes:
-      - application/json
       description: 删除草稿智能体对话历史。传入 detail_id 则只删除该条消息，不传则清空全部历史（会话 ID 保留）。
       parameters:
-      - description: 请求参数
-        in: body
-        name: data
+      - description: 智能体UUID
+        in: query
+        name: uuid
         required: true
-        schema:
-          $ref: '#/definitions/request.OpenAPIAgentDraftConversationDeleteRequest'
+        type: string
+      - description: 消息ID（不传则清空全部）
+        in: query
+        name: detail_id
+        type: string
       produces:
       - application/json
       responses:
@@ -2977,8 +2939,6 @@ paths:
       - openapi
   /agent/conversation/draft/detail:
     get:
-      consumes:
-      - application/json
       description: 获取指定草稿智能体的对话历史消息。草稿态每个智能体只维护一条会话，通过 uuid 定位后分页返回消息列表。
       parameters:
       - description: 智能体UUID
@@ -3020,8 +2980,6 @@ paths:
       - openapi
   /agent/conversation/list:
     get:
-      consumes:
-      - application/json
       description: 获取指定智能体的已发布对话列表，按创建时间降序排列。
       parameters:
       - description: 智能体UUID
@@ -3093,8 +3051,6 @@ paths:
       - openapi
   /agent/list:
     get:
-      consumes:
-      - application/json
       description: 获取当前 API Key 所属用户下的全部智能体（含草稿与已发布），可按名称模糊筛选。返回的 uuid 字段可用于其他智能体接口。
       parameters:
       - description: 按名称模糊筛选（可选）

@@ -21,7 +21,7 @@ func (u *UserUpdate) Check() error {
 type UserInfo struct {
 	Nickname string   `json:"nickname"`                     // 昵称
 	Password string   `json:"password" validate:"required"` // 密码
-	Phone    string   `json:"phone" validate:"required"`    // 电话
+	Phone    string   `json:"phone"`                        // 电话
 	Remark   string   `json:"remark"`                       // 备注
 	Gender   string   `json:"gender"`                       // 性别（0-女，1-男，空-未知）
 	Company  string   `json:"company"`                      // 公司

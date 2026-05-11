@@ -24234,7 +24234,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "password",
-                "phone",
                 "username"
             ],
             "properties": {
@@ -24343,7 +24342,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "password",
-                "phone",
                 "userId"
             ],
             "properties": {
@@ -26920,7 +26918,7 @@ const docTemplate = `{
                     "description": "列表项"
                 },
                 "listType": {
-                    "description": "类型: tool, mcp, workflow, skill, assistant, knowledge",
+                    "description": "类型: tool, mcp, workflow, skill, assistant, knowledge, ontology",
                     "type": "string"
                 }
             }
@@ -28339,6 +28337,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.CustomTab"
                         }
                     ]
+                },
+                "userPhoneRequired": {
+                    "description": "是否需要手机号",
+                    "type": "boolean"
                 }
             }
         },

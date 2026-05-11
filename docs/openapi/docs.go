@@ -83,9 +83,6 @@ const docTemplate = `{
             },
             "delete": {
                 "description": "删除指定智能体，同时删除其已发布版本。删除后不可恢复，请谨慎操作。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -95,13 +92,11 @@ const docTemplate = `{
                 "summary": "删除智能体OpenAPI",
                 "parameters": [
                     {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.OpenAPIAgentDeleteRequest"
-                        }
+                        "type": "string",
+                        "description": "智能体UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -274,10 +269,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "删除指定对话。传入 detail_id 则仅删除该条消息，不传则删除整个对话（含所有消息）。",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "删除整个对话（含 conversation 主体及所有历史消息）。如需按条删除消息或仅清空消息保留对话 ID，请使用 /agent/conversation/clear。",
                 "produces": [
                     "application/json"
                 ],
@@ -287,13 +279,11 @@ const docTemplate = `{
                 "summary": "删除智能体对话OpenAPI",
                 "parameters": [
                     {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.OpenAPIAgentConversationDeleteRequest"
-                        }
+                        "type": "string",
+                        "description": "对话ID",
+                        "name": "conversation_id",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -308,26 +298,27 @@ const docTemplate = `{
         },
         "/agent/conversation/clear": {
             "delete": {
-                "description": "清空指定对话的所有历史消息（ES 数据），保留对话 ID 本身，可继续发起新的问答。",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "对指定对话的消息（ES 数据）进行清理：传入 detail_id 则仅删除该条消息；不传则清空整个对话的全部消息。两种情况下 conversation_id 均保留，可继续发起新的问答。",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "openapi"
                 ],
-                "summary": "清空智能体对话历史OpenAPI",
+                "summary": "清空/按条删除智能体对话消息OpenAPI",
                 "parameters": [
                     {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.OpenAPIAgentConversationClearRequest"
-                        }
+                        "type": "string",
+                        "description": "对话ID",
+                        "name": "conversation_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "消息ID（不传则清空整个对话的全部消息）",
+                        "name": "detail_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -343,9 +334,6 @@ const docTemplate = `{
         "/agent/conversation/detail": {
             "get": {
                 "description": "获取指定对话的历史消息列表（问答明细），分页返回。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -416,9 +404,6 @@ const docTemplate = `{
         "/agent/conversation/draft": {
             "delete": {
                 "description": "删除草稿智能体对话历史。传入 detail_id 则只删除该条消息，不传则清空全部历史（会话 ID 保留）。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -428,13 +413,17 @@ const docTemplate = `{
                 "summary": "删除草稿态智能体对话历史OpenAPI",
                 "parameters": [
                     {
-                        "description": "请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.OpenAPIAgentDraftConversationDeleteRequest"
-                        }
+                        "type": "string",
+                        "description": "智能体UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "消息ID（不传则清空全部）",
+                        "name": "detail_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -450,9 +439,6 @@ const docTemplate = `{
         "/agent/conversation/draft/detail": {
             "get": {
                 "description": "获取指定草稿智能体的对话历史消息。草稿态每个智能体只维护一条会话，通过 uuid 定位后分页返回消息列表。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -523,9 +509,6 @@ const docTemplate = `{
         "/agent/conversation/list": {
             "get": {
                 "description": "获取指定智能体的已发布对话列表，按创建时间降序排列。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -646,9 +629,6 @@ const docTemplate = `{
         "/agent/list": {
             "get": {
                 "description": "获取当前 API Key 所属用户下的全部智能体（含草稿与已发布），可按名称模糊筛选。返回的 uuid 字段可用于其他智能体接口。",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -4091,34 +4071,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.OpenAPIAgentConversationClearRequest": {
-            "type": "object",
-            "required": [
-                "conversation_id"
-            ],
-            "properties": {
-                "conversation_id": {
-                    "description": "对话ID",
-                    "type": "string"
-                }
-            }
-        },
-        "request.OpenAPIAgentConversationDeleteRequest": {
-            "type": "object",
-            "required": [
-                "conversation_id"
-            ],
-            "properties": {
-                "conversation_id": {
-                    "description": "对话ID",
-                    "type": "string"
-                },
-                "detail_id": {
-                    "description": "可选：消息ID，不传则删除整个对话",
-                    "type": "string"
-                }
-            }
-        },
         "request.OpenAPIAgentCreateConversationRequest": {
             "type": "object",
             "required": [
@@ -4129,18 +4081,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.OpenAPIAgentDeleteRequest": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "智能体UUID",
                     "type": "string"
                 }
             }
@@ -4165,22 +4105,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.OpenAPIAgentDraftConversationDeleteRequest": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "detail_id": {
-                    "description": "可选：消息ID，不传则清空全部",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "智能体UUID",
                     "type": "string"
                 }
             }
@@ -4915,6 +4839,12 @@ const docTemplate = `{
         "response.ConversationResponse": {
             "type": "object",
             "properties": {
+                "errMessage": {
+                    "type": "string"
+                },
+                "errResponse": {
+                    "type": "string"
+                },
                 "order": {
                     "type": "integer"
                 },
@@ -5793,9 +5723,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.OpenAPIAgentBriefInfo"
                     }
-                },
-                "total": {
-                    "type": "integer"
                 }
             }
         },
@@ -6024,6 +5951,10 @@ const docTemplate = `{
             "properties": {
                 "conversationType": {
                     "description": "subAgent：子智能体；agentTool：主智能体工具；subAgentTool：子智能体工具",
+                    "type": "string"
+                },
+                "errMessage": {
+                    "description": "错误信息",
                     "type": "string"
                 },
                 "id": {

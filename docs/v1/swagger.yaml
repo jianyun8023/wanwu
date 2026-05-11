@@ -4450,7 +4450,6 @@ definitions:
         type: string
     required:
     - password
-    - phone
     - username
     type: object
   request.UserID:
@@ -4527,7 +4526,6 @@ definitions:
         type: string
     required:
     - password
-    - phone
     - userId
     type: object
   request.VisionConfig:
@@ -6206,7 +6204,7 @@ definitions:
       list:
         description: 列表项
       listType:
-        description: '类型: tool, mcp, workflow, skill, assistant, knowledge'
+        description: '类型: tool, mcp, workflow, skill, assistant, knowledge, ontology'
         type: string
     type: object
   response.GeneralAgentConversationDetailInfo:
@@ -7156,6 +7154,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/response.CustomTab'
         description: 标签页信息
+      userPhoneRequired:
+        description: 是否需要手机号
+        type: boolean
     type: object
   response.MCPActionList:
     properties:
