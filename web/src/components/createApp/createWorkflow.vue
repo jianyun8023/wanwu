@@ -45,7 +45,7 @@
             :placeholder="$t('list.descplaceholder')"
             v-model="form.desc"
             show-word-limit
-            maxlength="600"
+            maxlength="200"
           ></el-input>
         </el-form-item>
         <!--v-if="type === 'create'"-->
@@ -134,7 +134,7 @@ export default {
             trigger: 'blur',
           },
           {
-            max: 600,
+            max: 200,
             message: this.$t('list.pluginLimitRules'),
             trigger: 'blur',
           },

@@ -45,7 +45,7 @@
             :placeholder="$t('list.noChatDesc')"
             v-model="form.desc"
             show-word-limit
-            maxlength="600"
+            maxlength="200"
           ></el-input>
         </el-form-item>
       </el-form>
@@ -109,7 +109,7 @@ export default {
             message: this.$t('list.noChatDesc'),
             trigger: 'blur',
           },
-          { max: 600, message: this.$t('list.chatDescLimit'), trigger: 'blur' },
+          { max: 200, message: this.$t('list.chatDescLimit'), trigger: 'blur' },
         ],
       },
     };
