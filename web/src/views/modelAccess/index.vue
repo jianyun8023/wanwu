@@ -177,6 +177,7 @@
               </div>
               <div class="card-top-right" @click.stop="">
                 <el-switch
+                  v-if="item.allowEdit"
                   @change="
                     val => {
                       changeStatus(item, val);
@@ -193,15 +194,16 @@
                   :model-value="checkModelSelection(item.modelId)"
                   @change="setModelCheck(item.modelId)"
                 ></el-checkbox>
-                <el-dropdown @command="handleCommand" placement="top">
+                <el-dropdown
+                  v-if="item.allowEdit"
+                  @command="handleCommand"
+                  placement="top"
+                >
                   <span class="el-dropdown-link">
                     <i class="el-icon-more more"></i>
                   </span>
                   <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item
-                      v-if="item.allowEdit"
-                      :command="{ type: 'edit', item }"
-                    >
+                    <el-dropdown-item :command="{ type: 'edit', item }">
                       <i class="el-icon-edit-outline card-opera-icon"></i>
                       {{ $t('common.button.edit') }}
                     </el-dropdown-item>
