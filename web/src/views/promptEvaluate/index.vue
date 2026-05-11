@@ -4,7 +4,7 @@
       <div class="header-left">
         <span
           class="el-icon-arrow-left go-back"
-          @click="goTo('/prompt')"
+          @click="$router.push('/prompt')"
         ></span>
         <h3>{{ $t('promptEvaluate.title') }}</h3>
       </div>
@@ -133,7 +133,6 @@
 import { selectModelList } from '@/api/modelAccess';
 import ModelSelect from '@/components/modelSelect.vue';
 import sseMethod from '@/mixins/sseMethod';
-import { goTo } from '@/utils/util';
 
 export default {
   components: { ModelSelect },
@@ -165,7 +164,6 @@ export default {
     this.getModellist();
   },
   methods: {
-    goTo,
     getModellist(type = '') {
       selectModelList()
         .then(res => {

@@ -199,7 +199,7 @@ export default {
       link.href = url;
       link.download = fileName;
       link.click();
-      globalThis.URL.revokeObjectURL(link.href);
+      URL.revokeObjectURL(link.href);
     },
     handleDelete(row) {
       const data = {

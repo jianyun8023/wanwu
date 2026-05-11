@@ -3,7 +3,7 @@
     <div class="page-title">
       <i
         class="el-icon-arrow-left"
-        @click="goTo('/knowledge')"
+        @click="$router.push('/knowledge')"
         style="margin-right: 10px; font-size: 20px; cursor: pointer"
       ></i>
       {{ knowledgeName }}
@@ -383,7 +383,6 @@ import {
   QA_STATUS_PROCESSING,
 } from '@/views/knowledge/constants';
 import CopyIcon from '@/components/copyIcon.vue';
-import { goTo } from '@/utils/util';
 
 export default {
   components: {
@@ -666,7 +665,6 @@ export default {
         this.timer = null;
       }
     },
-    goTo,
     reload() {
       this.getTableData(this.docQuery);
     },

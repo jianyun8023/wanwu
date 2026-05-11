@@ -7,25 +7,28 @@ import { basePath } from '@/utils/config';
 import { store } from '@/store';
 
 export function guid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    let r = (Math.random() * 16) | 0,
-      v = c == 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replaceAll(
+    /[xy]/g,
+    function (c) {
+      let r = Math.trunc(Math.random() * 16),
+        v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    },
+  );
 }
 
 export const getXClientId = () => localStorage.getItem('xClientId');
 
 // 用于登录切组织等找到有权限的第一个菜单路径
 export const fetchPermFirPath = (list = menuList) => {
-  if (!list.length) return '';
+  if (!list.length) return { path: '/404' };
 
   let path = '';
   for (let i in list) {
     const item = list[i];
 
     if (checkPerm(item.perm)) {
-      if (item.children && item.children.length) {
+      if (item.children?.length) {
         path = fetchPermFirPath(item.children).path;
         break;
       } else {
@@ -54,10 +57,8 @@ export const fetchCurrentPathIndex = (path, list) => {
       };
       if (item.path && formatPath(path).includes(formatPath(item.path))) {
         index = item.index;
-      } else {
-        if (item.children && item.children.length) {
-          findIndex(item.children);
-        }
+      } else if (item.children?.length) {
+        findIndex(item.children);
       }
     }
     return index;
@@ -90,10 +91,8 @@ export const redirectUserInfoPage = (
 ) => {
   if (isUpdatePassword !== undefined && !isUpdatePassword) {
     router.push('/userInfo?showPwd=1');
-    callback && callback();
-  } else {
-    if (isRedirectUrl) jumpPermUrl();
-  }
+    callback?.();
+  } else if (isRedirectUrl) jumpPermUrl();
 };
 
 export const replaceIcon = logoPath => {
@@ -113,7 +112,7 @@ export const replaceTitle = title => {
 export const getModelDefaultIcon = () => {
   const { defaultIcon = {} } = store.state.user.commonInfo.data || {};
   return (
-    avatarSrc(defaultIcon.modelIcon) ||
+    avatarSrc(defaultIcon?.modelIcon) ||
     require('@/assets/imgs/model_default_icon.png')
   );
 };
@@ -125,7 +124,7 @@ export const copy = text => {
   document.body.appendChild(textareaEl);
   textareaEl.select();
   const res = document.execCommand('copy');
-  document.body.removeChild(textareaEl);
+  textareaEl.remove();
   return res;
 };
 
@@ -133,43 +132,45 @@ export const copyCb = () => {
   Message.success(i18n.t('common.copy.success'));
 };
 
-export const resDownloadFile = (response = {}, fileName) => {
-  const blob = new Blob([response], { type: response.type });
-  const url = URL.createObjectURL(blob);
+// 直链下载
+export function directDownload(url, filename = '') {
   const link = document.createElement('a');
   link.href = url;
-  link.download = fileName;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
   link.click();
-  window.URL.revokeObjectURL(link.href);
+  link.remove();
+}
+
+export const resDownloadFile = (response = {}, fileName = '') => {
+  const blob = new Blob([response], { type: response.type });
+  const url = URL.createObjectURL(blob);
+  directDownload(url, fileName);
+  URL.revokeObjectURL(url);
 };
 
-export const getInitTimeRange = () => {
-  const date = new Date();
-  const month = date.getMonth() + 1;
-  const startTime =
-    date.getFullYear() +
-    '-' +
-    (month < 10 ? '0' : '') +
-    month +
-    '-' +
-    '01 00:00:00';
-  const stamp = new Date().getTime() + 8 * 60 * 60 * 1000;
-  const endTime = new Date(stamp)
-    .toISOString()
-    .replace(/T/, ' ')
-    .replace(/\..+/, '')
-    .substring(0, 19);
-  return [startTime, endTime];
-};
+// fetch请求下载（强制重命名）
+export async function fetchDownload(url, filename = '') {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('文件下载失败');
+    const blob = await response.blob();
+    resDownloadFile(blob, filename);
+  } catch (error) {
+    console.error('下载出错:', error);
+    directDownload(url, filename);
+  }
+}
 
 export function convertLatexSyntax(inputText) {
   // 1. 匹配块级公式，将 `\[` 和 `\]` 替换为 `$$`，支持 `\\[` `\\]` 或单个 `\[` `\]`
-  inputText = inputText.replace(
+  inputText = inputText.replaceAll(
     /\\\[\s*([\s\S]+?)\s*\\\]/g,
     (_, formula) => `$$${formula}$$`,
   );
   // 2. 匹配行内公式，将 `\(` 和 `\)` 替换为 `$`，支持 `\\(` `\\)` 或单个 `\(` `\)`
-  inputText = inputText.replace(
+  inputText = inputText.replaceAll(
     /\\\(\s*([\s\S]+?)\s*\\\)/g,
     (_, formula) => `$${formula}$`,
   );
@@ -177,7 +178,7 @@ export function convertLatexSyntax(inputText) {
 }
 
 export function formatTimestamp(timestamp, format = 'YYYY-MM-DD HH:mm:ss') {
-  const date = new Date(timestamp || timestamp);
+  const date = new Date(timestamp);
 
   const map = {
     YYYY: date.getFullYear(),
@@ -188,27 +189,27 @@ export function formatTimestamp(timestamp, format = 'YYYY-MM-DD HH:mm:ss') {
     ss: String(date.getSeconds()).padStart(2, '0'),
   };
 
-  return format.replace(/YYYY|MM|DD|HH|mm|ss/g, matched => map[matched]);
+  return format.replaceAll(/YYYY|MM|DD|HH|mm|ss/g, matched => map[matched]);
 }
 
 export function isSub(data) {
-  return /\【([0-9]{0,2})\^\】/.test(data);
+  return /【(\d{0,2})\^】/.test(data);
 }
 
 export function parseSub(data, index, searchList) {
   // 标点吸附：汉字与引用之间、引用与中文/英文标点之间的空白全部压掉，
   // 避免出现 "水平 【1^】 。它..." 这种被空格割裂的阅读节奏
   data = data
-    .replace(/([\u4e00-\u9fa5A-Za-z0-9])\s+(?=【\d{0,2}\^】)/g, '$1')
-    .replace(/【(\d{0,2})\^】\s+(?=[，。！？；：、）】》」"'])/g, '【$1^】');
+    .replaceAll(/([\u4e00-\u9fa5A-Za-z0-9])\s+(?=【\d{0,2}\^】)/g, '$1')
+    .replaceAll(/【(\d{0,2})\^】\s+(?=[，。！？；：、）】》」"'])/g, '【$1^】');
   const escape = s =>
     String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  return data.replace(/\【([0-9]{0,2})\^\】/g, item => {
-    const num = item.match(/\【([0-9]{0,2})\^\】/)[1];
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  return data.replaceAll(/【(\d{0,2})\^】/g, item => {
+    const num = item.match(/【(\d{0,2})\^】/)[1];
     // 如提供 searchList，则附上 title / snippet 供前端 hover 气泡读取
     if (Array.isArray(searchList) && searchList.length) {
       const src = searchList[Number(num) - 1];
@@ -217,9 +218,9 @@ export function parseSub(data, index, searchList) {
         const rawSnippet = String(src.snippet || src.content || '');
         // 去掉原文里的 markdown 图片/链接 + HTML 标签，气泡里只展示纯文本
         const cleaned = rawSnippet
-          .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
-          .replace(/<\/?[a-zA-Z][^>]*>/g, '')
-          .replace(/\s+/g, ' ')
+          .replaceAll(/!\[[^\]]*\]\([^)]+\)/g, '')
+          .replaceAll(/<\/?[a-zA-Z][^>]*>/g, '')
+          .replaceAll(/\s+/g, ' ')
           .trim();
         const snippet = escape(
           cleaned.length > 120 ? cleaned.slice(0, 120) + '…' : cleaned,
@@ -229,70 +230,20 @@ export function parseSub(data, index, searchList) {
     }
     return `<sup class='citation' data-parents-index='${index}'>${num}</sup>`;
   });
-  /*if (!searchList || !Array.isArray(searchList)) {
-    searchList = [];
-  }
-  const result = data.match(/\【([0-9]{0,2})\^\】/g);
-  if (!result) return data;
-  return data.replace(/\【([0-9]{0,2})\^\】/g, item => {
-    const num = item.replace(/\【|\^\】/g, '');
-    if (!num) return item;
-    const searchItem = searchList[Number(num)-1];
-    if (!searchItem) return item;
-    const snippet = searchItem ? searchItem.snippet : '';
-    const title = searchItem ? searchItem.title : '';
-    const displaySnippet = snippet.length >= 25 ? snippet.substring(0, 25) + '...' : snippet;
-    return `
-      <div class="citation-container" data-citation-index="${index}" data-citation-number="${num}">
-        <sup class='citation' data-parents-index="${index}">${num}</sup>
-        <div class="citation-tips">
-          <div class="citation-tips-content">
-            <div class="citation-tips-content-text">${displaySnippet}</div>
-          </div>
-          <div class="citation-tips-title">
-            <span>
-              <span class="el-icon-document"></span>
-              <span>${title}</span>
-            </span>
-            <span class="el-icon-arrow-right citation-tips-content-icon" data-index="${index}" data-citation="${num}"></span>
-          </div>
-        </div>
-      </div>
-    `;
-  });*/
 }
 
 // 子会话专用的 parseSub
 export function parseSubConversation(text, index, searchList, id) {
-  return text.replace(/\【([0-9]{0,2})\^\】/g, item => {
-    let result = item.match(/\【([0-9]{0,2})\^\】/)[1];
+  return text.replaceAll(/【(\d{0,2})\^】/g, item => {
+    let result = item.match(/【(\d{0,2})\^】/)[1];
     return `<sup class='citation' data-parents-index='${index}' data-pid='${id}'>${result}</sup>`;
   });
-}
-
-/**
- *获取URL参数
- */
-export function getQueryString(val, href) {
-  const hrefNew = href || window.location.href;
-  const search = hrefNew.substring(
-    hrefNew.lastIndexOf('?') + 1,
-    hrefNew.length,
-  );
-  // 组装?
-  const uri = '?' + search;
-  const reg = new RegExp('' + val + '=([^&?]*)', 'ig');
-  const matchArr = uri.match(reg);
-  if (matchArr && matchArr.length) {
-    return matchArr[0].substring(val.length + 1);
-  }
-  return null;
 }
 
 // 是否是有效的URL
 export function isValidURL(string) {
   const res = string.match(
-    /(https?|ftp|file|ssh):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]/i,
+    /(https?|ftp|file|ssh):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|]/i,
   );
   return res !== null;
 }
@@ -302,17 +253,16 @@ export function isExternal(path) {
 }
 
 export const formatTools = tools => {
-  if (!(tools && tools.length)) return [];
-  const newTools = tools.map((n, i) => {
+  if (!tools?.length) return [];
+  return tools.map((n, i) => {
     let params = [];
     let properties = n.inputSchema.properties;
     for (let key in properties) {
       params.push({
         name: key,
-        requiredBadge:
-          n.inputSchema.required && n.inputSchema.required.includes(key)
-            ? i18n.t('common.required')
-            : '',
+        requiredBadge: n.inputSchema.required?.includes(key)
+          ? i18n.t('common.required')
+          : '',
         type: properties[key].type,
         description: properties[key].description,
       });
@@ -322,7 +272,6 @@ export const formatTools = tools => {
       params,
     };
   });
-  return newTools;
 };
 
 /**
@@ -381,7 +330,7 @@ export const formatAmount = (
     //缩小相应倍数，并保留2位小数
     const formattedValue = (num / divisor)
       .toFixed(2)
-      .replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+      .replaceAll(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
 
     if (returnType === 'object') {
       return {
@@ -429,7 +378,7 @@ export function debounce(func, wait, immediate) {
 
   const later = function () {
     // 计算上次调用时间与当前时间的差值
-    const last = +new Date() - timestamp;
+    const last = Date.now() - timestamp;
 
     // 如果上次调用时间与当前时间的差值小于wait，则设置新的定时器
     if (last < wait && last >= 0) {
@@ -439,7 +388,7 @@ export function debounce(func, wait, immediate) {
       timeout = null;
       if (!immediate) {
         result = func.apply(context, args);
-        if (!timeout) context = args = null;
+        context = args = null;
       }
     }
   };
@@ -447,7 +396,7 @@ export function debounce(func, wait, immediate) {
   return function () {
     context = this;
     args = arguments;
-    timestamp = +new Date();
+    timestamp = Date.now();
 
     // 如果immediate为true且当前没有定时器，则立即执行函数
     const callNow = immediate && !timeout;
@@ -496,7 +445,9 @@ export function formatFileSize(bytes, decimals = 2) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return (
-    parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i]
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) +
+    ' ' +
+    sizes[i]
   );
 }
 
@@ -510,11 +461,11 @@ export function Md2Img(markdownText, escapeHtml = true) {
   // 转义HTML特殊字符
   if (escapeHtml)
     markdownText = markdownText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
 
   let lastIndex = 0;
   let result = '';
@@ -539,7 +490,7 @@ export function Md2Img(markdownText, escapeHtml = true) {
   result += markdownText.substring(lastIndex);
 
   // 将换行符转换为<br>标签
-  result = result.replace(newlineRegex, '<br>');
+  result = result.replaceAll(newlineRegex, '<br>');
 
   return result;
 }
@@ -550,7 +501,7 @@ export function Img2Md(htmlString, escapeHtml = true) {
   const imgRegex = /<img\s+[^>]*src\s*=\s*["']([^"']+)["'][^>]*>/gi;
 
   // 替换 img 标签为 Markdown 格式
-  let result = htmlString.replace(imgRegex, (match, src) => {
+  let result = htmlString.replaceAll(imgRegex, (match, src) => {
     // 提取 alt 属性（如果有）
     const altMatch = match.match(/alt\s*=\s*["']([^"']*)["']/i);
     const alt = altMatch ? altMatch[1] : '';
@@ -559,49 +510,30 @@ export function Img2Md(htmlString, escapeHtml = true) {
 
   result = result
     // 处理空行
-    .replace(/<div><br><\/div>/gi, '\n')
+    .replaceAll(/<div><br><\/div>/gi, '\n')
     // 处理块级元素的换行 - 仅在块级元素前添加换行符，后截替换为空
-    .replace(/<(div|p|h[1-6]|li|blockquote)\b[^>]*>(.*?)<\/\1>/gi, '\n$2')
+    .replaceAll(/<(div|p|h[1-6]|li|blockquote)\b[^>]*>(.*?)<\/\1>/gi, '\n$2')
     // 处理自闭合的br标签
-    .replace(/<br\s*\/?>/gi, '\n')
+    .replaceAll(/<br\s*\/?>/gi, '\n')
     // 删除所有其他HTML标签，只保留纯文本内容和换行符
-    .replace(/<[^>]*>/g, '');
+    .replaceAll(/<[^>]*>/g, '');
 
   // 恢复HTML特殊字符
   if (escapeHtml)
     result = result
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&amp;/g, '&');
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&amp;', '&');
 
   return result;
-}
-
-export function goTo(path = '', back = false) {
-  if (back) {
-    router.back();
-  } else if (path) {
-    router.push({ path: path });
-  } else router.back();
-}
-
-// 直链下载
-export function directDownload(url, filename = '') {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }
 
 //   格式化文件大小
 export function filterSize(size) {
   if (!size) return '';
-  var num = 1024.0; //byte
+  const num = 1024; //byte
   if (size < num) return size + 'B';
   if (size < Math.pow(num, 2)) return (size / num).toFixed(2) + 'KB'; //kb
   if (size < Math.pow(num, 3))
@@ -750,99 +682,4 @@ export function formatDuration(ms) {
     return `${minutes}m ${secs}s`;
   }
   return `${secs}s`;
-}
-
-/**
- * 获取文件图标类名（Element UI）
- * @param {Object} file - 文件对象
- * @returns {string} Element UI 图标类名
- */
-export function getFileIconClass(file) {
-  if (file.type === 'directory' || file.type === 'dir' || file.isDir) {
-    return 'el-icon-folder';
-  }
-
-  const ext = file.name ? file.name.split('.').pop().toLowerCase() : '';
-  const iconMap = {
-    // 图片
-    png: 'el-icon-picture',
-    jpg: 'el-icon-picture',
-    jpeg: 'el-icon-picture',
-    gif: 'el-icon-picture',
-    svg: 'el-icon-picture',
-    webp: 'el-icon-picture',
-    bmp: 'el-icon-picture',
-    ico: 'el-icon-picture',
-    // 视频
-    mp4: 'el-icon-video-camera',
-    webm: 'el-icon-video-camera',
-    ogg: 'el-icon-video-camera',
-    mov: 'el-icon-video-camera',
-    m4v: 'el-icon-video-camera',
-    avi: 'el-icon-video-camera',
-    mkv: 'el-icon-video-camera',
-    // 音频
-    mp3: 'el-icon-headset',
-    wav: 'el-icon-headset',
-    m4a: 'el-icon-headset',
-    flac: 'el-icon-headset',
-    aac: 'el-icon-headset',
-    // 文档
-    pdf: 'el-icon-document',
-    doc: 'el-icon-document',
-    docx: 'el-icon-document',
-    xls: 'el-icon-document',
-    xlsx: 'el-icon-document',
-    ppt: 'el-icon-document',
-    pptx: 'el-icon-document',
-    txt: 'el-icon-document',
-    md: 'el-icon-document',
-    html: 'el-icon-document',
-    htm: 'el-icon-document',
-    json: 'el-icon-document',
-    js: 'el-icon-document',
-    ts: 'el-icon-document',
-    vue: 'el-icon-document',
-    py: 'el-icon-document',
-    java: 'el-icon-document',
-    go: 'el-icon-document',
-    css: 'el-icon-document',
-    scss: 'el-icon-document',
-    xml: 'el-icon-document',
-    yaml: 'el-icon-document',
-    yml: 'el-icon-document',
-    sql: 'el-icon-document',
-    sh: 'el-icon-document',
-    // 压缩包
-    zip: 'el-icon-files',
-    rar: 'el-icon-files',
-    tar: 'el-icon-files',
-    gz: 'el-icon-files',
-    '7z': 'el-icon-files',
-  };
-
-  return iconMap[ext] || 'el-icon-document';
-}
-
-// fetch请求下载（强制重命名）
-export async function fetchDownload(url, filename = '') {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('文件下载失败');
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(blobUrl);
-  } catch (error) {
-    console.error('下载出错:', error);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-  }
 }
