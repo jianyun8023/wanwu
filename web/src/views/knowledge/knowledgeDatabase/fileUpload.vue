@@ -721,7 +721,7 @@ import {
   FAT_SON_BLOCK,
   MODEL_TYPE_TIP,
 } from '../config';
-import { deepMerge } from '@/utils/util';
+import { deepMerge, filterSize } from '@/utils/util';
 import modelSelect from '@/components/modelSelect.vue';
 import { selectASRList, selectModelList } from '@/api/modelAccess';
 
@@ -1213,17 +1213,7 @@ export default {
         }
       });
     },
-    filterSize(size) {
-      if (!size) return '';
-      const num = 1024; //byte
-      if (size < num) return size + 'B';
-      if (size < Math.pow(num, 2)) return (size / num).toFixed(2) + 'KB'; //kb
-      if (size < Math.pow(num, 3))
-        return (size / Math.pow(num, 2)).toFixed(2) + 'MB'; //M
-      if (size < Math.pow(num, 4))
-        return (size / Math.pow(num, 3)).toFixed(2) + 'G'; //G
-      return (size / Math.pow(num, 4)).toFixed(2) + 'T'; //T
-    },
+    filterSize,
     fileTypeChange() {
       // 取消所有正在进行的上传请求
       this.cancelAllRequests();

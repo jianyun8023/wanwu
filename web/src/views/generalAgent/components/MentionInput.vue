@@ -261,7 +261,7 @@ export default {
 
     getCursorPosition() {
       try {
-        const selection = globalThis.getSelection();
+        const selection = getSelection();
         if (!selection || selection.rangeCount === 0) return 0;
 
         const range = selection.getRangeAt(0);

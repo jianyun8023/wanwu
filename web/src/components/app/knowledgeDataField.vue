@@ -194,7 +194,6 @@ export default {
     knowledgeConfig: {
       handler(val) {
         this.knowledgeList = val.knowledgebases || [];
-        console.log('knowledgeList', this.knowledgeList);
         this.knowledgeRecallConfig = val.config || {};
         this.showGraphSwitch = this.knowledgeList.some(
           item => item.graphSwitch === 1,
