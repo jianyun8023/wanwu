@@ -393,6 +393,10 @@ wga-sandbox:
     type: reuse
     host: wga-sandbox-wanwu
     image-name: ""
+  sandbox-ontology:
+    type: reuse
+    host: wga-sandbox-ontology-wanwu
+    image-name: ""
 
 ontology:
   enable: 0

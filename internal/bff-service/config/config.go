@@ -137,7 +137,8 @@ type DifyKnowledgeConfig struct {
 }
 
 type WgaSandboxConfig struct {
-	Sandbox WgaSandboxSandboxConfig `json:"sandbox" mapstructure:"sandbox"`
+	Sandbox         WgaSandboxSandboxConfig `json:"sandbox" mapstructure:"sandbox"`
+	SandboxOntology WgaSandboxSandboxConfig `json:"sandbox-ontology" mapstructure:"sandbox-ontology"`
 }
 
 type WgaSandboxSandboxConfig struct {
