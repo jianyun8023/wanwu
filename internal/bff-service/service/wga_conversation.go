@@ -353,13 +353,14 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	}
 
 	return WgaConversationChat(ctx, &WgaChatParams{
-		UserID:         userId,
-		OrgID:          orgId,
-		AgentID:        agentID,
-		ThreadID:       req.ThreadID,
-		Messages:       req.Messages,
-		ModelConfig:    modelConfig,
-		WorkspaceStore: workspaceStore,
+		UserID:            userId,
+		OrgID:             orgId,
+		AgentID:           agentID,
+		ThreadID:          req.ThreadID,
+		Messages:          req.Messages,
+		ModelConfig:       modelConfig,
+		WorkspaceStore:    workspaceStore,
+		SendWorkspaceEvent: true,
 	})
 }
 
