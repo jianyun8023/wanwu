@@ -139,7 +139,6 @@
           class="session-answer"
           :id="'message-container' + i"
         >
-          <!-- v-if="[0].includes(n.qa_type)" -->
           <div class="session-answer-wrapper">
             <img class="logo" :src="modelIconUrl || avatarSrc(defaultUrl)" />
             <div class="session-wrap" style="width: calc(100% - 30px)">
@@ -253,6 +252,7 @@
                           v-for="(chunk, cIdx) in item.stableChunks"
                           :key="'stable-' + cIdx"
                           class="chunk_stable"
+                          @click="$refs.imagePreview.handleImageClick($event)"
                           v-bind:class="{ 'ds-res': showDSBtn(chunk) }"
                           v-html="
                             showDSBtn(chunk) ? replaceHTML(chunk, n) : chunk
@@ -261,6 +261,7 @@
                         <div
                           v-if="item.activeResponse"
                           class="chunk_active"
+                          @click="$refs.imagePreview.handleImageClick($event)"
                           v-bind:class="{
                             'ds-res': showDSBtn(item.activeResponse),
                           }"
@@ -276,6 +277,7 @@
                     <div
                       v-else-if="item.renderedContent"
                       class="answer-content order-main-renderedContent"
+                      @click="$refs.imagePreview.handleImageClick($event)"
                       v-bind:class="{
                         'ds-res': showDSBtn(item.renderedContent),
                         hideDs: !n.isOpen,
@@ -332,6 +334,7 @@
                       <div
                         v-if="n.qaSearchList && n.qaSearchList.length"
                         class="rag-source-list"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                       >
                         <div
                           v-for="(m, j) in n.qaSearchList"
@@ -407,6 +410,7 @@
                       <div
                         v-if="n.searchList && n.searchList.length"
                         class="rag-source-list"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                       >
                         <div
                           v-for="(m, j) in n.searchList"
@@ -491,11 +495,13 @@
                         v-for="(chunk, idx) in n.stableReasoningChunks"
                         :key="'rc-' + idx"
                         class="chunk_stable"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                         v-html="unwrapCodeImages(chunk)"
                       ></div>
                       <div
                         v-if="n.activeReasoning"
                         class="chunk_active"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                         v-html="unwrapCodeImages(n.activeReasoning)"
                       ></div>
                     </template>
@@ -521,11 +527,13 @@
                         v-for="(chunk, idx) in n.stableReasoningChunks"
                         :key="'r-' + idx"
                         class="chunk_stable"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                         v-html="chunk"
                       ></div>
                       <div
                         v-if="n.activeReasoning"
                         class="chunk_active"
+                        @click="$refs.imagePreview.handleImageClick($event)"
                         v-html="n.activeReasoning"
                       ></div>
                     </section>
@@ -543,7 +551,7 @@
                     :class="{ 'rag-answer': chatType === 'rag' }"
                     @mouseover="onRagAnswerHover($event)"
                     @mouseout="onRagAnswerLeave($event)"
-                    @click="onRagAnswerClick($event)"
+                    @click="$refs.imagePreview.handleImageClick($event)"
                   >
                     <div
                       v-for="(chunk, idx) in n.stableChunks"
@@ -574,7 +582,7 @@
                   }"
                   @mouseover="onRagAnswerHover($event)"
                   @mouseout="onRagAnswerLeave($event)"
-                  @click="onRagAnswerClick($event, n)"
+                  @click="$refs.imagePreview.handleImageClick($event)"
                 >
                   <div
                     v-html="
@@ -594,14 +602,6 @@
               />
             </div>
           </div>
-          <!-- <div v-else class="session-answer-wrapper">
-            <img class="logo" :src="avatarSrc(defaultUrl)" />
-            <div v-if="n.code === 7" class="answer-content session-error">
-              <i class="el-icon-warning"></i>
-              &nbsp;{{ n.response }}
-            </div>
-            <div v-else class="answer-content" v-html="n.response"></div>
-          </div> -->
           <!--文件-->
           <div
             v-if="n.gen_file_url_list && n.gen_file_url_list.length"
@@ -681,10 +681,13 @@
                     </sub>
                     {{ m.title }}
                   </span>
-                  <!-- <span @click="goPreview($event,m)" class="search-doc">查看全文</span> -->
                 </div>
                 <el-collapse-transition>
-                  <div v-show="m.collapse ? true : false" class="snippet">
+                  <div
+                    v-show="!!m.collapse"
+                    class="snippet"
+                    @click="$refs.imagePreview.handleImageClick($event)"
+                  >
                     <p v-html="m.snippet"></p>
                   </div>
                 </el-collapse-transition>
@@ -872,39 +875,8 @@
         </div>
       </div>
     </transition>
-    <!-- RAG 答案图片 lightbox（极简自实现，避免额外依赖） -->
-    <transition name="rag-lightbox-fade">
-      <div
-        v-if="ragImageViewer.visible"
-        class="rag-lightbox"
-        @click.self="closeRagImageViewer"
-        @keydown.esc="closeRagImageViewer"
-        tabindex="-1"
-      >
-        <button
-          class="rag-lightbox-close"
-          @click="closeRagImageViewer"
-          :aria-label="$t('rag.citation.close')"
-        >
-          ×
-        </button>
-        <img
-          class="rag-lightbox-img"
-          :src="ragImageViewer.url"
-          :alt="ragImageViewer.alt"
-          @click.stop
-        />
-        <a
-          v-if="ragImageViewer.url"
-          class="rag-lightbox-download"
-          :href="ragImageViewer.url"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ $t('rag.citation.openInNewTab') }}
-        </a>
-      </div>
-    </transition>
+    <!-- 图片预览组件 -->
+    <ImagePreview ref="imagePreview" />
   </div>
 </template>
 
@@ -913,12 +885,13 @@ import smoothscroll from 'smoothscroll-polyfill';
 import { md } from '@/mixins/markdown-it';
 import 'highlight.js/styles/atom-one-dark.css';
 import commonMixin from '@/mixins/common';
-import { mapGetters, mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 import { avatarSrc, formatScore } from '@/utils/util';
 import SubConversion from './subConversion/index.vue';
 import SubConversionList from './subConversion/SubConversionList.vue';
 import RagStepCard from './ragStepCard.vue';
 import ErrorMsgCard from './errorMsgCard.vue';
+import ImagePreview from '@/components/ImagePreview.vue';
 import { AGENT_MESSAGE_CONFIG } from '@/components/stream/constants';
 
 export default {
@@ -953,6 +926,7 @@ export default {
     SubConversionList,
     RagStepCard,
     ErrorMsgCard,
+    ImagePreview,
   },
   data() {
     return {
@@ -987,7 +961,7 @@ export default {
       // 复制提示计时器map
       copyTimerMap: new Map(),
       historyBoxHeight: '', // 动态历史会话容器高度
-      // RAG 答案区：citation hover 气泡 & 图片 lightbox
+      // RAG 答案区：citation hover 气泡
       ragCitationTip: {
         visible: false,
         x: 0,
@@ -996,11 +970,6 @@ export default {
         title: '',
         snippet: '',
         number: '',
-      },
-      ragImageViewer: {
-        visible: false,
-        url: '',
-        alt: '',
       },
       // RAG 引用片段展开状态：key = `${messageIdx}-${sourceIdx}`，对齐模板里的 ragSnippet_ ref 命名
       // ragSnippetOverflow 一次性检测后缓存，不再重算——snippet 到达后不再变化，且可避免展开态反作用于检测逻辑
@@ -1044,9 +1013,9 @@ export default {
     this.setupScrollListener();
     smoothscroll.polyfill();
     document.addEventListener('click', this.handleCitationClick);
-    window.addEventListener('resize', this.handleWindowResize);
+    addEventListener('resize', this.handleWindowResize);
     // 兜底：外层 wheel / resize 时立即隐藏 RAG 引用气泡（避免 fixed 定位错位）
-    window.addEventListener('wheel', this.onWindowWheelHideTip, {
+    addEventListener('wheel', this.onWindowWheelHideTip, {
       passive: true,
     });
     this.updateAllFileScrollStates();
@@ -1066,8 +1035,8 @@ export default {
     }
     clearTimeout(this.scrollTimeout);
 
-    window.removeEventListener('resize', this.handleWindowResize);
-    window.removeEventListener('wheel', this.onWindowWheelHideTip);
+    removeEventListener('resize', this.handleWindowResize);
+    removeEventListener('wheel', this.onWindowWheelHideTip);
     if (this.resizeTimer) {
       clearTimeout(this.resizeTimer);
     }
@@ -1346,23 +1315,24 @@ export default {
       let { meta_data } = item;
       let { file_name, download_link, page_num, row_num, sheet_name } =
         meta_data;
-      var index = file_name.lastIndexOf('.');
-      var ext = file_name.substr(index + 1);
+      let index = file_name.lastIndexOf('.');
+      let ext = file_name.substr(index + 1);
       let openUrl = '';
       let fileUrl = encodeURIComponent(download_link);
       const fileType = ['docx', 'doc', 'txt', 'pdf', 'xlsx'];
       if (fileType.includes(ext)) {
         switch (ext) {
-          case 'docx' || 'doc':
-            openUrl = `${window.location.origin}/doc?fileUrl=` + fileUrl;
+          case 'docx':
+          case 'doc':
+            openUrl = `${location.origin}/doc?fileUrl=` + fileUrl;
             break;
           case 'txt':
-            openUrl = `${window.location.origin}/txtView?fileUrl=` + fileUrl;
+            openUrl = `${location.origin}/txtView?fileUrl=` + fileUrl;
             break;
           case 'pdf':
             if (page_num.length > 0) {
               openUrl =
-                `${window.location.origin}/pdfView?fileUrl=` +
+                `${location.origin}/pdfView?fileUrl=` +
                 fileUrl +
                 '&page=' +
                 page_num[0];
@@ -1370,7 +1340,7 @@ export default {
             break;
           case 'xlsx':
             openUrl =
-              `${window.location.origin}/jsExcel?url=` +
+              `${location.origin}/jsExcel?url=` +
               fileUrl +
               '&rownum=' +
               row_num +
@@ -1381,10 +1351,10 @@ export default {
             this.$message.warning('暂不支持此格式查看');
         }
       }
-      if (openUrl !== '') {
-        window.open(openUrl, '_blank', 'noopener,noreferrer');
-      } else {
+      if (openUrl === '') {
         this.$message.warning('暂不支持此格式查看');
+      } else {
+        open(openUrl, '_blank', 'noopener,noreferrer');
       }
     },
     setupScrollListener() {
@@ -1417,7 +1387,6 @@ export default {
 
       // 处理 think 标签
       if (thinkEnd.test(data)) {
-        // n.thinkText = '已深度思考';
         n.thinkText = this.$t('agent.thinked');
         if (!thinkStart.test(data)) {
           data = '<think>\n' + data;
@@ -1426,7 +1395,6 @@ export default {
 
       // 新增处理 tool 标签
       if (toolEnd.test(data)) {
-        // n.toolText = '已使用工具';
         n.thinkText = this.$t('agent.thinked');
         if (!toolStart.test(data)) {
           data = '<tool>\n' + data;
@@ -1435,16 +1403,13 @@ export default {
 
       // 统一替换为 section 标签
       return data
-        .replace(/think>/gi, 'section>')
-        .replace(/tool>/gi, 'section>');
+        .replaceAll('think>', 'section>')
+        .replaceAll('tool>', 'section>');
     },
     showDSBtn(data) {
       const pattern = /<(think|tool)(\s[^>]*)?>|<\/(think|tool)>/;
       const matches = data.match(pattern);
-      if (!matches) {
-        return false;
-      }
-      return true;
+      return !!matches;
     },
     toggle(event, index) {
       const name = event.target.className;
@@ -1469,15 +1434,8 @@ export default {
       return this.session_data;
     },
     copy(text) {
-      text = text.replaceAll('<br/>', '\n');
-      var textareaEl = document.createElement('textarea');
-      textareaEl.setAttribute('readonly', 'readonly');
-      textareaEl.value = text;
-      document.body.appendChild(textareaEl);
-      textareaEl.select();
-      var res = document.execCommand('copy');
-      document.body.removeChild(textareaEl);
-      return res;
+      const processedText = text.replaceAll('<br/>', '\n');
+      return this.$copy(processedText);
     },
     copycb() {
       this.$message.success(this.$t('agent.copyTips'));
@@ -1533,7 +1491,7 @@ export default {
       }
     },
     getFileSizeDisplay(fileSize) {
-      if (!fileSize || typeof fileSize !== 'number' || isNaN(fileSize)) {
+      if (!fileSize || typeof fileSize !== 'number' || Number.isNaN(fileSize)) {
         return '...';
       }
       return fileSize > 1024
@@ -1592,17 +1550,15 @@ export default {
       this.$emit('clearHistory');
     },
     getList() {
-      return JSON.parse(
-        JSON.stringify(
-          this.session_data.history.filter(item => {
-            delete item.operation;
-            return item;
-          }),
-        ),
+      return structuredClone(
+        this.session_data.history.filter(item => {
+          delete item.operation;
+          return item;
+        }),
       );
     },
     getAllList() {
-      return JSON.parse(JSON.stringify(this.session_data.history));
+      return structuredClone(this.session_data.history);
     },
     stopLoading() {
       this.session_data.history = this.session_data.history.filter(item => {
@@ -1664,7 +1620,7 @@ export default {
         dx: 0,
         dy: 0,
       };
-      var image = new Image();
+      let image = new Image();
       image.src = response.annotationImg;
       image.onload = () => {
         this.currImg.width = image.width;
@@ -1901,7 +1857,7 @@ export default {
       let x = rect.left + rect.width / 2;
       x = Math.min(
         Math.max(x, TIP_HALF_WIDTH + MARGIN),
-        window.innerWidth - TIP_HALF_WIDTH - MARGIN,
+        innerWidth - TIP_HALF_WIDTH - MARGIN,
       );
       const y = placement === 'top' ? rect.top - MARGIN : rect.bottom + MARGIN;
       this.ragCitationTip = {
@@ -1967,26 +1923,7 @@ export default {
         this.$set(this.ragSnippetOverflow, key, isOverflow);
       });
     },
-    /**
-     * RAG 回答区点击：IMG → lightbox。
-     * citation 点击由全局 document listener 的 handleCitationClick 处理，不在此处转发。
-     */
-    onRagAnswerClick(e) {
-      if (this.chatType !== 'rag') return;
-      const img = e.target && e.target.tagName === 'IMG' ? e.target : null;
-      if (!img) return;
-      const src = img.getAttribute('src') || '';
-      if (!/^(https?:\/\/|data:|\/)/i.test(src)) return;
-      this.ragImageViewer = {
-        visible: true,
-        url: src,
-        alt: img.getAttribute('alt') || '',
-      };
-      e.stopPropagation();
-    },
-    closeRagImageViewer() {
-      this.ragImageViewer.visible = false;
-    },
+
     /**
      * 判断该消息是否已经开始流式输出"正式回答"。
      * 用于驱动 thinking 卡片在回答开始的同一帧收起。
@@ -2011,45 +1948,51 @@ export default {
       // alt 文本转义：防止 alt="..."><script>... 之类的属性注入
       const escapeAttr = s =>
         String(s)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;');
       const replacer = (match, inner) => {
         const m = inner.match(/^\s*!\[([^\]]*)\]\(([^)\s]+)\)\s*$/);
         if (!m) return match;
-        const url = m[2].replace(/&amp;/g, '&');
+        const url = m[2].replaceAll('&amp;', '&');
         if (!SAFE_URL_RE.test(url)) return match;
         const alt = escapeAttr(m[1]);
         // url 也转义引号以阻断属性破坏（& < > 通常在 url 里是合法字符，仅转 "）
-        const safeUrl = url.replace(/"/g, '&quot;');
+        const safeUrl = url.replaceAll('"', '&quot;');
         return `<img src="${safeUrl}" alt="${alt}" />`;
       };
       // 1) 块级缩进代码：<pre><code>![image](url)</code></pre>
-      let out = html.replace(
+      let out = html.replaceAll(
         /<pre(?:\s[^>]*)?>\s*<code(?:\s[^>]*)?>([^<]+)<\/code>\s*<\/pre>/g,
         replacer,
       );
       // 2) 行内反引号代码：<code>![image](url)</code>
-      out = out.replace(/<code(?:\s[^>]*)?>([^<]+)<\/code>/g, replacer);
+      out = out.replaceAll(/<code(?:\s[^>]*)?>([^<]+)<\/code>/g, replacer);
       // 3) 占位 <img>：src 不是合法 URL（http/https/data/ 根路径） → 还原为字面文本
       //    用于 LLM 在思考中写 ![title](url) 这种"语法示例"的情况，避免显示破图标
-      out = out.replace(/<img\b[^>]*?\bsrc="([^"]*)"[^>]*>/gi, (match, src) => {
-        if (/^(https?:\/\/|data:|\/)/i.test(src)) return match;
-        const altMatch = match.match(/\balt="([^"]*)"/i);
-        const alt = altMatch ? altMatch[1] : '';
-        // 解码再编码，避免 &amp; 之类丢失
-        const decode = s =>
-          s
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/&amp;/g, '&');
-        const escape = s =>
-          s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        return escape(`![${decode(alt)}](${decode(src)})`);
-      });
+      out = out.replaceAll(
+        /<img\b[^>]*?\bsrc="([^"]*)"[^>]*>/gi,
+        (match, src) => {
+          if (/^(https?:\/\/|data:|\/)/i.test(src)) return match;
+          const altMatch = match.match(/\balt="([^"]*)"/i);
+          const alt = altMatch ? altMatch[1] : '';
+          // 解码再编码，避免 &amp; 之类丢失
+          const decode = s =>
+            s
+              .replaceAll('&lt;', '<')
+              .replaceAll('&gt;', '>')
+              .replaceAll('&quot;', '"')
+              .replaceAll('&#39;', "'")
+              .replaceAll('&amp;', '&');
+          const escape = s =>
+            s
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;');
+          return escape(`![${decode(alt)}](${decode(src)})`);
+        },
+      );
       return out;
     },
     /**
@@ -2210,6 +2153,7 @@ export default {
     width: 100%;
     img {
       width: 80% !important;
+      cursor: zoom-in;
     }
     section li,
     li {
@@ -2254,7 +2198,6 @@ export default {
   .session-item {
     min-height: 80px;
     display: flex;
-    // justify-content:flex-end;
     padding: 20px;
     line-height: 28px;
     img {
@@ -2455,18 +2398,19 @@ export default {
         }
         .snippet {
           padding: 5px 14px;
+          ::v-deep img {
+            cursor: zoom-in;
+          }
         }
       }
     }
     /*操作*/
     .answer-operation {
       display: flex;
-      // justify-content: space-between;
       align-items: center;
       padding: 5px 20px 15px 63px;
       color: #777;
       .opera-left {
-        // flex: 8;
         .restart,
         .preStop {
           cursor: pointer;
@@ -2478,7 +2422,6 @@ export default {
         }
       }
       .opera-right {
-        // flex: 1;
         cursor: pointer;
         display: inline-flex;
         img {
@@ -2689,6 +2632,9 @@ img.failed::after {
   display: block;
   font-size: 0;
   color: #c8c8c8;
+  width: 54px;
+  height: 18px;
+  margin: 6px 0 0 55px;
 }
 
 .text-loading.la-dark {
@@ -2700,15 +2646,6 @@ img.failed::after {
   float: none;
   background-color: currentColor;
   border: 0 solid currentColor;
-}
-
-.text-loading {
-  width: 54px;
-  height: 18px;
-  margin: 6px 0 0 55px;
-}
-
-.text-loading > div {
   width: 8px;
   height: 8px;
   margin: 4px;
@@ -2779,6 +2716,14 @@ img.failed::after {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+// 思考过程块：支持图片预览
+.chunk_stable,
+.chunk_active {
+  ::v-deep img {
+    cursor: zoom-in;
+  }
 }
 .rag-source-item {
   display: flex;
@@ -2873,6 +2818,7 @@ img.failed::after {
     height: auto;
     object-fit: contain;
     border-radius: 4px;
+    cursor: zoom-in;
   }
 }
 .rag-source-expand-btn {
@@ -3184,84 +3130,6 @@ img.failed::after {
 .rag-tip-fade-enter.placement-bottom,
 .rag-tip-fade-leave-to.placement-bottom {
   transform: translate(-50%, -4px);
-}
-
-/* RAG 图片 lightbox */
-.rag-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 2100;
-  background: rgba(15, 23, 42, 0.86);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  outline: none;
-
-  .rag-lightbox-img {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 8px;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-    cursor: default;
-    animation: rag-lightbox-zoom 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .rag-lightbox-close {
-    position: absolute;
-    top: 20px;
-    right: 28px;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
-    font-size: 28px;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.18s ease;
-    &:hover {
-      background: rgba(255, 255, 255, 0.22);
-    }
-  }
-  .rag-lightbox-download {
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 18px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-    font-size: 13px;
-    text-decoration: none;
-    transition:
-      background 0.18s ease,
-      color 0.18s ease;
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-  }
-}
-.rag-lightbox-fade-enter-active,
-.rag-lightbox-fade-leave-active {
-  transition: opacity 0.22s ease;
-}
-.rag-lightbox-fade-enter,
-.rag-lightbox-fade-leave-to {
-  opacity: 0;
-}
-@keyframes rag-lightbox-zoom {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 /* 引用跳转后的闪烁高亮 */
