@@ -45,6 +45,7 @@ type AgentInfo struct {
 }
 
 type ToolConfig struct {
+	ToolID   string
 	Avatar   string
 	ToolName string
 }

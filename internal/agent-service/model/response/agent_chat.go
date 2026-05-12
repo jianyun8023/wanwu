@@ -57,7 +57,8 @@ func (c *AgentChatRespContext) IncreaseOrder() {
 	c.Order = c.Order + 1
 }
 
-func NewAgentChatRespContext(multiAgent bool, mainAgentName string, order int) *AgentChatRespContext {
+func NewAgentChatRespContext(multiAgent bool, order int, reqParams *request.AgentChatParams) *AgentChatRespContext {
+	var mainAgentName = reqParams.AgentBaseParams.Name
 	return &AgentChatRespContext{
 		MultiAgent:        multiAgent,
 		Order:             order,

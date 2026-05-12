@@ -75,19 +75,20 @@ func createMCPClient(ctx context.Context, url string, transport string) (client.
 	return retryMcpClient, nil
 }
 
-func GetToolsFromMCPServers(ctx context.Context, toolParamsList []*request.MCPToolInfo) ([]tool.BaseTool, error) {
+func GetToolsFromMCPServers(ctx context.Context, toolParamsList []*request.MCPToolInfo) ([]tool.BaseTool, map[string]*request.ToolConfig, error) {
 	if len(toolParamsList) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var allTools []tool.BaseTool
+	var toolMap = make(map[string]*request.ToolConfig)
 
 	for _, serverInfo := range toolParamsList {
 		log.Infof("Connecting to MCP server: %v", serverInfo)
 
 		mcpClient, err := createMCPClient(ctx, serverInfo.URL, serverInfo.Transport)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create MCP client for %v: %v", serverInfo, err)
+			return nil, nil, fmt.Errorf("failed to create MCP client for %v: %v", serverInfo, err)
 		}
 		// 注意:不要在这里关闭客户端,因为工具在后续使用时还需要这个连接
 		// defer mcpClient.Close()
@@ -97,12 +98,22 @@ func GetToolsFromMCPServers(ctx context.Context, toolParamsList []*request.MCPTo
 			ToolNameList: serverInfo.ToolNameList,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get mcp tools from %v: %v", serverInfo, err)
+			return nil, nil, fmt.Errorf("failed to get mcp tools from %v: %v", serverInfo, err)
 		}
 
 		log.Infof("Loaded %d tools from %v", len(tools), serverInfo)
+		if len(serverInfo.ToolNameList) > 0 {
+			//mcp 的方法名先不做替换，因为mcp的函数名基本都是符合规则一般不会有特殊字符
+			for _, toolName := range serverInfo.ToolNameList {
+				toolMap[toolName] = &request.ToolConfig{
+					Avatar:   serverInfo.Avatar,
+					ToolName: toolName,
+					ToolID:   toolName,
+				}
+			}
+		}
 		allTools = append(allTools, tools...)
 	}
 
-	return allTools, nil
+	return allTools, toolMap, nil
 }

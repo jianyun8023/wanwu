@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -43,11 +44,12 @@ func (t *openAPITool) InvokableRun(ctx context.Context, argumentsInJSON string, 
 	return t.handler(ctx, argumentsInJSON)
 }
 
-func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.PluginToolInfo) ([]tool.BaseTool, error) {
+func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.PluginToolInfo, changeToolName bool) ([]tool.BaseTool, map[string]*request.ToolConfig, error) {
 	if len(pluginToolList) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var allTools []tool.BaseTool
+	var toolIDMap = make(map[string]*request.ToolConfig)
 
 	for _, wrapper := range pluginToolList {
 		if wrapper.APISchema == nil {
@@ -85,6 +87,18 @@ func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.Pl
 				if einoTool.Name == "" {
 					einoTool.Name = fmt.Sprintf("%s_%s", method, path)
 				}
+				//处理模型functionName 不能包含中文等特殊字符的问题
+				var toolID = einoTool.Name
+				var toolName = einoTool.Name
+				if changeToolName {
+					toolID = util.MD5(einoTool.Name)
+					einoTool.Name = toolID
+				}
+				toolIDMap[toolID] = &request.ToolConfig{
+					ToolID:   toolID,
+					ToolName: toolName,
+					Avatar:   wrapper.ToolAvatar,
+				}
 
 				if len(apiTitle) > 0 {
 					einoTool.Desc = fmt.Sprintf("%s,%s", apiTitle, einoTool.Desc)
@@ -120,7 +134,7 @@ func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.Pl
 		}
 	}
 
-	return allTools, nil
+	return allTools, toolIDMap, nil
 }
 
 func GetEnioToolsFromOpenAPISchema(ctx context.Context, pluginTool *request.PluginToolInfo) ([]*schema.ToolInfo, error) {

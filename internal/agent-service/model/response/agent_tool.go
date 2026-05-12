@@ -2,7 +2,6 @@ package response
 
 import (
 	"encoding/json"
-
 	"github.com/cloudwego/eino/schema"
 )
 

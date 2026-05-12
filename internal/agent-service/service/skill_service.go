@@ -49,6 +49,7 @@ type SkillParams struct {
 
 // skillTool 实现了 tool.StreamableTool 接口
 type skillTool struct {
+	skillName  string // 处理后的技能名称
 	info       *schema.ToolInfo
 	Skill      *request.SkillToolInfo
 	userQuery  string
@@ -75,14 +76,22 @@ type SkillExecutor struct {
 }
 
 // GetToolsFromSkills 根据技能列表创建工具列表
-func GetToolsFromSkills(ctx context.Context, skillToolList []*request.SkillToolInfo, query, agentName string, uploadFile []string, chatInfo *service_model.AgentChatInfo) ([]tool.BaseTool, error) {
+func GetToolsFromSkills(ctx context.Context, skillToolList []*request.SkillToolInfo, query, agentName string, uploadFile []string, chatInfo *service_model.AgentChatInfo, changeToolName bool) ([]tool.BaseTool, map[string]*request.ToolConfig, error) {
 	if len(skillToolList) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
+	var toolMap = make(map[string]*request.ToolConfig)
 	rs := lo.Map(skillToolList, func(skill *request.SkillToolInfo, index int) tool.BaseTool {
-		return buildSkillTool(skill, query, agentName, uploadFile, chatInfo)
+		skillToolInfo := buildSkillTool(skill, query, agentName, uploadFile, chatInfo, changeToolName)
+		var toolId = skillToolInfo.info.Name
+		toolMap[toolId] = &request.ToolConfig{
+			Avatar:   skillToolInfo.Skill.Avatar,
+			ToolName: skillToolInfo.skillName,
+			ToolID:   toolId,
+		}
+		return skillToolInfo
 	})
-	return rs, nil
+	return rs, toolMap, nil
 }
 
 // Info 返回工具的元信息
@@ -109,9 +118,11 @@ func (t *skillTool) StreamableRun(ctx context.Context, argumentsInJSON string, o
 }
 
 // buildSkillTool 构建技能工具
-func buildSkillTool(skill *request.SkillToolInfo, query, agentName string, uploadFile []string, chatInfo *service_model.AgentChatInfo) *skillTool {
+func buildSkillTool(skill *request.SkillToolInfo, query, agentName string, uploadFile []string, chatInfo *service_model.AgentChatInfo, changeToolName bool) *skillTool {
+	toolInfo, skillName := buildToolInfo(skill, changeToolName)
 	return &skillTool{
-		info:       buildToolInfo(skill),
+		skillName:  skillName,
+		info:       toolInfo,
 		Skill:      skill,
 		userQuery:  query,
 		agentName:  agentName,
@@ -120,9 +131,14 @@ func buildSkillTool(skill *request.SkillToolInfo, query, agentName string, uploa
 	}
 }
 
-func buildToolInfo(skill *request.SkillToolInfo) *schema.ToolInfo {
+func buildToolInfo(skill *request.SkillToolInfo, changeToolName bool) (*schema.ToolInfo, string) {
+	skillName := agent_util.AgentSkillPrefix + TrimBeforeSpecial(skill.Name, specialNameSet)
+	var changeName = skillName
+	if changeToolName {
+		changeName = agent_util.MD5(skillName)
+	}
 	toolInfo := &schema.ToolInfo{
-		Name: agent_util.AgentSkillPrefix + TrimBeforeSpecial(skill.Name, specialNameSet),
+		Name: changeName,
 		Desc: skill.Desc,
 	}
 	templateConfig := agent_config.GetToolTemplateConfig()
@@ -133,7 +149,7 @@ func buildToolInfo(skill *request.SkillToolInfo) *schema.ToolInfo {
 			toolInfo.ParamsOneOf = apiSchema[0].ParamsOneOf
 		}
 	}
-	return toolInfo
+	return toolInfo, skillName
 }
 
 func TrimBeforeSpecial(s string, specialSet map[rune]bool) string {

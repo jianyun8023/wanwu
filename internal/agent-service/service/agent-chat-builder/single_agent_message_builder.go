@@ -287,7 +287,7 @@ func buildNewContentByStep(respContext *response.AgentChatRespContext, req *requ
 		}
 		respContext.ContentOutput = false
 		respContext.IncreaseOrder()
-		agentTool.ToolName = tool.Function.Name
+		agentTool.ToolName = buildToolName(tool.Function.Name, req.ToolMap)
 		agentTool.ToolType = response.BuildEventTypeByTool(agentTool)
 		agentTool.Avatar = buildToolAvatar(tool.Function.Name, req.ToolMap, agentTool.ToolType)
 		subEventData = response.BuildStartTool(agentTool)
@@ -365,6 +365,18 @@ func buildMessageTool(chatMessage *schema.Message, toolId string) *schema.ToolCa
 		}
 	}
 	return nil
+}
+
+// buildToolName 构建工具名称, 从md5转换成正常的工具名称
+func buildToolName(toolName string, toolMap map[string]*request.ToolConfig) string {
+	if len(toolMap) == 0 {
+		return toolName
+	}
+	tool := toolMap[toolName]
+	if tool == nil {
+		return toolName
+	}
+	return tool.ToolName
 }
 
 // buildToolAvatar 构建工具头像

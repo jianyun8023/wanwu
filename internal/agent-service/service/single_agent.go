@@ -66,11 +66,12 @@ func BaseCreateSingleAgent(ctx *gin.Context, req *request.AgentChatParams, agent
 		return nil, err
 	}
 	//2.创建智能体
-	agent, err := createAgent(ctx, req, chatModel, chatInfo)
+	agent, toolIDMap, err := createAgent(ctx, req, chatModel, chatInfo)
 	if err != nil {
 		log.Errorf("failed to create agent: %v", err)
 		return nil, err
 	}
+	chatContext.ToolMap = toolIDMap
 	return &SingleAgent{
 		ChatModelAgent: agent,
 		Req:            req,
@@ -94,7 +95,7 @@ func (s *SingleAgent) Chat(ctx *gin.Context) error {
 
 	//2.处理结果
 	_, err := agent_message_processor.AgentMessage(ctx, iter, &request.AgentChatContext{AgentChatReq: s.Req,
-		KnowledgeHitData: s.ChatContext.KnowledgeHitData, ToolMap: buildToolMap(s.Req), Order: s.ChatContext.Order, CurrentAgent: s.ChatContext.CurrentAgent})
+		KnowledgeHitData: s.ChatContext.KnowledgeHitData, ToolMap: s.ChatContext.ToolMap, Order: s.ChatContext.Order, CurrentAgent: s.ChatContext.CurrentAgent})
 	return err
 }
 
@@ -159,17 +160,17 @@ func searchSingleAgent(ctx *gin.Context, req *request.AgentChatReq) (*assistant_
 }
 
 // 创建对应智能体
-func createAgent(ctx *gin.Context, req *request.AgentChatParams, chatModel model.ToolCallingChatModel, chatInfo *service_model.AgentChatInfo) (*adk.ChatModelAgent, error) {
+func createAgent(ctx *gin.Context, req *request.AgentChatParams, chatModel model.ToolCallingChatModel, chatInfo *service_model.AgentChatInfo) (*adk.ChatModelAgent, map[string]*request.ToolConfig, error) {
 	baseParams := req.AgentBaseParams
-	toolsConfig, err := BuildAgentToolsConfig(ctx, req, chatInfo)
+	toolsConfig, toolMap, err := BuildAgentToolsConfig(ctx, req, chatInfo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var exit tool.BaseTool
 	if req.MultiAgent {
 		exit = &adk.ExitTool{}
 	}
-	return adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+	agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Model:       chatModel,
 		Name:        baseParams.Name,
 		Description: baseParams.Description,
@@ -177,31 +178,5 @@ func createAgent(ctx *gin.Context, req *request.AgentChatParams, chatModel model
 		ToolsConfig: toolsConfig,
 		Exit:        exit,
 	})
-}
-
-func buildToolMap(params *request.AgentChatParams) map[string]*request.ToolConfig {
-	toolMap := make(map[string]*request.ToolConfig)
-	if params.ToolParams != nil {
-		if len(params.ToolParams.PluginToolList) > 0 {
-			for _, toolInfo := range params.ToolParams.PluginToolList {
-				toolMap[toolInfo.ToolName] = &request.ToolConfig{
-					Avatar:   toolInfo.ToolAvatar,
-					ToolName: toolInfo.ToolName,
-				}
-			}
-		}
-		if len(params.ToolParams.McpToolList) > 0 {
-			for _, toolInfo := range params.ToolParams.McpToolList {
-				if len(toolInfo.ToolNameList) > 0 {
-					for _, toolName := range toolInfo.ToolNameList {
-						toolMap[toolName] = &request.ToolConfig{
-							Avatar:   toolInfo.Avatar,
-							ToolName: toolName,
-						}
-					}
-				}
-			}
-		}
-	}
-	return toolMap
+	return agent, toolMap, err
 }
