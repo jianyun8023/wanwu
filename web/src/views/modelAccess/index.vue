@@ -161,7 +161,7 @@
               />
               <div
                 :class="
-                  item.modelType === LLM
+                  item.modelType === LLM && item.allowEdit
                     ? 'card-title-with-select'
                     : 'card-title'
                 "
