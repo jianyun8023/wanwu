@@ -117,7 +117,7 @@ func DeleteChatflowConversation(ctx *gin.Context) {
 	userID := getUserID(ctx)
 	orgID := getOrgID(ctx)
 
-	err := service.DeleteChatflowConversationByConvId(ctx, userID, orgID, req.UUID, req.ConversationId)
+	err := service.DeleteChatflowConversationByConversationId(ctx, userID, orgID, req.UUID, req.ConversationId)
 	if err != nil {
 		gin_util.Response(ctx, nil, err)
 		return

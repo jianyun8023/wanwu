@@ -73,7 +73,7 @@ func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, con
 	}
 
 	// 3. 如果已有 appId，传给接口复用
-	if appInfo.ApplicationId != "" {
+	if appInfo.GetApplicationId() != "" {
 		body["app_id"] = appInfo.ApplicationId
 	}
 
@@ -111,7 +111,7 @@ func CreateChatflowConversation(ctx *gin.Context, userId, orgId, workflowId, con
 	}
 
 	// 4. 首次创建时保存 workflowId 和 appId 的关联关系
-	if appInfo.ApplicationId == "" {
+	if appInfo.GetApplicationId() == "" {
 		_, err = app.CreateChatflowApplication(ctx, &app_service.CreateChatflowApplicationReq{
 			WorkflowId:    workflowId,
 			ApplicationId: appId,
@@ -323,7 +323,7 @@ func ChatflowApplicationList(ctx *gin.Context, userId, orgId, workflowId string)
 		}, nil
 	}
 	// 3.如果没有记录，则通过workflow接口创建一条，并且替换掉返回值中的ID
-	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.GetProjectConversationDef)
+	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.GetProjectConversationUri)
 	ret := &response.CozeCreateProjectConversationDefResponse{}
 	if resp, err := resty.New().
 		R().
@@ -428,35 +428,7 @@ func DeleteChatflowConversation(ctx *gin.Context, orgId, projectId, uniqueId str
 	return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_delete_chatflow_conversation", "delete chatflow conversation failed")
 }
 
-func GetProjectConversationList(ctx *gin.Context, orgId, projectId string) ([]*response.CozeProjectConversationItem, error) {
-	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.ListProjectConversationUri)
-	ret := &response.CozeListProjectConversationResponse{}
-	if resp, err := resty.New().
-		R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetHeaders(workflowHttpReqHeader(ctx)).
-		SetQueryParams(map[string]string{
-			"project_id":    projectId,
-			"create_method": "2",
-			"create_env":    "2",
-			"limit":         "1000",
-			"connector_id":  "1024",
-			"space_id":      orgId,
-		}).
-		SetResult(ret).
-		Get(url); err != nil {
-		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", err.Error())
-	} else if resp.StatusCode() >= 300 {
-		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("[%v] code %v msg %v", resp.StatusCode(), ret.Code, ret.Msg))
-	} else if ret.Code != 0 {
-		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("code %v msg %v", ret.Code, ret.Msg))
-	}
-	return ret.Data, nil
-}
-
-func DeleteChatflowConversationByConvId(ctx *gin.Context, userId, orgId, workflowId, conversationId string) error {
+func DeleteChatflowConversationByConversationId(ctx *gin.Context, userId, orgId, workflowId, conversationId string) error {
 	// 1. 获取 applicationId (projectId)
 	appInfo, err := app.GetChatflowApplication(ctx, &app_service.GetChatflowApplicationReq{
 		OrgId:      orgId,
@@ -471,7 +443,7 @@ func DeleteChatflowConversationByConvId(ctx *gin.Context, userId, orgId, workflo
 	}
 
 	// 2. 获取会话列表，通过 conversationId 找到 uniqueId
-	conversations, err := GetProjectConversationList(ctx, orgId, appInfo.ApplicationId)
+	conversations, err := getChatflowProjectConversationList(ctx, orgId, appInfo.ApplicationId)
 	if err != nil {
 		return err
 	}
@@ -506,7 +478,7 @@ func GetChatflowConversationList(ctx *gin.Context, userId, orgId, workflowId str
 	}
 
 	// 2. 获取会话列表
-	conversations, err := GetProjectConversationList(ctx, orgId, appInfo.ApplicationId)
+	conversations, err := getChatflowProjectConversationList(ctx, orgId, appInfo.ApplicationId)
 	if err != nil {
 		return nil, err
 	}
@@ -525,6 +497,35 @@ func GetChatflowConversationList(ctx *gin.Context, userId, orgId, workflowId str
 }
 
 // --- internal ---
+
+func getChatflowProjectConversationList(ctx *gin.Context, orgId, projectId string) ([]*response.CozeProjectConversationItem, error) {
+	url, _ := url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.GetProjectConversationListUri)
+	ret := &response.CozeListProjectConversationResponse{}
+	if resp, err := resty.New().
+		R().
+		SetContext(ctx).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeaders(workflowHttpReqHeader(ctx)).
+		SetQueryParams(map[string]string{
+			"project_id":    projectId,
+			"create_method": "2",
+			"create_env":    "2",
+			"limit":         "1000",
+			"connector_id":  "1024",
+			"space_id":      orgId,
+		}).
+		SetResult(ret).
+		Get(url); err != nil {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", err.Error())
+	} else if resp.StatusCode() >= 300 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("[%v] code %v msg %v", resp.StatusCode(), ret.Code, ret.Msg))
+	} else if ret.Code != 0 {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_get_project_conversation_list", fmt.Sprintf("code %v msg %v", ret.Code, ret.Msg))
+	}
+	return ret.Data, nil
+}
+
 func cozeChatflowInfo2Model(chatflowInfo *response.CozeWorkflowListDataWorkflow) response.AppBriefInfo {
 	return response.AppBriefInfo{
 		AppId:     chatflowInfo.WorkflowId,
