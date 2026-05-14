@@ -91,7 +91,6 @@ func buildInt(value *int, defaultValue int) int {
 }
 
 // buildDsThinkingConfig 构建deepseek thinking配置,
-// 目前eino 有bug，目前关闭思考过程功能不生效，已经有人给enio提了pr ，等修复后，升级github.com/cloudwego/eino-ext/components/model/deepseek 版本
 func buildDsThinkingConfig(enableThinking *int) *deepseek.ThinkingConfig {
 	if enableThinking != nil {
 		var thinking = "disabled"
