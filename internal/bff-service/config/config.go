@@ -236,10 +236,11 @@ type WorkflowServiceConfig struct {
 	// conversation
 	CreateChatflowConversationUri string `json:"create_chatflow_conversation_uri" mapstructure:"create_chatflow_conversation_uri"`
 	GetConversationMessageListUri string `json:"get_conversation_message_list_uri" mapstructure:"get_conversation_message_list_uri"`
+	DeleteConversationUri         string `json:"delete_conversation_uri" mapstructure:"delete_conversation_uri"`
 	GetDraftIntelligenceListUri   string `json:"get_draft_intelligence_list_uri" mapstructure:"get_draft_intelligence_list_uri"`
 	GetDraftIntelligenceInfoUri   string `json:"get_draft_intelligence_info_uri" mapstructure:"get_draft_intelligence_info_uri"`
-	DeleteConversationUri         string `json:"delete_conversation_uri" mapstructure:"delete_conversation_uri"`
-	GetProjectConversationDef     string `json:"get_project_conversation_def" mapstructure:"get_project_conversation_def"`
+	GetProjectConversationUri     string `json:"get_project_conversation_uri" mapstructure:"get_project_conversation_uri"`
+	GetProjectConversationListUri string `json:"get_project_conversation_list_uri" mapstructure:"get_project_conversation_list_uri"`
 	// upload
 	UploadActionUri string `json:"upload_action_uri" mapstructure:"upload_action_uri"`
 	UploadCommonUri string `json:"upload_common_uri" mapstructure:"upload_common_uri"`

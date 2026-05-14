@@ -101,6 +101,23 @@ func (req *OpenAPIChatflowGetConversationMessageListRequest) Check() error {
 	return nil
 }
 
+type OpenAPIChatflowDeleteConversationRequest struct {
+	UUID           string `json:"uuid" validate:"required"`
+	ConversationId string `json:"conversation_id" validate:"required"`
+}
+
+func (req *OpenAPIChatflowDeleteConversationRequest) Check() error {
+	return nil
+}
+
+type OpenAPIChatflowGetConversationListRequest struct {
+	UUID string `json:"uuid" validate:"required"`
+}
+
+func (req *OpenAPIChatflowGetConversationListRequest) Check() error {
+	return nil
+}
+
 type OpenAPIAgentConfigUpdateRequest struct {
 	AssistantUUID       string                  `json:"assistantUuid" validate:"required"`
 	Prologue            string                  `json:"prologue"`
