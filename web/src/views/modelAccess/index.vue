@@ -191,6 +191,7 @@
                 <el-checkbox
                   style="margin-left: 10px; margin-top: -2px"
                   v-if="item.modelType === LLM"
+                  :disabled="!item.isActive"
                   :model-value="checkModelSelection(item.modelId)"
                   @change="setModelCheck(item.modelId)"
                 ></el-checkbox>
@@ -256,6 +257,7 @@
                 size="mini"
                 type="primary"
                 round
+                :disabled="!item.isActive"
                 @click.stop="goModelExprience(item.modelId)"
               >
                 {{ $t('modelExprience.createConversation') }}
