@@ -35,6 +35,7 @@ log/
 
 # Environment
 .env
+.env.ontology
 *.env.local
 
 # Backup files (except template files)

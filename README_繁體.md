@@ -165,7 +165,7 @@
 
     1.1 拷貝環境變量文件
     ```bash
-    cp .env.bak .env
+    cp .env.example .env
     ```
 
     1.2 根據系統修改.env文件中的`WANWU_ARCH`、`WANWU_EXTERNAL_IP`變量
@@ -257,10 +257,60 @@
     # 備份當前.env文件
     cp .env .env.old
     # 拷貝.env文件
-    cp .env.bak .env
+    cp .env.example .env
     ```
 
 3. 基於上述Docker安裝步驟，將系統服務完整啟動
+
+------
+
+### 🧬 啟動本體智能體平台
+
+1. 基於上述Docker安裝步驟，將系統服務完整啟動
+
+2. 首次運行前
+
+    2.1 生成RSA密鑰對
+    ```bash
+    ./configs/microservice/ontology/vega-server/generate-keys.sh configs/microservice/ontology/vega-server
+    ```
+
+    2.2 生成前端公鑰配置（跨平台，需要 Node 環境）
+    ```bash
+    node configs/microservice/ontology/vega-server/generate-public-key-js.js
+    ```
+
+3. 拷貝環境變量文件（首次運行前或系統升級後）
+
+    ```bash
+    # 備份當前.env.ontology文件（如果存在）
+    cp .env.ontology .env.ontology.old
+    # 拷貝.env.ontology文件
+    cp .env.ontology.example .env.ontology
+    ```
+
+4. 啟動服務
+
+    4.1 確認.env文件中已開啟本體功能
+    ```
+    WANWU_BFF_ONTOLOGY_ENABLE=1
+    ```
+
+    4.2 啟動本體智能體服務
+    ```bash
+    # amd64系統執行:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.amd64 -f docker-compose.ontology.yaml up -d
+    # arm64系統執行:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.arm64 -f docker-compose.ontology.yaml up -d
+    ```
+
+5. 關閉服務
+    ```bash
+    # amd64系統執行:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.amd64 -f docker-compose.ontology.yaml down
+    # arm64系統執行:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.arm64 -f docker-compose.ontology.yaml down
+    ```
 
 ------
 

@@ -1,0 +1,5 @@
+# RSA Keys - Do NOT commit to version control
+data-connection/private_key.pem
+data-connection/public_key.pem
+vega-gateway-pro/private_key.pem
+web/public-key.js

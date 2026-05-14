@@ -162,7 +162,7 @@ The platform has been successfully applied in multiple industries such as **fina
 
     1.1 Copy the environment variable file
     ```bash
-    cp .env.bak .env
+    cp .env.example .env
     ```
 
     1.2 Modify the `WANWU_ARCH` and `WANWU_EXTERNAL_IP` variables in the .env file according to the system
@@ -257,10 +257,60 @@ The platform has been successfully applied in multiple industries such as **fina
     # Backup the current .env file
     cp .env .env.old
     # Copy the .env file
-    cp .env.bak .env
+    cp .env.example .env
     ```
 
 3. Based on the above Docker installation steps, completely start the system service
+
+------
+
+### 🧬 Start Ontology Agent Platform
+
+1. Based on the above Docker installation steps, completely start the system service
+
+2. Before the first run
+
+    2.1 Generate RSA key pair
+    ```bash
+    ./configs/microservice/ontology/vega-server/generate-keys.sh configs/microservice/ontology/vega-server
+    ```
+
+    2.2 Generate frontend public key configuration (cross-platform, requires Node environment)
+    ```bash
+    node configs/microservice/ontology/vega-server/generate-public-key-js.js
+    ```
+
+3. Copy environment variable file (before first run or after system upgrade)
+
+    ```bash
+    # Backup current .env.ontology file (if exists)
+    cp .env.ontology .env.ontology.old
+    # Copy .env.ontology file
+    cp .env.ontology.example .env.ontology
+    ```
+
+4. Start the service
+
+    4.1 Confirm ontology feature is enabled in .env file
+    ```
+    WANWU_BFF_ONTOLOGY_ENABLE=1
+    ```
+
+    4.2 Start ontology agent service
+    ```bash
+    # For amd64 system:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.amd64 -f docker-compose.ontology.yaml up -d
+    # For arm64 system:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.arm64 -f docker-compose.ontology.yaml up -d
+    ```
+
+5. Stop the service
+    ```bash
+    # For amd64 system:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.amd64 -f docker-compose.ontology.yaml down
+    # For arm64 system:
+    docker compose --env-file .env --env-file .env.ontology --env-file .env.image.arm64 -f docker-compose.ontology.yaml down
+    ```
 
 ------
 
