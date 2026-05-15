@@ -109,7 +109,11 @@
 
 ▸ **基礎開發範式**：依然支援基於 **函數調用** 的傳統Agent建構，支援私域知識庫關聯與多輪線上除錯
 
-#### **7. 後端即服務（BaaS）**
+#### 7.萬悟本體智能體
+
+▸ 基於企業數據與文件自動構建業務知識網絡，賦予AI深度推理與閉環行動能力，讓大模型真正懂業務、會決策。
+
+#### **8. 後端即服務（BaaS）**
 ▸ 提供 **RESTful API** ，支援與企業現有系統（OA/CRM/ERP等）深度整合
 
 ▸ 提供 **細粒度權限控制**，保障生產環境穩定運行
@@ -124,6 +128,7 @@
 |        RAG引擎         |         ✅          |          ✅          |       ✅        |         ✅          |         ✅          |
 |    多智能體編排開發    |          ✅         |          ❌          |         ✅       |         ✅          |         ❌          |
 |    知識圖譜GraphRAG    |         ✅          |          ❌          |       ❌        |         ✅          |         ❌          |
+|        本體智能體         |         ✅          |          ❌          |       ❌        |         ❌          |         ❌          |
 | 通用智能體+Skills編排  |         ✅          |          ❌          |       ❌        |         ❌          |         ❌          |
 |         Agent          |         ✅          |          ✅          |       ✅        |         ✅          |         ✅          |
 |         工作流         |         ✅          |          ✅          |       ✅        |         ✅          |         ✅          |
@@ -132,7 +137,7 @@
 |        本地部署        |         ✅          |          ✅          |       ✅        |         ✅          |         ✅          |
 |         多租戶         |         ✅          |   ❌（商用有限制）   | ❌（商用有限制） |         ✅          | ✅（但用戶間不互通） |
 |      license友好       |         ✅          |   ❌（商用有限制）   | ❌（商用有限制） |     未完全開源      |         ✅          |
-> 截止2026年4月22日對比。
+> 截止2026年5月15日對比。
 
 ------
 
@@ -345,6 +350,7 @@
 |                             功能                             |                           詳細描述                           |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
 | [通用智能體](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/8.%e9%80%9a%e7%94%a8%e6%99%ba%e8%83%bd%e4%bd%93) | 平台深度整合了深度研究與數據分析等高級能力，實現從簡單問答到複雜業務處理的全面跨越，打造你的全能AI數位助理。 |
+|                          本體智能體                          | 基於企業數據與文件自動構建業務知識網絡，賦予AI深度推理與閉環行動能力，讓大模型真正懂業務、會決策。 |
 | [模型管理](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/1.%E6%A8%A1%E5%9E%8B%E7%AE%A1%E7%90%86.md) | 支援使用者匯入包括聯通元景、OpenAI-API-compatible、Ollama、通義千問、火山引擎等模型供應商的 LLM、Embedding、Rerank 模型。[ 模型匯入方式-詳細版](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%85%A5%E6%96%B9%E5%BC%8F-%E8%AF%A6%E7%BB%86%E7%89%88.md) |
 | [知識庫](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93) | 在文件解析能力方面：支援12種文件類型的上傳，支援 URL 解析；文件解析方式支援 OCR 與[**MinerU 模型解析（適用於標題、表格、公式等場景）**](https://github.com/UnicomAI/DocParserServer/tree/main)的私有化部署與接入，文件分段設定支援通用分段和父子分段。在調優能力方面：支援知識圖譜、元數據管理及元數據過濾查詢，支援分段內容增刪改，支援對分段設定關鍵字標籤提升召回效果，支援分段啟停操作，支援命中測試等功能。在檢索能力方面：支援向量檢索、全文檢索、混合檢索等多種檢索模式；在問答能力方面：支援自動引用出處，支援圖文並茂的生成答案。 |
 | [資源庫](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/3.%E5%B7%A5%E5%85%B7%E5%B9%BF%E5%9C%BA.md) | 同時支援匯入自己的 MCP 服務或自訂工具，並在工作流和智能體中使用。 |

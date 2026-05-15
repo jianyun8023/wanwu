@@ -107,7 +107,11 @@ The **Yuanjing Wanwu AI Agent Platform** is an **enterprise-oriented**, **one-st
 
 ▸ **Basic Development Paradigm**: Still supports traditional Agent construction based on **function calling**, supporting private knowledge base association and multi-round online debugging
 
-#### **7. Backend as a Service (BaaS)**
+#### 7.Wanwu Ontology Agent
+
+▸ Automatically constructs business knowledge networks from enterprise data and documents, empowering AI with deep reasoning and closed-loop action capabilities to truly understand business and make decisions.
+
+#### **8. Backend as a Service (BaaS)**
 ▸ Provides **RESTful API**, supports deep integration with existing enterprise systems (OA/CRM/ERP, etc.)
 
 ▸ Provides **fine-grained permission control** to ensure stable operation in production environments
@@ -121,6 +125,7 @@ The **Yuanjing Wanwu AI Agent Platform** is an **enterprise-oriented**, **one-st
 |               Direct OCR import                |   ✅   |                ❌                |             ❌              |                ❌                |                ❌                |
 |                   RAG engine                   |   ✅   |                ✅                |             ✅              |                ✅                |                ✅                |
 |                    GraphRAG                    |   ✅   |                ❌                |             ❌              |                ✅                |                ❌                |
+|                 Ontology Agent                 |   ✅   |                ❌                |             ❌              |                ❌                |                ❌                |
 |    Multi-Agent Orchestration & Development     |   ✅   |                ❌                |             ✅              |                ✅                |                ❌                |
 | General Agent & Skills Orchestration Framework |   ✅   |                ❌                |             ❌              |                ❌                |                ❌                |
 |                     Agent                      |   ✅   |                ✅                |             ✅              |                ✅                |                ✅                |
@@ -130,7 +135,7 @@ The **Yuanjing Wanwu AI Agent Platform** is an **enterprise-oriented**, **one-st
 |                Local deployment                |   ✅   |                ✅                |             ✅              |                ✅                |                ✅                |
 |                  Multi-tenant                  |   ✅   |   ❌(Commercially restricted)    | ❌(Commercially restricted) |                ✅                | ✅(Users are not interconnected) |
 |                license friendly                |   ✅   |   ❌(Commercially restricted)    | ❌(Commercially restricted) |      Not fully open source      |                ✅                |
-> As of April 22, 2026.
+> As of May 15, 2026.
 
 ------
 
@@ -340,6 +345,7 @@ To help you quickly get started with this project, we strongly recommend that yo
 | Feature                                                      | Detailed Description                                         |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
 | [General Agent](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/8.%e9%80%9a%e7%94%a8%e6%99%ba%e8%83%bd%e4%bd%93) | The platform deeply integrates advanced capabilities such as deep research and data analysis, achieving a comprehensive leap from simple Q&A to complex business processing, creating your all-around AI digital assistant. |
+| Ontology Agent                                               | Automatically constructs business knowledge networks from enterprise data and documents, empowering AI with deep reasoning and closed-loop action capabilities to truly understand business and make decisions. |
 | [Model Management](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/1.%E6%A8%A1%E5%9E%8B%E7%AE%A1%E7%90%86.md) | Supports users to import LLM, Embedding, and Rerank models from various model providers, including Unicom Yuanjing, OpenAI-API-compatible, Ollama, Tongyi Qianwen, and Volcano Engine. [Model Import Methods - Detailed Version](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%85%A5%E6%96%B9%E5%BC%8F-%E8%AF%A6%E7%BB%86%E7%89%88.md) |
 | [Knowledge Base](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93) | In terms of document parsing capabilities: supports uploading of 12 file types and URL parsing; Supports private deployment and integration for document parsing via two methods: OCR and [a proprietary MinerU model (for scenarios like titles, tables, and formulas)](https://github.com/UnicomAI/DocParserServer/tree/main) ; document segmentation settings support both general segmentation and parent-child segmentation. In terms of optimization capabilities: supports metadata management 、Graph RAG and metadata filtering queries, supports adding, deleting, and modifying segmented content, supports setting keyword tags for segments to improve recall performance, supports segment enable/disable operations, and supports hit testing. In terms of retrieval capabilities: supports multiple retrieval modes including vector search, full-text search, and hybrid search. In terms of Q&A capabilities: supports automatic citation of sources and generating answers with both text and images.<br |
 | [Resource Library](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/3.%E5%B7%A5%E5%85%B7%E5%B9%BF%E5%9C%BA.md) | Supports importing your own MCP services or custom tools or skills for use in workflows and agents. |
