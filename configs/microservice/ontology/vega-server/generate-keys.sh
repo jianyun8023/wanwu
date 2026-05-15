@@ -32,10 +32,10 @@ cp "$OUTPUT_DIR/data-connection/private_key.pem" "$OUTPUT_DIR/vega-gateway-pro/p
 echo "  Created: $OUTPUT_DIR/vega-gateway-pro/private_key.pem"
 
 # Set permissions
-echo "Setting file permissions (600)..."
-chmod 600 "$OUTPUT_DIR/data-connection/private_key.pem"
-chmod 600 "$OUTPUT_DIR/data-connection/public_key.pem"
-chmod 600 "$OUTPUT_DIR/vega-gateway-pro/private_key.pem"
+echo "Setting file permissions ..."
+chmod 644 "$OUTPUT_DIR/data-connection/private_key.pem"
+chmod 644 "$OUTPUT_DIR/data-connection/public_key.pem"
+chmod 644 "$OUTPUT_DIR/vega-gateway-pro/private_key.pem"
 
 echo ""
 echo "=== RSA Key Generation Complete ==="
