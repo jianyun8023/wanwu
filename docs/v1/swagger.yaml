@@ -4266,8 +4266,10 @@ definitions:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
         type: array
       ontology:
+        description: 目前限制只能选一个知识网络
         items:
           $ref: '#/definitions/request.GeneralAgentConfigItem'
+        maxItems: 1
         type: array
       skill:
         items:
@@ -8442,6 +8444,145 @@ definitions:
         items:
           $ref: '#/definitions/protocol.Tool'
         type: array
+    type: object
+  response.ToolBoxAPIAuth:
+    properties:
+      api_key_header:
+        type: string
+      api_key_header_prefix:
+        type: string
+      api_key_query_param:
+        type: string
+      api_key_value:
+        type: string
+      auth_type:
+        type: string
+    type: object
+  response.ToolBoxAPISpec:
+    properties:
+      callbacks: {}
+      components: {}
+      external_docs: {}
+      parameters:
+        items: {}
+        type: array
+      request_body: {}
+      responses:
+        items:
+          $ref: '#/definitions/response.ToolBoxResponseItem'
+        type: array
+      security: {}
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  response.ToolBoxDetail:
+    properties:
+      api_auth:
+        allOf:
+        - $ref: '#/definitions/response.ToolBoxAPIAuth'
+        description: 工具箱共享的鉴权配置
+      api_key:
+        description: 工具箱共享的 apiKey 值
+        type: string
+      box_id:
+        type: string
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      page:
+        type: integer
+      page_size:
+        type: integer
+      tools:
+        items:
+          $ref: '#/definitions/response.ToolBoxToolItem'
+        type: array
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  response.ToolBoxGlobalParams:
+    properties:
+      description:
+        type: string
+      in:
+        type: string
+      name:
+        type: string
+      required:
+        type: boolean
+      type:
+        type: string
+      value: {}
+    type: object
+  response.ToolBoxMetadata:
+    properties:
+      api_spec:
+        $ref: '#/definitions/response.ToolBoxAPISpec'
+      create_time:
+        type: integer
+      create_user:
+        type: string
+      description:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+      server_url:
+        type: string
+      summary:
+        type: string
+      update_time:
+        type: integer
+      update_user:
+        type: string
+      version:
+        type: string
+    type: object
+  response.ToolBoxResponseItem:
+    properties:
+      content: {}
+      description:
+        type: string
+      status_code:
+        type: string
+    type: object
+  response.ToolBoxToolItem:
+    properties:
+      create_time:
+        type: integer
+      create_user:
+        type: string
+      description:
+        type: string
+      extend_info:
+        additionalProperties: {}
+        type: object
+      global_parameters:
+        $ref: '#/definitions/response.ToolBoxGlobalParams'
+      metadata:
+        $ref: '#/definitions/response.ToolBoxMetadata'
+      metadata_type:
+        type: string
+      name:
+        type: string
+      resource_object:
+        type: string
+      status:
+        type: string
+      tool_id:
+        type: string
+      update_time:
+        type: integer
+      update_user:
+        type: string
+      use_rule:
+        type: string
     type: object
   response.ToolDetail4Workflow:
     properties:
@@ -12980,7 +13121,6 @@ paths:
       - description: 运行ID
         in: query
         name: runId
-        required: true
         type: string
       - description: 对话ID
         in: query
@@ -13017,7 +13157,6 @@ paths:
       - description: 运行ID
         in: query
         name: runId
-        required: true
         type: string
       - description: 对话ID
         in: query
@@ -13050,7 +13189,6 @@ paths:
       - description: 运行ID
         in: query
         name: runId
-        required: true
         type: string
       - description: 对话ID
         in: query
@@ -19746,6 +19884,52 @@ paths:
       security:
       - JWT: []
       summary: 工具具体action（用于workflow）
+      tags:
+      - workflow
+  /workflow/tool/box:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工具箱id（对应 toolSquareId 或 customToolId）
+        in: query
+        name: box_id
+        type: string
+      - description: 工具箱类型：builtin / custom
+        in: query
+        name: box_type
+        type: string
+      - description: action 的 operationId，传了则精确过滤
+        in: query
+        name: tool_id
+        type: string
+      - description: 当前页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页显示数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 工具集状态过滤
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.ToolBoxDetail'
+              type: object
+      security:
+      - JWT: []
+      summary: 工具箱明细查询（已解析 schema），对接本体智能体专用接口
       tags:
       - workflow
   /workflow/tool/select:

@@ -778,6 +778,84 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "description": "对话流删除会话OpenAPI",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "对话流删除会话OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIChatflowDeleteConversationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/chatflow/conversation/list": {
+            "post": {
+                "description": "对话流获取会话列表OpenAPI",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "openapi"
+                ],
+                "summary": "对话流获取会话列表OpenAPI",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.OpenAPIChatflowGetConversationListRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.OpenAPIChatflowConversationListResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         },
         "/chatflow/conversation/message/list": {
@@ -4170,6 +4248,32 @@ const docTemplate = `{
                 }
             }
         },
+        "request.OpenAPIChatflowDeleteConversationRequest": {
+            "type": "object",
+            "required": [
+                "conversation_id",
+                "uuid"
+            ],
+            "properties": {
+                "conversation_id": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.OpenAPIChatflowGetConversationListRequest": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "request.OpenAPIChatflowGetConversationMessageListRequest": {
             "type": "object",
             "required": [
@@ -5722,6 +5826,28 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/response.OpenAPIAgentBriefInfo"
+                    }
+                }
+            }
+        },
+        "response.OpenAPIChatflowConversationItem": {
+            "type": "object",
+            "properties": {
+                "conversation_id": {
+                    "type": "string"
+                },
+                "conversation_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.OpenAPIChatflowConversationListResponse": {
+            "type": "object",
+            "properties": {
+                "conversations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.OpenAPIChatflowConversationItem"
                     }
                 }
             }

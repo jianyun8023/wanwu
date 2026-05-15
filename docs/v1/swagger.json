@@ -6993,8 +6993,7 @@
                         "type": "string",
                         "description": "运行ID",
                         "name": "runId",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -7055,8 +7054,7 @@
                         "type": "string",
                         "description": "运行ID",
                         "name": "runId",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -7106,8 +7104,7 @@
                         "type": "string",
                         "description": "运行ID",
                         "name": "runId",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -18526,6 +18523,83 @@
                 }
             }
         },
+        "/workflow/tool/box": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workflow"
+                ],
+                "summary": "工具箱明细查询（已解析 schema），对接本体智能体专用接口",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "工具箱id（对应 toolSquareId 或 customToolId）",
+                        "name": "box_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "工具箱类型：builtin / custom",
+                        "name": "box_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "action 的 operationId，传了则精确过滤",
+                        "name": "tool_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "当前页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页显示数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "工具集状态过滤",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.ToolBoxDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/workflow/tool/select": {
             "get": {
                 "security": [
@@ -24858,7 +24932,9 @@
                     }
                 },
                 "ontology": {
+                    "description": "目前限制只能选一个知识网络",
                     "type": "array",
+                    "maxItems": 1,
                     "items": {
                         "$ref": "#/definitions/request.GeneralAgentConfigItem"
                     }
@@ -31110,6 +31186,215 @@
                     "items": {
                         "$ref": "#/definitions/protocol.Tool"
                     }
+                }
+            }
+        },
+        "response.ToolBoxAPIAuth": {
+            "type": "object",
+            "properties": {
+                "api_key_header": {
+                    "type": "string"
+                },
+                "api_key_header_prefix": {
+                    "type": "string"
+                },
+                "api_key_query_param": {
+                    "type": "string"
+                },
+                "api_key_value": {
+                    "type": "string"
+                },
+                "auth_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ToolBoxAPISpec": {
+            "type": "object",
+            "properties": {
+                "callbacks": {},
+                "components": {},
+                "external_docs": {},
+                "parameters": {
+                    "type": "array",
+                    "items": {}
+                },
+                "request_body": {},
+                "responses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ToolBoxResponseItem"
+                    }
+                },
+                "security": {},
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "response.ToolBoxDetail": {
+            "type": "object",
+            "properties": {
+                "api_auth": {
+                    "description": "工具箱共享的鉴权配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.ToolBoxAPIAuth"
+                        }
+                    ]
+                },
+                "api_key": {
+                    "description": "工具箱共享的 apiKey 值",
+                    "type": "string"
+                },
+                "box_id": {
+                    "type": "string"
+                },
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_prev": {
+                    "type": "boolean"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ToolBoxToolItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.ToolBoxGlobalParams": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "in": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {}
+            }
+        },
+        "response.ToolBoxMetadata": {
+            "type": "object",
+            "properties": {
+                "api_spec": {
+                    "$ref": "#/definitions/response.ToolBoxAPISpec"
+                },
+                "create_time": {
+                    "type": "integer"
+                },
+                "create_user": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "server_url": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "update_time": {
+                    "type": "integer"
+                },
+                "update_user": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ToolBoxResponseItem": {
+            "type": "object",
+            "properties": {
+                "content": {},
+                "description": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ToolBoxToolItem": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "type": "integer"
+                },
+                "create_user": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "extend_info": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "global_parameters": {
+                    "$ref": "#/definitions/response.ToolBoxGlobalParams"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/response.ToolBoxMetadata"
+                },
+                "metadata_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "resource_object": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tool_id": {
+                    "type": "string"
+                },
+                "update_time": {
+                    "type": "integer"
+                },
+                "update_user": {
+                    "type": "string"
+                },
+                "use_rule": {
+                    "type": "string"
                 }
             }
         },
