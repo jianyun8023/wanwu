@@ -377,10 +377,16 @@
         />
       </transition>
 
-      <!-- 预览会话面板 -->
+      <!--
+        预览会话面板生命周期说明：
+        1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
+        2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
+      -->
       <transition name="workspace-slide">
         <SkillTabs
-          v-if="shouldShowSkillTabs"
+          v-if="shouldMountSkillTabs"
+          v-show="shouldShowSkillTabs"
+          :key="skillTabsKey"
           :skillPreviewParams="skillPreviewParams"
           class="preview-chat-panel"
           @view-workspace="handleViewWorkspace"
@@ -572,14 +578,21 @@ export default {
         this.selectedMode?.value === MAIN_CHAT_MODES.SKILL_MODE
       );
     },
-    shouldShowSkillTabs() {
+    // 控制组件是否挂载：会话身份存在时才挂载，切换会话/previewId 时配合 key 卸载重建以重置 SSE。
+    shouldMountSkillTabs() {
       return (
         this.isActiveSkillMode &&
         !!this.currentThreadId &&
         !!this.customSkillId &&
-        !!this.previewId &&
-        !this.previewVisible
+        !!this.previewId
       );
+    },
+    // 控制组件是否可见：文件预览打开时只隐藏 SkillTabs，不卸载，避免中断内部预览 SSE。
+    shouldShowSkillTabs() {
+      return this.shouldMountSkillTabs && !this.previewVisible;
+    },
+    skillTabsKey() {
+      return `${this.currentThreadId}_${this.previewId}`;
     },
     // 当前选中的会话对象
     currentConversation() {
