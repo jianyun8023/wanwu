@@ -150,9 +150,8 @@ export default {
               lang: [
                 i18n.t('statisticsEcharts.dateView'),
                 i18n.t('statisticsEcharts.close'),
-                i18n.t('statisticsEcharts.reload'),
               ],
-              readOnly: false,
+              readOnly: true,
               optionToContent: function (opt) {
                 var axisData = opt.xAxis[0].data;
                 var series = opt.series;

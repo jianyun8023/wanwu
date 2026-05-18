@@ -78,9 +78,8 @@ export default {
               lang: [
                 i18n.t('statisticsEcharts.dateView'),
                 i18n.t('statisticsEcharts.close'),
-                i18n.t('statisticsEcharts.reload'),
               ],
-              readOnly: false,
+              readOnly: true,
               optionToContent: function (opt) {
                 // console.log(opt)
                 //该函数可以自定义列表为table，opt是给我们提供的原始数据的obj。 可打印出来数据结构查看
