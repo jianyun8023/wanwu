@@ -3854,6 +3854,11 @@ definitions:
         description: 问答库Rerank模型
       ragId:
         type: string
+      recommendQuestion:
+        description: 推荐问题
+        items:
+          type: string
+        type: array
       rerankConfig:
         allOf:
         - $ref: '#/definitions/request.AppModelConfig'
@@ -7965,6 +7970,11 @@ definitions:
         description: 问答库Rerank模型
       ragId:
         type: string
+      recommendQuestion:
+        description: 推荐问题
+        items:
+          type: string
+        type: array
       rerankConfig:
         allOf:
         - $ref: '#/definitions/request.AppModelConfig'
@@ -16479,7 +16489,6 @@ paths:
       description: 获取模型体验对话记录列表
       parameters:
       - description: 模型体验对话ID
-        format: int32
         in: query
         name: modelExperienceId
         required: true

@@ -12656,7 +12656,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -24337,6 +24336,13 @@ const docTemplate = `{
                 "ragId": {
                     "type": "string"
                 },
+                "recommendQuestion": {
+                    "description": "推荐问题",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "rerankConfig": {
                     "description": "知识库Rerank模型",
                     "allOf": [
@@ -30486,6 +30492,13 @@ const docTemplate = `{
                 },
                 "ragId": {
                     "type": "string"
+                },
+                "recommendQuestion": {
+                    "description": "推荐问题",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "rerankConfig": {
                     "description": "Rerank模型",
