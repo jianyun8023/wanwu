@@ -27,6 +27,7 @@ export default {
         desc: '',
         knowledgeBaseConfig: { config: {}, knowledgebases: [] },
         qaKnowledgeBaseConfig: { config: {}, knowledgebases: [] },
+        recommendQuestion: [],
       },
     };
   },
@@ -51,8 +52,14 @@ export default {
             this.editForm.knowledgeBaseConfig = res.data.knowledgeBaseConfig;
           }
           if (res.data.qaKnowledgeBaseConfig) {
-            this.editForm.qaKnowledgeBaseConfig = res.data.qaKnowledgeBaseConfig;
+            this.editForm.qaKnowledgeBaseConfig =
+              res.data.qaKnowledgeBaseConfig;
           }
+          this.editForm.recommendQuestion = res.data.recommendQuestion.map(
+            item => ({
+              value: item,
+            }),
+          );
           this.setMaxPicNum(res.data.visionConfig.picNum);
         }
       });
