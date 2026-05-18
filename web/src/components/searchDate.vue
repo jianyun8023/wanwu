@@ -130,15 +130,12 @@ export default {
         disabledDate(time) {
           if (_this.nowTime) {
             return (
-              // time.getTime() > Date.now() - 8.64e7 &&
-              // time.getTime() > _this.a.getTime()
-              time.getTime() > Date.now() - 8.64e7 ||
+              time.getTime() > Date.now() ||
               time.getTime() < _this.nowTime.getTime() - 90 * 24 * 3600000 ||
               time.getTime() > _this.nowTime.getTime() + 90 * 24 * 3600000
             );
           } else {
-            // return time.getTime() > Date.now() - 8.64e6; //只能选择今天及今天之前的日期
-            return time.getTime() > Date.now() - 8.64e7; //只能选择今天之前的日期，连今天的日期也不能选
+            return time.getTime() > Date.now(); // 只能选择今天及今天之前的日期
           }
         },
         onPick(picker, date, dateString) {

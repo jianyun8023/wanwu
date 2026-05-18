@@ -102,7 +102,7 @@
       </div>
 
       <div v-if="recommendList.length" class="right-recommend">
-        <p style="margin: 20px 0; color: #333">
+        <p class="recommend-list-title">
           {{ $t('tempSquare.otherTemp') }}
         </p>
         <div
