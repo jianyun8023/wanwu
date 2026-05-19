@@ -442,9 +442,10 @@ func CopyDocAndRemoveRag(ctx context.Context, knowledge *model.KnowledgeBase, do
 		//2.rag删除
 		var fileName = service.RebuildFileName(knowledgeDoc.DocId, knowledgeDoc.FileType, knowledgeDoc.Name)
 		err = service.RagDeleteDoc(ctx, &service.RagDeleteDocParams{
-			UserId:        knowledge.UserId,
-			KnowledgeBase: knowledge.RagName,
-			FileName:      fileName,
+			UserId:          knowledge.UserId,
+			KnowledgeBaseId: knowledge.KnowledgeId,
+			KnowledgeBase:   knowledge.RagName,
+			FileName:        fileName,
 		})
 		if err != nil {
 			return processError(status, err)
@@ -686,6 +687,7 @@ func CreateKnowledgeUrlDoc(ctx context.Context, doc *model.KnowledgeDoc, importT
 			SplitType:         service.RebuildSplitType(config.SegmentMethod),
 			Separators:        config.Splitter,
 			KnowledgeBaseName: knowledge.RagName,
+			KnowledgeBaseId:   knowledge.KnowledgeId,
 			OcrModelId:        importTask.OcrModelId,
 			PreProcess:        preProcess.PreProcessList,
 			RagMetaDataParams: ragMetaList,

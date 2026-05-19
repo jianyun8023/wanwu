@@ -620,6 +620,7 @@ func (s *Service) GetDocSegmentList(ctx context.Context, req *knowledgebase_doc_
 		segmentListResp, err = service.RagGetDocSegmentList(ctx, &service.RagGetDocSegmentParams{
 			UserId:            knowledge.UserId,
 			KnowledgeBaseName: knowledge.RagName,
+			KnowledgeBaseId:   knowledge.KnowledgeId,
 			FileName:          service.RebuildFileName(docInfo.DocId, docInfo.FileType, docInfo.Name),
 			PageSize:          req.PageSize,
 			SearchAfter:       req.PageSize * (req.PageNo - 1),
