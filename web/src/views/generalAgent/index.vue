@@ -238,19 +238,24 @@
                 :placeholder="inputPlaceholder"
                 @keydown-enter="handleKeyDown"
                 :disabled="isStreaming || previewIsStreaming"
+                :isDIP="selectedMode?.value === 'DIP Agent'"
               />
             </div>
 
             <!-- 底部工具栏：配置按钮 + 发送按钮 -->
             <div class="input-toolbar">
               <div class="toolbar-left">
-                <div class="config-btn" @click="showConfigDialog = true">
+                <div
+                  v-show="selectedMode?.value !== 'DIP Agent'"
+                  class="config-btn"
+                  @click="showConfigDialog = true"
+                >
                   <i class="el-icon-setting"></i>
                   <span>{{ $t('generalAgent.header.config') }}</span>
                 </div>
                 <!-- 导入Skill按钮 -->
                 <div
-                  v-if="isSkillType && !currentThreadId"
+                  v-show="isSkillType && !currentThreadId"
                   class="config-btn"
                   @click="openImportSkillDialog"
                 >
@@ -258,17 +263,17 @@
                   <span>{{ $t('generalAgent.header.importSkill') }}</span>
                 </div>
                 <!-- 已选模式标签 -->
-                <div v-if="selectedMode" class="mode-btn mode-btn-selected">
+                <div v-show="selectedMode" class="mode-btn mode-btn-selected">
                   <img
-                    v-if="selectedMode.avatar"
-                    :src="selectedMode.avatar"
+                    v-if="selectedMode?.avatar"
+                    :src="selectedMode?.avatar"
                     alt=""
                     class="mode-avatar"
                   />
-                  <i v-else :class="selectedMode.icon"></i>
-                  <span>{{ selectedMode.label }}</span>
+                  <i v-else :class="selectedMode?.icon"></i>
+                  <span>{{ selectedMode?.label }}</span>
                   <i
-                    v-if="
+                    v-show="
                       mode !== 'skill' &&
                       (!isSkillType || (isSkillType && !currentThreadId))
                     "
@@ -349,13 +354,13 @@
               @click="addMode(mode.value)"
             >
               <img
-                v-if="mode.avatar"
-                :src="mode.avatar"
+                v-if="mode?.avatar"
+                :src="mode?.avatar"
                 class="mode-avatar"
                 alt=""
               />
-              <i v-else :class="mode.icon"></i>
-              <span>{{ mode.label }}</span>
+              <i v-else :class="mode?.icon"></i>
+              <span>{{ mode?.label }}</span>
             </div>
           </div>
           <div class="input-footer">
