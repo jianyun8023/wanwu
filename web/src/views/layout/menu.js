@@ -33,6 +33,14 @@ export const menuList = [
     perm: [PERMS.ONTOLOGY],
     children: [
       {
+        name: i18n.t('menu.digitalHuman'),
+        index: 'ontologyAgent-digital-human',
+        perm: PERMS.ONTOLOGY_DATA_SOURCE,
+        redirect: () => {
+          location.href = location.origin + basePath + '/vega/digital-human';
+        },
+      },
+      {
         name: i18n.t('menu.ontology'),
         index: 'ontologyAgent-ontology',
         perm: PERMS.ONTOLOGY_KNOWLEDGE_NETWORK,
