@@ -141,13 +141,13 @@ export default {
           this.uploading = true;
           batchCreateUser(formData, config)
             .then(res => {
+              this.uploading = false;
               const { errors } = res.data || {};
               if (errors && errors.length > 0) {
                 this.errorData = res.data || {};
                 this.hintVisible = true;
                 return;
               }
-              this.uploading = false;
               this.$message.success(this.$t('common.message.success'));
               this.handleClose();
               this.$emit('reloadData');
