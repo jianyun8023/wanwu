@@ -131,6 +131,7 @@
           v-for="n in randomReminderList"
           :key="n.id"
           :style="`background-color:${colorArr[n.random]}`"
+          @click="setRandomReminder(n)"
         >
           <el-popover
             placement="top-start"
@@ -142,11 +143,7 @@
               n.prompt && n.prompt.replaceAll('{', '').replaceAll('}', '')
             "
           >
-            <span
-              style="font-size: 15px"
-              slot="reference"
-              @click="setRandomReminder(n)"
-            >
+            <span style="font-size: 15px" slot="reference">
               {{ n.title || n.name }}
             </span>
           </el-popover>
