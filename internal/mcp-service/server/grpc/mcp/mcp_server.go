@@ -70,6 +70,7 @@ func (s *Service) GetMCPServer(ctx context.Context, req *mcp_service.GetMCPServe
 		SseExample:        sseExample,
 		StreamableUrl:     streamableUrl,
 		StreamableExample: streamableExample,
+		Transport:         constant.MCPTransportSSE,
 	}, nil
 }
 
@@ -107,6 +108,7 @@ func (s *Service) GetMCPServerList(ctx context.Context, req *mcp_service.GetMCPS
 			SseExample:        sseExample,
 			StreamableUrl:     streamableUrl,
 			StreamableExample: streamableExample,
+			Transport:         constant.MCPTransportSSE,
 		})
 	}
 	return &mcp_service.GetMCPServerListResp{

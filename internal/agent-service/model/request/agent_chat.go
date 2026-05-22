@@ -1,6 +1,7 @@
 package request
 
 import (
+	"github.com/UnicomAI/wanwu/api/proto/common"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model"
 	service_model "github.com/UnicomAI/wanwu/internal/agent-service/service/service-model"
 	openapi3_util "github.com/UnicomAI/wanwu/pkg/openapi3-util"
@@ -160,10 +161,12 @@ type PluginToolInfo struct {
 }
 
 type MCPToolInfo struct {
-	URL          string   `json:"url"`
-	Transport    string   `json:"transport"`
-	ToolNameList []string `json:"toolNameList"` // MCP工具方法列表,会根据此方法名的列表进行mcp方法的过滤，如果此列为空，则标识不进行过滤
-	Avatar       string   `json:"avatar"`
+	URL          string                    `json:"url"`
+	Transport    string                    `json:"transport"`
+	ToolNameList []string                  `json:"toolNameList"` // MCP工具方法列表,会根据此方法名的列表进行mcp方法的过滤，如果此列为空，则标识不进行过滤
+	Avatar       string                    `json:"avatar"`
+	Headers      map[string]string         `json:"headers"`
+	ApiAuth      *common.ApiAuthWebRequest `json:"apiAuth"`
 }
 
 type SkillToolInfo struct {

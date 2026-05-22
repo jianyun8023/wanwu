@@ -87,6 +87,8 @@ func (c *Client) UpdateMCP(ctx context.Context, tab *model.MCPClient) *errs.Stat
 		"streamable_url": tab.StreamableUrl,
 		"transport":      tab.Transport,
 		"avatar_path":    tab.AvatarPath,
+		"auth_json":      tab.AuthJSON,
+		"headers":        tab.Headers,
 	}).Error; err != nil {
 		return toErrStatus("mcp_update_err", err.Error())
 	}

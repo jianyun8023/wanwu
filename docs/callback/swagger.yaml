@@ -2315,6 +2315,10 @@ definitions:
     type: object
   response.MCPDetail:
     properties:
+      apiAuth:
+        allOf:
+        - $ref: '#/definitions/util.ApiAuthWebRequest'
+        description: api身份认证
       avatar:
         allOf:
         - $ref: '#/definitions/request.Avatar'
@@ -2334,6 +2338,11 @@ definitions:
       from:
         description: 来源
         type: string
+      headers:
+        additionalProperties:
+          type: string
+        description: 请求头
+        type: object
       manual:
         description: 使用说明
         type: string
@@ -2361,6 +2370,11 @@ definitions:
       transport:
         description: '传输协议: "sse" 或 "streamable"'
         type: string
+      type:
+        description: 'type: mcp'
+        type: string
+    required:
+    - apiAuth
     type: object
   response.MCPServerDetail:
     properties:

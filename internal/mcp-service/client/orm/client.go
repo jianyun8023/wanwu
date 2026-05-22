@@ -56,6 +56,9 @@ func NewClient(ctx context.Context, db *gorm.DB) (*Client, error) {
 	if err := initCustomToolAuthJson(db); err != nil {
 		return nil, err
 	}
+	if err := initMCPAuthJson(db); err != nil {
+		return nil, err
+	}
 	if err := initMCPClientTransport(db); err != nil {
 		return nil, err
 	}
@@ -133,6 +136,27 @@ func initCustomToolAuthJson(dbClient *gorm.DB) error {
 		return err
 	}
 
+	return nil
+}
+
+func initMCPAuthJson(dbClient *gorm.DB) error {
+	//数据量不会太大直接getAll
+	apiAuth := &util.ApiAuthWebRequest{
+		AuthType: util.AuthTypeNone,
+	}
+	apiAuthBytes, err := json.Marshal(apiAuth)
+	if err != nil {
+		return err
+	}
+	updateMap := map[string]interface{}{
+		"auth_json": string(apiAuthBytes),
+	}
+	err = dbClient.Model(&model.MCPClient{}).
+		Where("auth_json = '' OR auth_json IS NULL").
+		Updates(updateMap).Error
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

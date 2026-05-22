@@ -70,6 +70,8 @@ func (k *McpProcess) Build(assistant *AgentInfo, prepareParams *AgentPreparePara
 				Url:          info.URL,
 				ToolNameList: info.ToolNameList,
 				Avatar:       info.Avatar,
+				Headers:      info.Headers,
+				ApiAuth:      info.ApiAuth,
 			})
 		}
 		agentChatParams.ToolParams.McpToolList = append(agentChatParams.ToolParams.McpToolList, mcpToolList...)
@@ -137,6 +139,8 @@ func buildCustomMcpList(prepareParams *AgentPrepareParams, mcpTools map[string]c
 				URL:          url,
 				Transport:    transport,
 				ToolNameList: toolList,
+				Headers:      mcpCustom.Headers,
+				ApiAuth:      mcpCustom.ApiAuth,
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,8 @@ func (s *Service) GetSquareMCPList(ctx context.Context, req *mcp_service.GetSqua
 }
 
 func (s *Service) CreateCustomMCP(ctx context.Context, req *mcp_service.CreateCustomMCPReq) (*emptypb.Empty, error) {
+	authJSON, _ := json.Marshal(req.GetApiAuth())
+	headersJSON, _ := json.Marshal(req.GetHeaders())
 	if err := s.cli.CreateMCP(ctx, &model.MCPClient{
 		OrgID:         req.OrgId,
 		UserID:        req.UserId,
@@ -55,6 +58,8 @@ func (s *Service) CreateCustomMCP(ctx context.Context, req *mcp_service.CreateCu
 		StreamableUrl: req.StreamableUrl,
 		Transport:     req.Transport,
 		AvatarPath:    req.AvatarPath,
+		AuthJSON:      string(authJSON),
+		Headers:       string(headersJSON),
 	}); err != nil {
 		return nil, errStatus(errs.Code_MCPCreateCustomMCPErr, err)
 	}
@@ -62,6 +67,8 @@ func (s *Service) CreateCustomMCP(ctx context.Context, req *mcp_service.CreateCu
 }
 
 func (s *Service) UpdateCustomMCP(ctx context.Context, req *mcp_service.UpdateCustomMCPReq) (*emptypb.Empty, error) {
+	authJSON, _ := json.Marshal(req.GetApiAuth())
+	headersJSON, _ := json.Marshal(req.GetHeaders())
 	if err := s.cli.UpdateMCP(ctx, &model.MCPClient{
 		ID:            util.MustU32(req.McpId),
 		Name:          req.Name,
@@ -71,6 +78,8 @@ func (s *Service) UpdateCustomMCP(ctx context.Context, req *mcp_service.UpdateCu
 		StreamableUrl: req.StreamableUrl,
 		Transport:     req.Transport,
 		AvatarPath:    req.AvatarPath,
+		AuthJSON:      string(authJSON),
+		Headers:       string(headersJSON),
 	}); err != nil {
 		return nil, errStatus(errs.Code_MCPUpdateCustomMCPErr, err)
 	}
@@ -185,6 +194,8 @@ func buildCustomMCPDetail(mcp *model.MCPClient) *mcp_service.CustomMCPDetail {
 		StreamableUrl: mcp.StreamableUrl,
 		Transport:     mcp.Transport,
 		AvatarPath:    mcp.AvatarPath,
+		ApiAuth:       buildApiAuthFromModel(mcp),
+		Headers:       buildHeadersFromModel(mcp),
 		Info: &mcp_service.SquareMCPInfo{
 			McpSquareId: mcp.McpSquareId,
 			Name:        mcp.Name,
@@ -214,8 +225,32 @@ func buildCustomMCPInfo(mcp *model.MCPClient) *mcp_service.CustomMCPInfo {
 		StreamableUrl: detail.StreamableUrl,
 		Transport:     detail.Transport,
 		AvatarPath:    detail.AvatarPath,
+		ApiAuth:       detail.ApiAuth,
+		Headers:       detail.Headers,
 		Info:          detail.Info,
 	}
+}
+
+func buildApiAuthFromModel(mcp *model.MCPClient) *common.ApiAuthWebRequest {
+	if mcp.AuthJSON == "" {
+		return nil
+	}
+	apiAuth := &common.ApiAuthWebRequest{}
+	if err := json.Unmarshal([]byte(mcp.AuthJSON), apiAuth); err != nil {
+		return nil
+	}
+	return apiAuth
+}
+
+func buildHeadersFromModel(mcp *model.MCPClient) map[string]string {
+	if mcp.Headers == "" {
+		return nil
+	}
+	var headers map[string]string
+	if err := json.Unmarshal([]byte(mcp.Headers), &headers); err != nil {
+		return nil
+	}
+	return headers
 }
 
 func buildSquareMCPDetail(mcpCfg config.McpConfig, hasCustom bool) *mcp_service.SquareMCPDetail {

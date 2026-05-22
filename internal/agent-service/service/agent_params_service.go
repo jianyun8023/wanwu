@@ -140,6 +140,8 @@ func buildMCPToolList(mcpToolList []*assistant_service.MCPToolInfo) []*request.M
 			Transport:    item.Transport,
 			ToolNameList: item.ToolNameList,
 			Avatar:       item.Avatar,
+			Headers:      item.Headers,
+			ApiAuth:      item.ApiAuth,
 		}
 	})
 }

@@ -4826,7 +4826,18 @@ const docTemplate = `{
         },
         "response.MCPDetail": {
             "type": "object",
+            "required": [
+                "apiAuth"
+            ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -4854,6 +4865,13 @@ const docTemplate = `{
                 "from": {
                     "description": "来源",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "manual": {
                     "description": "使用说明",
@@ -4889,6 +4907,10 @@ const docTemplate = `{
                 },
                 "transport": {
                     "description": "传输协议: \"sse\" 或 \"streamable\"",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "type: mcp",
                     "type": "string"
                 }
             }

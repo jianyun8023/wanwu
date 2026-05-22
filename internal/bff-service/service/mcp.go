@@ -13,6 +13,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/constant"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	openapi3_util "github.com/UnicomAI/wanwu/pkg/openapi3-util"
+	pkg_util "github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -60,6 +61,8 @@ func CreateMCP(ctx *gin.Context, userID, orgID string, req request.MCPCreate) er
 		StreamableUrl: req.StreamableURL,
 		Transport:     req.Transport,
 		AvatarPath:    req.Avatar.Key,
+		ApiAuth:       toApiAuthProto(req.ApiAuth),
+		Headers:       req.Headers,
 	})
 	return err
 }
@@ -76,6 +79,8 @@ func UpdateMCP(ctx *gin.Context, userID, orgID string, req request.MCPUpdate) er
 		StreamableUrl: req.StreamableURL,
 		Transport:     req.Transport,
 		AvatarPath:    req.Avatar.Key,
+		ApiAuth:       toApiAuthProto(req.ApiAuth),
+		Headers:       req.Headers,
 	})
 	return err
 }
@@ -155,6 +160,8 @@ func GetMCPSelect(ctx *gin.Context, userID, orgID string, name string) (*respons
 			Transport:     mcpInfo.Transport,
 			Type:          constant.MCPTypeMCP,
 			Avatar:        cacheMCPAvatar(ctx, mcpInfo.Info.AvatarPath, mcpInfo.AvatarPath),
+			ApiAuth:       toApiAuthResponse(mcpInfo.GetApiAuth()),
+			Headers:       mcpInfo.GetHeaders(),
 		})
 	}
 
@@ -194,35 +201,65 @@ func GetMCPSelect(ctx *gin.Context, userID, orgID string, name string) (*respons
 	}, nil
 }
 
-func GetMCPToolList(ctx *gin.Context, mcpID, serverUrl, transport string) (*response.MCPToolList, error) {
+func GetMCPToolList(ctx *gin.Context, req request.MCPToolListReq) (*response.MCPToolList, error) {
 	transportType := constant.MCPTransportSSE // 默认使用 sse
-	if mcpID != "" {
-		mcpDetail, err := mcp.GetCustomMCP(ctx.Request.Context(), &mcp_service.GetCustomMCPReq{
-			McpId: mcpID,
-		})
-		if err != nil {
-			return nil, err
+	serverUrl := req.ServerURL
+	auth := req.ApiAuth
+	headers := req.Headers
+	if req.MCPID != "" {
+		switch req.Type {
+		case constant.MCPTypeMCP, "":
+			mcpDetail, err := mcp.GetCustomMCP(ctx.Request.Context(), &mcp_service.GetCustomMCPReq{
+				McpId: req.MCPID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			// 根据 transport 字段选择 URL
+			switch mcpDetail.Transport {
+			case constant.MCPTransportStreamable:
+				serverUrl = mcpDetail.StreamableUrl
+				transportType = constant.MCPTransportStreamable
+			case constant.MCPTransportSSE:
+				serverUrl = mcpDetail.SseUrl
+				transportType = constant.MCPTransportSSE
+			default:
+				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "transport empty")
+			}
+			// 获取鉴权信息和自定义请求头
+			if mcpDetail.GetApiAuth() != nil {
+				authResp := toApiAuthResponse(mcpDetail.GetApiAuth())
+				auth = &authResp
+			}
+			headers = mcpDetail.GetHeaders()
+		case constant.MCPTypeMCPServer:
+			mcpServerDetail, err := mcp.GetMCPServer(ctx.Request.Context(), &mcp_service.GetMCPServerReq{
+				McpServerId: req.MCPID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			// 根据 transport 字段选择 URL
+			switch mcpServerDetail.Transport {
+			case constant.MCPTransportStreamable:
+				serverUrl = mcpServerDetail.StreamableUrl
+				transportType = constant.MCPTransportStreamable
+			case constant.MCPTransportSSE:
+				serverUrl = mcpServerDetail.SseUrl
+				transportType = constant.MCPTransportSSE
+			default:
+				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "transport empty")
+			}
 		}
-		// 根据 transport 字段选择 URL
-		switch mcpDetail.Transport {
-		case constant.MCPTransportStreamable:
-			serverUrl = mcpDetail.StreamableUrl
-			transportType = constant.MCPTransportStreamable
-		case constant.MCPTransportSSE:
-			serverUrl = mcpDetail.SseUrl
-			transportType = constant.MCPTransportSSE
-		default:
-			return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "transport empty")
-		}
-	} else if transport != "" {
+	} else if req.Transport != "" {
 		// 如果传入了 transport 参数，使用传入的值
-		transportType = transport
+		transportType = req.Transport
 	}
 	if serverUrl == "" {
 		return nil, grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, "url empty")
 	}
 
-	tools, err := mcp_util.ListTools(ctx.Request.Context(), serverUrl, transportType)
+	tools, err := mcp_util.ListToolsWithAuth(ctx.Request.Context(), serverUrl, transportType, auth, headers)
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, err.Error())
 	}
@@ -247,7 +284,10 @@ func GetMCPActionList(ctx *gin.Context, userID, orgID string, req request.MCPAct
 			actions = append(actions, toolActions...)
 		}
 	case constant.MCPTypeMCP:
-		tools, err := GetMCPToolList(ctx, req.ToolId, "", "")
+		tools, err := GetMCPToolList(ctx, request.MCPToolListReq{
+			MCPID: req.ToolId,
+			Type:  req.ToolType,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -275,6 +315,8 @@ func toMCPCustomDetail(ctx *gin.Context, mcpDetail *mcp_service.CustomMCPDetail)
 			SSEURL:        mcpDetail.SseUrl,
 			StreamableURL: mcpDetail.StreamableUrl,
 			Transport:     mcpDetail.Transport,
+			ApiAuth:       toApiAuthResponse(mcpDetail.GetApiAuth()),
+			Headers:       mcpDetail.GetHeaders(),
 			MCPSquareInfo: toMCPSquareInfo(ctx, mcpDetail.Info, mcpDetail.AvatarPath),
 		},
 		MCPSquareIntro: toMCPSquareIntro(mcpDetail.Intro),
@@ -284,9 +326,12 @@ func toMCPCustomDetail(ctx *gin.Context, mcpDetail *mcp_service.CustomMCPDetail)
 func toMCPCustomInfo(ctx *gin.Context, mcpInfo *mcp_service.CustomMCPInfo) response.MCPInfo {
 	return response.MCPInfo{
 		MCPID:         mcpInfo.McpId,
+		Type:          constant.MCPTypeMCP,
 		SSEURL:        mcpInfo.SseUrl,
 		StreamableURL: mcpInfo.StreamableUrl,
 		Transport:     mcpInfo.Transport,
+		ApiAuth:       toApiAuthResponse(mcpInfo.GetApiAuth()),
+		Headers:       mcpInfo.GetHeaders(),
 		MCPSquareInfo: toMCPSquareInfo(ctx, mcpInfo.Info, mcpInfo.AvatarPath),
 	}
 }
@@ -347,4 +392,27 @@ func toToolAction(tool *common.ToolAction) *protocol.Tool {
 		}
 	}
 	return ret
+}
+
+func toApiAuthProto(auth pkg_util.ApiAuthWebRequest) *common.ApiAuthWebRequest {
+	return &common.ApiAuthWebRequest{
+		AuthType:           auth.AuthType,
+		ApiKeyHeaderPrefix: auth.ApiKeyHeaderPrefix,
+		ApiKeyHeader:       auth.ApiKeyHeader,
+		ApiKeyQueryParam:   auth.ApiKeyQueryParam,
+		ApiKeyValue:        auth.ApiKeyValue,
+	}
+}
+
+func toApiAuthResponse(auth *common.ApiAuthWebRequest) pkg_util.ApiAuthWebRequest {
+	if auth == nil {
+		return pkg_util.ApiAuthWebRequest{}
+	}
+	return pkg_util.ApiAuthWebRequest{
+		AuthType:           auth.GetAuthType(),
+		ApiKeyHeaderPrefix: auth.GetApiKeyHeaderPrefix(),
+		ApiKeyHeader:       auth.GetApiKeyHeader(),
+		ApiKeyQueryParam:   auth.GetApiKeyQueryParam(),
+		ApiKeyValue:        auth.GetApiKeyValue(),
+	}
 }

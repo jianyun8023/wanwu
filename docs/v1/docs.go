@@ -12489,7 +12489,7 @@ const docTemplate = `{
             }
         },
         "/mcp/tool/list": {
-            "get": {
+            "post": {
                 "description": "获取MCP Tool列表",
                 "consumes": [
                     "application/json"
@@ -12503,22 +12503,13 @@ const docTemplate = `{
                 "summary": "获取MCP Tool列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "mcpId(和serverUrl传一个)",
-                        "name": "mcpId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "serverUrl,就是sseUrl/streamable(和mcpId传一个)",
-                        "name": "serverUrl",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "传输协议类型: sse 或 streamable(仅当serverUrl不为空时生效)",
-                        "name": "transport",
-                        "in": "query"
+                        "description": "mcp工具列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.MCPToolListReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -24055,11 +24046,20 @@ const docTemplate = `{
         "request.MCPCreate": {
             "type": "object",
             "required": [
+                "apiAuth",
                 "desc",
                 "from",
                 "name"
             ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -24075,6 +24075,13 @@ const docTemplate = `{
                 "from": {
                     "description": "来源",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mcpSquareId": {
                     "description": "广场mcpId(非空表示来源于广场)",
@@ -24279,15 +24286,63 @@ const docTemplate = `{
                 }
             }
         },
+        "request.MCPToolListReq": {
+            "type": "object",
+            "required": [
+                "apiAuth"
+            ],
+            "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "mcpId": {
+                    "description": "mcpId",
+                    "type": "string"
+                },
+                "serverUrl": {
+                    "description": "\"serverUrl,就是sseUrl/streamable(和mcpId传一个)\"",
+                    "type": "string"
+                },
+                "transport": {
+                    "description": "传输协议: \"sse\" 或 \"streamable\"",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "mcp/mcpserver",
+                    "type": "string"
+                }
+            }
+        },
         "request.MCPUpdate": {
             "type": "object",
             "required": [
+                "apiAuth",
                 "desc",
                 "from",
                 "mcpId",
                 "name"
             ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -24303,6 +24358,13 @@ const docTemplate = `{
                 "from": {
                     "description": "来源",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mcpId": {
                     "type": "string"
@@ -30066,7 +30128,18 @@ const docTemplate = `{
         },
         "response.MCPDetail": {
             "type": "object",
+            "required": [
+                "apiAuth"
+            ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -30094,6 +30167,13 @@ const docTemplate = `{
                 "from": {
                     "description": "来源",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "manual": {
                     "description": "使用说明",
@@ -30130,12 +30210,27 @@ const docTemplate = `{
                 "transport": {
                     "description": "传输协议: \"sse\" 或 \"streamable\"",
                     "type": "string"
+                },
+                "type": {
+                    "description": "type: mcp",
+                    "type": "string"
                 }
             }
         },
         "response.MCPInfo": {
             "type": "object",
+            "required": [
+                "apiAuth"
+            ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -30155,6 +30250,13 @@ const docTemplate = `{
                 "from": {
                     "description": "来源",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mcpId": {
                     "description": "mcpId",
@@ -30179,15 +30281,28 @@ const docTemplate = `{
                 "transport": {
                     "description": "传输协议: \"sse\" 或 \"streamable\"",
                     "type": "string"
+                },
+                "type": {
+                    "description": "type: mcp",
+                    "type": "string"
                 }
             }
         },
         "response.MCPSelect": {
             "type": "object",
             "required": [
+                "apiAuth",
                 "toolType"
             ],
             "properties": {
+                "apiAuth": {
+                    "description": "api身份认证",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/util.ApiAuthWebRequest"
+                        }
+                    ]
+                },
                 "avatar": {
                     "description": "图标",
                     "allOf": [
@@ -30199,6 +30314,13 @@ const docTemplate = `{
                 "description": {
                     "description": "描述",
                     "type": "string"
+                },
+                "headers": {
+                    "description": "请求头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mcpId": {
                     "description": "mcpId",
@@ -32650,7 +32772,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/v1",
 	Schemes:          []string{},
 	Title:            "AI Agent Productivity Platform API",
-	Description:      "## HTTP Header\n| Header        | 说明      |\n| ------------- | --------- |\n| Authorization | JWT token |\n| X-Language    | 语言Code  |\n| X-Org-Id      | 组织ID    |\n| X-Client-Id   | 客户端标识|\n\n## HTTP Status\n| HTTP Status             | 说明                   |\n| ----------------------- | ---------------------- |\n| 200, StatusOK           | 请求返回成功           |\n| 400, StatusBadRequest   | 请求返回失败，用于业务 |\n| 401, StatusUnauthorized | JWT认证失败            |\n| 403, StatusForbidden    | 没有权限               |\n\n## 权限-菜单对应表\n| 一级权限        | 二级权限  | 三级权限 | 一级菜单 | 二级菜单 | 三级菜单 |\n|-------------|-------|------|------|------|------|\n| guest       |       |      | 【访客】 |      |      |\n| common      |       |      | 【通用】 |      |      |\n| permission  |       |      | 权限管理 |      |      |\n| permission  | user  |      | 权限管理 | 用户管理 |      |\n| permission  | org   |      | 权限管理 | 组织管理 |      |\n| permission  | role  |      | 权限管理 | 角色管理 |      |\n\n## `/v1/user/permission`返回用例\n```json\n{\n  \"code\": 0,\n  \"data\": {\n    \"orgPermission\": {\n      \"org\": {\"id\": \"test-org-id\", \"name\": \"test-org-name\"},\n      \"permissions\": [\n        {\"perm\": \"permission\"},\n        {\"perm\": \"permission.user\"},\n        {\"perm\": \"permission.org\"},\n        {\"perm\": \"permission.role\"}\n      ]\n    }\n  },\n  \"msg\": \"操作成功\"\n}\n```",
+	Description:      "## HTTP Header\r\n| Header        | 说明      |\r\n| ------------- | --------- |\r\n| Authorization | JWT token |\r\n| X-Language    | 语言Code  |\r\n| X-Org-Id      | 组织ID    |\r\n| X-Client-Id   | 客户端标识|\r\n\r\n## HTTP Status\r\n| HTTP Status             | 说明                   |\r\n| ----------------------- | ---------------------- |\r\n| 200, StatusOK           | 请求返回成功           |\r\n| 400, StatusBadRequest   | 请求返回失败，用于业务 |\r\n| 401, StatusUnauthorized | JWT认证失败            |\r\n| 403, StatusForbidden    | 没有权限               |\r\n\r\n## 权限-菜单对应表\r\n| 一级权限        | 二级权限  | 三级权限 | 一级菜单 | 二级菜单 | 三级菜单 |\r\n|-------------|-------|------|------|------|------|\r\n| guest       |       |      | 【访客】 |      |      |\r\n| common      |       |      | 【通用】 |      |      |\r\n| permission  |       |      | 权限管理 |      |      |\r\n| permission  | user  |      | 权限管理 | 用户管理 |      |\r\n| permission  | org   |      | 权限管理 | 组织管理 |      |\r\n| permission  | role  |      | 权限管理 | 角色管理 |      |\r\n\r\n## `/v1/user/permission`返回用例\r\n```json\r\n{\r\n  \"code\": 0,\r\n  \"data\": {\r\n    \"orgPermission\": {\r\n      \"org\": {\"id\": \"test-org-id\", \"name\": \"test-org-name\"},\r\n      \"permissions\": [\r\n        {\"perm\": \"permission\"},\r\n        {\"perm\": \"permission.user\"},\r\n        {\"perm\": \"permission.org\"},\r\n        {\"perm\": \"permission.role\"}\r\n      ]\r\n    }\r\n  },\r\n  \"msg\": \"操作成功\"\r\n}\r\n```",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

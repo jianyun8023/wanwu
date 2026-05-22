@@ -133,6 +133,8 @@ message CreateCustomMCPReq {
   string avatarPath = 8;
   string streamableUrl = 9;
   string transport = 10; // 传输协议: "sse" 或 "streamable"
+  common.ApiAuthWebRequest apiAuth = 11; // api身份认证
+  map<string, string> headers = 12; // 请求头
 }
 
 message UpdateCustomMCPReq {
@@ -146,6 +148,8 @@ message UpdateCustomMCPReq {
   string avatarPath = 8;
   string streamableUrl = 9;
   string transport = 10; // 传输协议: "sse" 或 "streamable"
+  common.ApiAuthWebRequest apiAuth = 11; // api身份认证
+  map<string, string> headers = 12; // 请求头
 }
 
 message GetCustomMCPReq {
@@ -195,6 +199,8 @@ message CustomMCPDetail {
   SquareMCPIntro intro = 5;
   string streamableUrl = 6;
   string transport = 7; // 传输协议: "sse" 或 "streamable"
+  common.ApiAuthWebRequest apiAuth = 8; // api身份认证
+  map<string, string> headers = 9; // 请求头
 }
 
 message CustomMCPInfo {
@@ -204,6 +210,8 @@ message CustomMCPInfo {
   SquareMCPInfo info = 4;
   string streamableUrl = 5;
   string transport = 6; // 传输协议: "sse" 或 "streamable"
+  common.ApiAuthWebRequest apiAuth = 7; // api身份认证
+  map<string, string> headers = 8; // 请求头
 }
 
 message SquareMCPDetail {

@@ -835,6 +835,8 @@ message MCPToolInfo {
   // 如果此列为空，则表示不进行过滤
   repeated string toolNameList = 3;
   string avatar = 4;//头像
+  common.ApiAuthWebRequest apiAuth = 5; // api身份认证
+  map<string, string> headers = 6; // 请求头
 }
 
 message SkillParams {

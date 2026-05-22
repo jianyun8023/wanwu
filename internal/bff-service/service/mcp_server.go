@@ -374,5 +374,6 @@ func toMCPServerDetail(ctx *gin.Context, mcpServerInfo *mcp_service.MCPServerInf
 		StreamableURL:     mcpServerInfo.StreamableUrl,
 		StreamableExample: mcpServerInfo.StreamableExample,
 		Tools:             mcpServerTools,
+		Transport:         mcpServerInfo.Transport,
 	}
 }
