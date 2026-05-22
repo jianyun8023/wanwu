@@ -53,10 +53,10 @@ func SuccessGraphStatus(status int) bool {
 	return GraphStatus(status) == GraphSuccess
 }
 
-// BuildGraphShowStatus 报告展示状态 0:待处理，1.解析中，2.解析成功，3.解析失败
+// BuildGraphShowStatus 报告展示状态 0:待处理，1.解析中，2.解析成功，3.解析失败 4. 文档处理失败，不显示图谱状态
 func BuildGraphShowStatus(status GraphStatus, docStatus int) (int, string) {
 	if docStatus == DocFail {
-		return -1, "文档处理失败，不显示图谱状态"
+		return 4, "文档处理失败，不显示图谱状态"
 	}
 	switch status {
 	case GraphInit:

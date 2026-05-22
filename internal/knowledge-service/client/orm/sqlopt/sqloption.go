@@ -4,6 +4,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// docFailStatus 文档解析失败相关的 status 码（上传/切片/向量化等环节失败）
+var docFailStatus = []int{5, 51, 52, 53, 54, 55, 56, 61, 62}
+
 type SqlOptions []SQLOption
 
 func SQLOptions(opts ...SQLOption) SqlOptions {
@@ -262,10 +265,8 @@ func WithGraphStatusList(graphStatus []int) SQLOption {
 	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
 		if len(graphStatus) == 0 {
 			return db
-		} else if len(graphStatus) == 1 {
-			return db.Where("graph_status = ?", graphStatus[0])
 		}
-		return db.Where("graph_status IN ?", graphStatus)
+		return db.Where("graph_status IN ? AND status NOT IN ?", graphStatus, docFailStatus)
 	})
 }
 
