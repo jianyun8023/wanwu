@@ -40,6 +40,7 @@ type ExplorationAppInfo struct {
 	IsFavorite  bool
 	PublishType string
 	UserID      string
+	OrgID       string
 }
 
 type SensitiveWordTableWithWord struct {

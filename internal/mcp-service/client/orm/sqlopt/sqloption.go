@@ -242,6 +242,42 @@ func WithSkillIDs(skillIDs []string) SQLOption {
 	})
 }
 
+func WithCustomSkillID(customSkillID string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if customSkillID != "" {
+			return db.Where("custom_skill_id = ?", customSkillID)
+		}
+		return db
+	})
+}
+
+func WithCustomSkillIDs(customSkillIDs []string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if len(customSkillIDs) > 0 {
+			return db.Where("custom_skill_id IN ?", customSkillIDs)
+		}
+		return db
+	})
+}
+
+func WithAcquiredSkillID(acquiredSkillID string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if acquiredSkillID != "" {
+			return db.Where("acquired_skill_id = ?", acquiredSkillID)
+		}
+		return db
+	})
+}
+
+func WithAcquiredSkillIDs(acquiredSkillIDs []string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if len(acquiredSkillIDs) > 0 {
+			return db.Where("acquired_skill_id IN ?", acquiredSkillIDs)
+		}
+		return db
+	})
+}
+
 func WithVariableName(name string) SQLOption {
 	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
 		if name != "" {

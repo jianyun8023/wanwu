@@ -9,6 +9,6 @@ type AcquiredSkillVariable struct {
 	Desc            string `gorm:"column:desc;type:text;comment:描述"`
 	VariableKey     string `gorm:"column:variable_key;comment:变量Key"`
 	VariableValue   string `gorm:"column:variable_value;comment:变量Value"`
-	CreatedAt       int64  `gorm:"column:created_at;default:0;comment:创建时间"`
-	UpdatedAt       int64  `gorm:"column:updated_at;default:0;comment:更新时间"`
+	CreatedAt       int64  `gorm:"column:created_at;autoCreateTime:milli;comment:创建时间"`
+	UpdatedAt       int64  `gorm:"column:updated_at;autoUpdateTime:milli;comment:更新时间"`
 }

@@ -71,7 +71,7 @@ message GetCustomSkillByThreadIDResp {
   CustomSkill skill = 1;
 }
 
-// 按 wgaThreadIdList 批量查找 custom skill，返回全量 CustomSkill（含 variables）。
+// 按 wgaThreadIdList 批量查找 custom skill，返回 CustomSkillGetListResp（PublishCustomSkill：草稿 + 可选最新发布）。
 // 未命中的 threadId 仍占一条：仅 wgaThreadId 有值、skillId 为空，与 GetCustomSkillByThreadID 未命中语义一致。非数据库错误不返回 RPC 错误。
 message GetCustomSkillListByThreadIDListReq {
   Identity identity = 1;
@@ -148,7 +148,7 @@ message PublishCustomSkillReq {
 
 message UpdatePublishCustomSkillReq {
   string skillId = 1;
-  string desc = 2;
+  string versionDesc = 2;
 }
 
 message GetPublishCustomSkillHistoryListReq {

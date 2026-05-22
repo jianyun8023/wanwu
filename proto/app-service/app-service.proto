@@ -187,6 +187,7 @@ message ExplorationAppInfo{
   bool isFavorite = 5;
   string publishType = 6;
   string userId = 7;
+  string orgId = 8;
 }
 
 message AppInfo{

@@ -13,11 +13,3 @@ type CustomSkillPublish struct {
 	ObjectPath         string `gorm:"column:object_path;comment:skill数据minio对象路径(zip压缩包)"`
 }
 
-// CustomSkillPublishSnapshot is optional caller-provided data when publishing.
-// If Variables is non-empty, it is serialized to VariableInfos instead of loading from DB.
-// Non-empty Markdown / ObjectPath override the corresponding fields on the CustomSkill row.
-type CustomSkillPublishSnapshot struct {
-	Variables  []*CustomSkillVariable
-	Markdown   string
-	ObjectPath string
-}

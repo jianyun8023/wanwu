@@ -25,10 +25,11 @@ func (s *Service) UpdateCustomSkillThreadMeta(ctx context.Context, req *mcp_serv
 }
 
 func (s *Service) CreateCustomSkillVar(ctx context.Context, req *mcp_service.CreateCustomSkillVarReq) (*mcp_service.SkillVariableCreateResp, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_var_create", "identity is empty"))
+	customSkill, st := s.cli.GetCustomSkill(ctx, req.SkillId)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
 	}
-	id, err := s.cli.CreateCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), toCustomSkillVariable(req.SkillId, req.Variable))
+	id, err := s.cli.CreateCustomSkillVar(ctx, customSkill.UserID, customSkill.OrgID, toCustomSkillVariable(req.SkillId, req.Variable))
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
@@ -36,51 +37,59 @@ func (s *Service) CreateCustomSkillVar(ctx context.Context, req *mcp_service.Cre
 }
 
 func (s *Service) GetCustomSkillVars(ctx context.Context, req *mcp_service.GetCustomSkillVarsReq) (*mcp_service.CustomSkillVars, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_var_list", "identity is empty"))
+	customSkill, st := s.cli.GetCustomSkill(ctx, req.SkillId)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
 	}
-	variables, err := s.cli.GetCustomSkillVars(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.SkillId)
+	variables, err := s.cli.GetCustomSkillVars(ctx, customSkill.UserID, customSkill.OrgID, req.SkillId)
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
-	protoVars := make([]*mcp_service.Variable, 0, len(variables))
-	for _, v := range variables {
-		protoVars = append(protoVars, toProtoVariableFromCustom(v))
-	}
 	return &mcp_service.CustomSkillVars{
 		SkillId:   req.SkillId,
-		Variables: protoVars,
+		Variables: toProtoVariablesFromCustom(variables),
 		Total:     int64(len(variables)),
 	}, nil
 }
 
 func (s *Service) UpdateCustomSkillVar(ctx context.Context, req *mcp_service.UpdateCustomSkillVarReq) (*emptypb.Empty, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_var_update", "identity is empty"))
-	}
 	id := util.MustU32(req.GetId())
-	if err := s.cli.UpdateCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id, protoVariableToCustomModel(req.Variable)); err != nil {
+	variable, varSt := s.cli.GetCustomSkillVarByID(ctx, id)
+	if varSt != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, varSt)
+	}
+	customSkill, st := s.cli.GetCustomSkill(ctx, variable.SkillID)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
+	}
+	if err := s.cli.UpdateCustomSkillVar(ctx, customSkill.UserID, customSkill.OrgID, id, protoVariableToCustomModel(req.Variable)); err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *Service) DeleteCustomSkillVar(ctx context.Context, req *mcp_service.DeleteCustomSkillVarReq) (*emptypb.Empty, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_var_delete", "identity is empty"))
-	}
 	id := util.MustU32(req.GetId())
-	if err := s.cli.DeleteCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id); err != nil {
+	variable, varSt := s.cli.GetCustomSkillVarByID(ctx, id)
+	if varSt != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, varSt)
+	}
+	customSkill, st := s.cli.GetCustomSkill(ctx, variable.SkillID)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
+	}
+	if err := s.cli.DeleteCustomSkillVar(ctx, customSkill.UserID, customSkill.OrgID, id); err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *Service) CreateAcquiredSkillVar(ctx context.Context, req *mcp_service.CreateAcquiredSkillVarReq) (*mcp_service.SkillVariableCreateResp, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, toErrStatus("mcp_acquired_skill_var_create", "identity is empty"))
+	acquired, st := s.cli.GetAcquiredSkill(ctx, req.AcquiredSkillId)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, st)
 	}
-	id, err := s.cli.CreateAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), toAcquiredSkillVariable(req.SkillId, req.Variable))
+	id, err := s.cli.CreateAcquiredSkillVar(ctx, acquired.UserID, acquired.OrgID, toAcquiredSkillVariable(req.AcquiredSkillId, req.Variable))
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
 	}
@@ -88,10 +97,11 @@ func (s *Service) CreateAcquiredSkillVar(ctx context.Context, req *mcp_service.C
 }
 
 func (s *Service) GetAcquiredSkillVars(ctx context.Context, req *mcp_service.GetAcquiredSkillVarsReq) (*mcp_service.AcquiredSkillVars, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, toErrStatus("mcp_acquired_skill_var_list", "identity is empty"))
+	acquired, st := s.cli.GetAcquiredSkill(ctx, req.AcquiredSkillId)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, st)
 	}
-	variables, err := s.cli.GetAcquiredSkillVars(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.SkillId)
+	variables, err := s.cli.GetAcquiredSkillVars(ctx, acquired.UserID, acquired.OrgID, req.AcquiredSkillId)
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
 	}
@@ -100,29 +110,39 @@ func (s *Service) GetAcquiredSkillVars(ctx context.Context, req *mcp_service.Get
 		protoVars = append(protoVars, toProtoVariableFromAcquired(v))
 	}
 	return &mcp_service.AcquiredSkillVars{
-		SkillId:   req.SkillId,
-		Variables: protoVars,
-		Total:     int64(len(variables)),
+		AcquiredSkillId: req.AcquiredSkillId,
+		Variables:       protoVars,
+		Total:           int64(len(variables)),
 	}, nil
 }
 
 func (s *Service) UpdateAcquiredSkillVar(ctx context.Context, req *mcp_service.UpdateAcquiredSkillVarReq) (*emptypb.Empty, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, toErrStatus("mcp_acquired_skill_var_update", "identity is empty"))
-	}
 	id := util.MustU32(req.GetId())
-	if err := s.cli.UpdateAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id, protoVariableToAcquiredModel(req.Variable)); err != nil {
+	variable, varSt := s.cli.GetAcquiredSkillVarByID(ctx, id)
+	if varSt != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, varSt)
+	}
+	acquired, st := s.cli.GetAcquiredSkill(ctx, variable.AcquiredSkillID)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, st)
+	}
+	if err := s.cli.UpdateAcquiredSkillVar(ctx, acquired.UserID, acquired.OrgID, id, protoVariableToAcquiredModel(req.Variable)); err != nil {
 		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *Service) DeleteAcquiredSkillVar(ctx context.Context, req *mcp_service.DeleteAcquiredSkillVarReq) (*emptypb.Empty, error) {
-	if req.GetIdentity() == nil {
-		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, toErrStatus("mcp_acquired_skill_var_delete", "identity is empty"))
-	}
 	id := util.MustU32(req.GetId())
-	if err := s.cli.DeleteAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id); err != nil {
+	variable, varSt := s.cli.GetAcquiredSkillVarByID(ctx, id)
+	if varSt != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, varSt)
+	}
+	acquired, st := s.cli.GetAcquiredSkill(ctx, variable.AcquiredSkillID)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, st)
+	}
+	if err := s.cli.DeleteAcquiredSkillVar(ctx, acquired.UserID, acquired.OrgID, id); err != nil {
 		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
 	}
 	return &emptypb.Empty{}, nil
@@ -181,6 +201,7 @@ func (s *Service) GetBuiltinSkillVars(ctx context.Context, req *mcp_service.GetB
 }
 
 // --- internal ---
+
 func toCustomSkillVariable(skillId string, variable *mcp_service.Variable) *model.CustomSkillVariable {
 	if variable == nil {
 		return &model.CustomSkillVariable{SkillID: skillId}
@@ -206,16 +227,16 @@ func protoVariableToCustomModel(variable *mcp_service.Variable) *model.CustomSki
 	}
 }
 
-func toAcquiredSkillVariable(skillId string, variable *mcp_service.Variable) *model.AcquiredSkillVariable {
+func toAcquiredSkillVariable(acquiredSkillId string, variable *mcp_service.Variable) *model.AcquiredSkillVariable {
 	if variable == nil {
-		return &model.AcquiredSkillVariable{SkillID: skillId}
+		return &model.AcquiredSkillVariable{AcquiredSkillID: acquiredSkillId}
 	}
 	return &model.AcquiredSkillVariable{
-		SkillID:       skillId,
-		Name:          variable.Name,
-		Desc:          variable.Desc,
-		VariableKey:   variable.VariableKey,
-		VariableValue: variable.VariableValue,
+		AcquiredSkillID: acquiredSkillId,
+		Name:            variable.Name,
+		Desc:            variable.Desc,
+		VariableKey:     variable.VariableKey,
+		VariableValue:   variable.VariableValue,
 	}
 }
 
@@ -253,19 +274,6 @@ func protoVariableToBuiltinModel(variable *mcp_service.Variable) *model.BuiltinS
 		Desc:          variable.Desc,
 		VariableKey:   variable.VariableKey,
 		VariableValue: variable.VariableValue,
-	}
-}
-
-func toProtoVariableFromCustom(v *model.CustomSkillVariable) *mcp_service.Variable {
-	if v == nil {
-		return nil
-	}
-	return &mcp_service.Variable{
-		Id:            util.Int2Str(v.ID),
-		Name:          v.Name,
-		Desc:          v.Desc,
-		VariableKey:   v.VariableKey,
-		VariableValue: v.VariableValue,
 	}
 }
 
