@@ -233,7 +233,8 @@ export default {
   methods: {
     uploadOnChange(file, fileList) {
       if (!fileList.length) return;
-      this.fileList = fileList;
+      const newFileList = fileList[fileList.length - 1];
+      this.fileList = [newFileList];
       if (this.fileList.length > 0) {
         this.maxSizeBytes = 0;
         this.isExpire = true;
