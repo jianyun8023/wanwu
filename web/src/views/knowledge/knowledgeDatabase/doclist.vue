@@ -362,7 +362,11 @@
                       <span>{{ $t('knowledgeManage.graph.graphStatus') }}</span>
                       <FilterPopover
                         style="margin-left: 5px"
-                        :options="KNOWLEDGE_GRAPH_STATUS_OPTIONS"
+                        :options="
+                          KNOWLEDGE_GRAPH_STATUS_OPTIONS.filter(
+                            opt => opt.value !== INITIAL,
+                          )
+                        "
                         @applyFilter="filterGraphStatus"
                       />
                     </div>
@@ -600,6 +604,7 @@ export default {
       KNOWLEDGE_GRAPH_STATUS_OPTIONS,
       dropdownGroups: DROPDOWN_GROUPS.slice(0, 1),
       graphDropdownGroups: DROPDOWN_GROUPS.slice(2),
+      INITIAL,
       STATUS_FINISHED,
       STATUS_FAILED,
       POWER_TYPE_EDIT,
