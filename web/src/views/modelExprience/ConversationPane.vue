@@ -62,6 +62,15 @@
               <span class="mdl">{{ $t('modelExprience.stop') }}</span>
             </span>
           </div>
+          <div v-show="!isInit && !isGenerating" class="stop-box">
+            <span class="stop" @click="refresh">
+              <img
+                class="stop-icon mdl"
+                :src="require('@/assets/imgs/refresh.png')"
+              />
+              <span class="mdl">{{ $t('agent.refresh') }}</span>
+            </span>
+          </div>
           <StreamInputField
             ref="editable"
             type="webChat"
@@ -136,6 +145,7 @@ export default {
         modelSetting: {},
       },
       isChatGenerating: false, // 是否正在创建会话
+      isInit: true,
     };
   },
   watch: {
@@ -228,6 +238,7 @@ export default {
     },
     // 请求历史记录的问答对话信息
     fetchExprienceDetail(modelExperienceId, modelId) {
+      this.isInit = true;
       getExprienceDetail({
         modelId,
         modelExperienceId,
@@ -502,11 +513,17 @@ export default {
         sessionRef && sessionRef.preStop();
       });
     },
+    refresh() {
+      Object.entries(this.sessionRefs).forEach(([, sessionRef]) => {
+        sessionRef && sessionRef.refresh();
+      });
+    },
     async preSend() {
       if (this.isChatGenerating) {
         this.$message.warning(this.$t('modelExprience.warning.chatGenerating'));
         return;
       }
+      this.isInit = false;
       const inputVal = this.$refs['editable'].getPrompt();
       const fileList = this.$refs['editable'].getFileList();
       if (!inputVal) {
