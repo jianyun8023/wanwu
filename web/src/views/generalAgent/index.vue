@@ -1,12 +1,20 @@
 <template>
   <div class="general-agent-page">
-    <!-- 左侧会话列表 - 可折叠 -->
-    <div :class="['sidebar', { collapsed: sidebarCollapsed }]">
-      <div class="sidebar-content">
+    <!-- 主内容区 -->
+    <div
+      :class="{
+        'has-sidebar': !sidebarCollapsed,
+        'has-workspace': panelVisible && activeWorkspace,
+        'has-preview': previewVisible || shouldShowSkillTabs,
+      }"
+      class="agent-main-content"
+    >
+      <!-- 左侧会话列表 - 固定宽度，可折叠 -->
+      <div :class="['sidebar', { collapsed: sidebarCollapsed }]">
         <div class="sidebar-header">
           <el-button
-            type="primary"
             class="new-chat-btn"
+            type="primary"
             @click="initNewConversation"
           >
             <i class="el-icon-plus"></i>
@@ -35,15 +43,9 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 主内容区 -->
-    <div
-      class="agent-main-content"
-      :class="{ 'has-workspace': panelVisible && activeWorkspace }"
-    >
-      <!-- 主消息区域 -->
-      <div class="main-content-body">
+      <!-- 中间区域：主消息区域（自适应）或 40% 宽度 -->
+      <div class="center-panel">
         <!-- 顶部标题栏 -->
         <div class="header">
           <div class="header-left">
@@ -79,7 +81,7 @@
               class="header-icon-btn workspace-entry-btn"
               @click="handleViewSkillWorkspace"
             >
-              <span class="btn-text">
+              <span>
                 {{ $t('generalAgent.header.workspace') }}
               </span>
             </button>
@@ -88,11 +90,11 @@
 
         <!-- 消息区域 - 独立滚动 -->
         <div
+          ref="messageArea"
           :class="[
             'message-area',
             { empty: isEmptyConversation && !isLoadingHistory },
           ]"
-          ref="messageArea"
           @scroll="handleMessageAreaScroll"
         >
           <!-- 加载历史记录中 -->
@@ -109,8 +111,8 @@
             <message-item
               v-for="(msg, index) in messageList"
               :key="msg.id || index"
-              :message="msg"
               :is-last-message="index === messageList.length - 1"
+              :message="msg"
               :thread-id="currentThreadId"
               @regenerate="handleRegenerate"
               @view-workspace="handleViewWorkspace"
@@ -131,14 +133,14 @@
             @click="handleScrollToBottomClick"
           >
             <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
               fill="none"
+              height="16"
               stroke="currentColor"
-              stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
             >
               <polyline points="6,9 12,15 18,9"></polyline>
             </svg>
@@ -174,12 +176,12 @@
             <div style="margin-bottom: 12px">
               <ModelSelect
                 v-model="selectedModel"
+                :filterable="true"
+                :loading="modelLoading"
                 :options="modelList"
                 :placeholder="$t('common.model.select')"
-                :loading="modelLoading"
-                :filterable="true"
-                @change="handleModelChange"
                 class="model-select-inline"
+                @change="handleModelChange"
               />
             </div>
 
@@ -189,44 +191,39 @@
               <div
                 v-for="(file, index) in uploadedFiles"
                 :key="index"
-                class="echo-img-box"
-                :class="{ 'is-uploading': file.uploading }"
+                :class="['echo-img-box', { 'is-uploading': file.uploading }]"
               >
-                <div class="echo-img-item">
-                  <!-- 图片类型 -->
-                  <el-image
-                    v-if="file.type && file.type.startsWith('image/')"
-                    class="echo-img"
-                    :src="file.displayUrl"
-                    :preview-src-list="[file.displayUrl]"
-                  ></el-image>
-                  <!-- 文档类型 -->
-                  <div v-else class="echo-doc-box">
-                    <img
-                      :src="require('@/assets/imgs/fileicon.png')"
-                      class="docIcon"
-                    />
-                    <div class="docInfo">
-                      <p class="docInfo_name">
-                        {{ $t('knowledgeManage.fileName') }}：{{
-                          file.fileName
-                        }}
-                      </p>
-                      <p class="docInfo_size">
-                        {{ $t('knowledgeManage.fileSize') }}：{{
-                          file.size > 1024
-                            ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
-                            : (file.size || 0) + ' bytes'
-                        }}
-                      </p>
-                    </div>
+                <!-- 图片类型 -->
+                <el-image
+                  v-if="file.type && file.type.startsWith('image/')"
+                  :preview-src-list="[file.displayUrl]"
+                  :src="file.displayUrl"
+                  class="echo-img"
+                ></el-image>
+                <!-- 文档类型 -->
+                <div v-else class="echo-doc-box">
+                  <img
+                    :src="require('@/assets/imgs/fileicon.png')"
+                    class="docIcon"
+                  />
+                  <div class="docInfo">
+                    <p class="docInfo_name">
+                      {{ $t('knowledgeManage.fileName') }}：{{ file.fileName }}
+                    </p>
+                    <p class="docInfo_size">
+                      {{ $t('knowledgeManage.fileSize') }}：{{
+                        file.size > 1024
+                          ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+                          : (file.size || 0) + ' bytes'
+                      }}
+                    </p>
                   </div>
-                  <!-- 删除按钮 -->
-                  <i
-                    class="el-icon-close echo-close"
-                    @click="removeFile(index)"
-                  ></i>
                 </div>
+                <!-- 删除按钮 -->
+                <i
+                  class="el-icon-close echo-close"
+                  @click="removeFile(index)"
+                ></i>
               </div>
             </div>
 
@@ -235,10 +232,10 @@
               <MentionInput
                 ref="mentionInput"
                 v-model="inputMessage"
-                :placeholder="inputPlaceholder"
-                @keydown-enter="handleKeyDown"
                 :disabled="isStreaming || previewIsStreaming"
                 :isDIP="selectedMode?.value === 'DIP Agent'"
+                :placeholder="inputPlaceholder"
+                @keydown-enter="handleKeyDown"
               />
             </div>
 
@@ -302,36 +299,36 @@
                 </StreamUploadField>
                 <el-button
                   v-show="isStreaming"
-                  class="send-btn stop-btn"
                   circle
+                  class="send-btn stop-btn"
                   @click="handleStopClick"
                 >
                   <svg
                     class="stop-icon"
+                    height="16"
                     viewBox="0 0 24 24"
                     width="16"
-                    height="16"
                   >
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                    <rect height="12" rx="2" width="12" x="6" y="6" />
                   </svg>
                 </el-button>
                 <el-button
                   v-show="!isStreaming"
-                  type="primary"
-                  class="send-btn"
-                  circle
                   :disabled="!canSend"
+                  circle
+                  class="send-btn"
+                  type="primary"
                   @click="sendMessage"
                 >
                   <svg
                     class="send-icon"
+                    height="18"
                     viewBox="0 0 24 24"
                     width="18"
-                    height="18"
                   >
                     <path
-                      fill="currentColor"
                       d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
+                      fill="currentColor"
                     />
                   </svg>
                 </el-button>
@@ -356,8 +353,8 @@
               <img
                 v-if="mode?.avatar"
                 :src="mode?.avatar"
-                class="mode-avatar"
                 alt=""
+                class="mode-avatar"
               />
               <i v-else :class="mode?.icon"></i>
               <span>{{ mode?.label }}</span>
@@ -369,48 +366,55 @@
         </div>
       </div>
 
-      <!-- Workspace 面板 -->
-      <transition name="workspace-slide">
-        <workspace-panel
-          v-if="panelVisible && activeWorkspace"
-          ref="workspacePanel"
-          :thread-id="activeWorkspace.threadId"
-          :run-id="activeWorkspace.runId"
-          :initial-data="currentWorkspaceTree"
-          @close="hidePanel"
-          @preview-file="handlePreviewFile"
-        />
-      </transition>
+      <!-- 右侧区域：工作空间 + 预览（固定宽度或 60%） -->
+      <div class="right-area">
+        <!-- Workspace 面板 -->
+        <transition name="workspace-slide">
+          <workspace-panel
+            v-if="panelVisible && activeWorkspace"
+            ref="workspacePanel"
+            :initial-data="currentWorkspaceTree"
+            :run-id="activeWorkspace.runId"
+            :thread-id="activeWorkspace.threadId"
+            @close="hidePanel"
+            @preview-file="handlePreviewFile"
+          />
+        </transition>
 
-      <!-- 文件预览抽屉 -->
-      <transition name="workspace-slide">
-        <file-preview-drawer
-          v-if="previewVisible"
-          :visible.sync="previewVisible"
-          :file="previewFile"
-          :file-path="previewFilePath"
-          :blob="previewBlob"
-          :loading="previewLoading"
-          @close="previewVisible = false"
-        />
-      </transition>
+        <!-- 预览面板：文件预览或 SkillTabs -->
+        <transition name="workspace-slide">
+          <div
+            v-if="previewVisible || shouldShowSkillTabs"
+            class="preview-panel"
+          >
+            <!-- 文件预览抽屉 -->
+            <file-preview-drawer
+              v-if="previewVisible"
+              :blob="previewBlob"
+              :file="previewFile"
+              :file-path="previewFilePath"
+              :loading="previewLoading"
+              :visible.sync="previewVisible"
+              @close="previewVisible = false"
+            />
 
-      <!--
-        预览会话面板生命周期说明：
-        1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
-        2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
-      -->
-      <transition name="workspace-slide">
-        <SkillTabs
-          v-if="shouldMountSkillTabs"
-          v-show="shouldShowSkillTabs"
-          :key="skillTabsKey"
-          :skillPreviewParams="skillPreviewParams"
-          class="preview-chat-panel"
-          @view-workspace="handleViewWorkspace"
-          @refresh-workspace="loadWorkspaceFiles"
-        />
-      </transition>
+            <!--
+              预览会话面板生命周期说明：
+              1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
+              2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
+              3. SkillTabs 和文件预览抽屉互斥显示，占用相同空间
+            -->
+            <SkillTabs
+              v-if="shouldMountSkillTabs"
+              v-show="shouldShowSkillTabs"
+              :key="skillTabsKey"
+              :skillPreviewParams="skillPreviewParams"
+              @view-workspace="handleViewWorkspace"
+              @refresh-workspace="loadWorkspaceFiles"
+            />
+          </div>
+        </transition>
+      </div>
 
       <!-- 配置弹窗 -->
       <configDialog
@@ -1711,33 +1715,63 @@ $message-max-width: 900px;
   box-sizing: border-box;
 }
 
-.sidebar {
+.agent-main-content {
+  flex: 1;
   display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  width: 240px;
-  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition:
-    width 0.3s ease,
-    margin-right 0.3s ease;
-  margin-right: 16px;
+
+  // 只有主对话时，主对话占据 100%
+  &:not(.has-sidebar):not(.has-workspace):not(.has-preview) {
+    .center-panel {
+      width: 100%;
+    }
+
+    .right-area {
+      display: none;
+    }
+  }
+
+  // 有预览时，左侧 40%，右侧 60%
+  &.has-preview {
+    .center-panel {
+      width: 40%;
+    }
+
+    .right-area {
+      width: 60%;
+    }
+  }
+
+  // 没有工作空间且没有预览时，隐藏 right-area
+  &:not(.has-workspace):not(.has-preview) {
+    .right-area {
+      display: none;
+    }
+  }
+}
+
+// 左侧会话列表 - 固定宽度
+.sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  height: 100%;
+  flex-shrink: 0;
+  background: #f9fafb;
+  border-right: 1px solid #f0f0f0;
+  transition: width 0.3s ease;
+  overflow: hidden;
 
   &.collapsed {
     width: 0;
-    margin-right: 0;
-    box-shadow: none;
-  }
-
-  .sidebar-content {
-    display: flex;
-    flex-direction: column;
-    width: 240px;
-    height: 100%;
-    flex-shrink: 0;
+    border-right: none;
   }
 
   .sidebar-header {
@@ -1843,26 +1877,8 @@ $message-max-width: 900px;
   }
 }
 
-.agent-main-content {
-  flex: 1;
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-
-  &.has-workspace {
-    .main-content-body {
-      flex: 1;
-      min-width: 25vw;
-    }
-  }
-}
-
-.main-content-body {
+// 中间区域：主对话（自适应或 40%）
+.center-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1870,6 +1886,32 @@ $message-max-width: 900px;
   min-height: 0;
   position: relative;
   overflow: hidden;
+  background: #fff;
+  transition: width 0.3s ease;
+}
+
+// 右侧区域：工作空间 + 预览（固定宽度或 60%）
+.right-area {
+  flex: none;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.3s ease;
+
+  // Workspace 面板：固定宽度
+  ::v-deep .workspace-panel {
+    border-left: 1px solid #f0f0f0;
+  }
+
+  // 预览面板：占据剩余空间
+  .preview-panel {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border-left: 1px solid #f0f0f0;
+  }
 }
 
 .header {
@@ -2122,151 +2164,83 @@ $message-max-width: 900px;
 
     .echo-img-box {
       position: relative;
+      display: inline-block;
 
-      .echo-img-item {
-        position: relative;
-        display: inline-block;
+      // 图片样式
+      .echo-img {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
 
-        // 图片样式
-        .echo-img {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px;
-          cursor: pointer;
+      // 文档样式
+      .echo-doc-box {
+        background: #fff;
+        min-width: 200px;
+        max-width: 300px;
+        border: 1px solid #dcdfe6;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 50px 10px 5px;
+
+        .docIcon {
+          width: 30px;
+          height: 30px;
+          flex-shrink: 0;
         }
 
-        // 文档样式
-        .echo-doc-box {
-          background: #fff;
-          min-width: 200px;
-          max-width: 300px;
-          border: 1px solid #dcdfe6;
-          border-radius: 5px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 50px 10px 5px;
+        .docInfo {
+          flex: 1;
+          margin-left: 8px;
+          overflow: hidden;
 
-          .docIcon {
-            width: 30px;
-            height: 30px;
-            flex-shrink: 0;
-          }
-
-          .docInfo {
-            flex: 1;
-            margin-left: 8px;
+          .docInfo_name {
+            color: #333;
+            font-size: 13px;
+            margin: 0;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-            .docInfo_name {
-              color: #333;
-              font-size: 13px;
-              margin: 0;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-
-            .docInfo_size {
-              color: #bbbbbb;
-              font-size: 12px;
-              margin: 4px 0 0 0;
-            }
+          .docInfo_size {
+            color: #bbbbbb;
+            font-size: 12px;
+            margin: 4px 0 0 0;
           }
         }
+      }
 
-        // 关闭按钮
-        .echo-close {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          width: 18px;
-          height: 18px;
-          background: #ef4444;
-          color: #fff;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          font-size: 12px;
-          transition: transform 0.2s;
-          z-index: 10;
+      // 关闭按钮
+      .echo-close {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        transition: transform 0.2s;
+        z-index: 10;
 
-          &:hover {
-            transform: scale(1.1);
-          }
+        &:hover {
+          transform: scale(1.1);
         }
+      }
+    }
 
-        // 加载图标
-        .loading-icon {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          font-size: 20px;
-          color: #409eff;
-          z-index: 5;
-        }
-
-        // 上传遮罩层
-        .upload-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 5;
-
-          .upload-progress-bar {
-            width: 36px;
-            height: 36px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            svg {
-              position: absolute;
-              top: 0;
-              left: 0;
-              transform: rotate(-90deg);
-
-              circle {
-                fill: none;
-                stroke-width: 3;
-              }
-
-              .progress-bg {
-                stroke: rgba(255, 255, 255, 0.3);
-              }
-
-              .progress-fill {
-                stroke: #fff;
-                stroke-linecap: round;
-                transition: stroke-dashoffset 0.3s ease;
-              }
-            }
-
-            .progress-text {
-              color: #fff;
-              font-size: 9px;
-              font-weight: 600;
-              z-index: 1;
-            }
-          }
-        }
-
-        &.is-uploading {
-          .echo-close {
-            display: none;
-          }
-        }
+    &.is-uploading {
+      .echo-close {
+        display: none;
       }
     }
   }
@@ -2398,12 +2372,6 @@ $message-max-width: 900px;
       border-color: rgba($claude-primary, 0.3);
     }
 
-    &.has-selection {
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
-      background: rgba($claude-primary, 0.05);
-    }
-
     i {
       font-size: 16px;
     }
@@ -2477,30 +2445,6 @@ $message-max-width: 900px;
     }
   }
 
-  .model-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-
-    .model-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .model-provider {
-      flex-shrink: 0;
-      margin-left: 8px;
-      padding: 2px 6px;
-      font-size: 11px;
-      color: #666;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-  }
-
   .input-footer {
     text-align: center;
     font-size: 12px;
@@ -2529,11 +2473,5 @@ $message-max-width: 900px;
 .workspace-slide-leave-to {
   transform: translateX(100%);
   opacity: 0;
-}
-
-// Workspace 面板容器（需要添加）
-.workspace-panel {
-  width: 320px;
-  flex-shrink: 0;
 }
 </style>

@@ -278,14 +278,6 @@ export default {
       }
     },
   },
-  mounted() {
-    if (this.visible) {
-      this.$nextTick(() => {
-        this.bindCopyButtons();
-        this.bindCodeCopyButtons();
-      });
-    }
-  },
   beforeDestroy() {
     this.unbindCopyButtons();
     this.stopResize();
@@ -351,8 +343,7 @@ export default {
         this.previewType = 'unsupported';
       } finally {
         this.$nextTick(() => {
-          this.bindCopyButtons();
-          this.bindCodeCopyButtons();
+          this.rebindCopyButtons();
         });
       }
     },
@@ -466,14 +457,9 @@ export default {
       }
     },
 
-    bindCopyButtons() {
-      if (!this.$refs.markdownRef) return;
-
-      this.unbindCopyButtons();
-
-      const copyButtons =
-        this.$refs.markdownRef.querySelectorAll('.code-copy-btn');
-      copyButtons.forEach(btn => {
+    bindCopyButtonsToContainer(container) {
+      if (!container) return;
+      container.querySelectorAll('.code-copy-btn').forEach(btn => {
         const handler = e => {
           e.preventDefault();
           e.stopPropagation();
@@ -488,18 +474,12 @@ export default {
           }
 
           if (text) {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                const originalText = e.target.innerText;
-                e.target.innerText = this.$t('common.copy.copySuccess');
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                }, 1500);
-              })
-              .catch(() => {
-                this.$message.error(this.$t('tempSquare.copyFailed'));
-              });
+            const res = this.$copy(text);
+            if (res) {
+              this.$message.success(this.$t('common.copy.copySuccess'));
+            } else {
+              this.$message.error(this.$t('tempSquare.copyFailed'));
+            }
           }
         };
         btn.addEventListener('click', handler);
@@ -507,42 +487,10 @@ export default {
       });
     },
 
-    bindCodeCopyButtons() {
-      if (!this.$refs.codeRef) return;
-
-      const copyButtons = this.$refs.codeRef.querySelectorAll('.code-copy-btn');
-      copyButtons.forEach(btn => {
-        const handler = e => {
-          e.preventDefault();
-          e.stopPropagation();
-          const codeBlock = e.target.closest('pre.code-block');
-          const lines = codeBlock?.querySelectorAll('.code-line-content');
-
-          let text = '';
-          if (lines && lines.length > 0) {
-            lines.forEach((line, i) => {
-              text += line.textContent + (i < lines.length - 1 ? '\n' : '');
-            });
-          }
-
-          if (text) {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                const originalText = e.target.innerText;
-                e.target.innerText = this.$t('common.copy.copySuccess');
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                }, 1500);
-              })
-              .catch(() => {
-                this.$message.error(this.$t('tempSquare.copyFailed'));
-              });
-          }
-        };
-        btn.addEventListener('click', handler);
-        this.copyClickHandlers.push({ btn, handler });
-      });
+    rebindCopyButtons() {
+      this.unbindCopyButtons();
+      this.bindCopyButtonsToContainer(this.$refs.markdownRef);
+      this.bindCopyButtonsToContainer(this.$refs.codeRef);
     },
 
     unbindCopyButtons() {
@@ -566,7 +514,7 @@ export default {
 .preview-panel {
   position: relative;
   height: 100%;
-  min-width: 500px;
+  width: 100%;
   background: #fff;
   border-left: 1px solid #e4e7ed;
   display: flex;

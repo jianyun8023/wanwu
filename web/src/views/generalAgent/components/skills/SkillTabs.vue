@@ -113,7 +113,7 @@ export default {
 
 <style lang="scss" scoped>
 .skill-tabs-container {
-  width: 650px;
+  width: 100%;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
