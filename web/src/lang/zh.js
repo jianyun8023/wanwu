@@ -2154,6 +2154,7 @@ export default {
     copyrightMsg: '请输入版权信息',
     copyrightEnable: '是否在界面中显示版权信息',
     urlEffectiveTime: 'URL生效时间',
+    expiredAtBeforeNow: '过期时间不能早于当前时间',
     appDescMsg: '请输入应用描述',
     appDesc: '应用描述',
     appNameMsg: '请输入应用名称',

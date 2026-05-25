@@ -1164,7 +1164,6 @@ export default {
       sessionCom.pushHistory(params);
 
       this._print = new Print({
-        timer: 10000,
         onPrintEnd: () => {
           this.onMainPrintEnd && this.onMainPrintEnd();
         },
