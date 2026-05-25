@@ -546,13 +546,42 @@ func (r *Runner) sendPromptAsync(ctx context.Context) error {
 }
 
 // buildSystemAndPrompt 构建系统提示词和用户提示词。
+// 当 SystemMessageStrategy 为 merge 时，提取 messages 中的 system 消息并合并到 instruction 中。
 // historyMessages: 倒序找到第一条 role=user 之前的所有消息
 // prompt: 倒序找到第一条 role=user 消息，将这条及之后的所有消息拼接成 prompt
 func (r *Runner) buildSystemAndPrompt() (system string, prompt string, err error) {
+	messages := r.opt.Messages
+
+	// 提取 system 消息到 instruction（仅 merge 策略）
+	var extraSystemContent string
+	var otherMessages []adk.Message
+	if r.opt.SystemMessageStrategy == wga_sandbox_option.SystemMessageStrategyMerge {
+		for _, msg := range messages {
+			if msg.Role == schema.System && msg.Content != "" {
+				if extraSystemContent != "" {
+					extraSystemContent += "\n\n"
+				}
+				extraSystemContent += msg.Content
+			} else {
+				otherMessages = append(otherMessages, msg)
+			}
+		}
+	} else {
+		otherMessages = messages
+	}
+
+	instruction := r.opt.Instruction
+	if extraSystemContent != "" {
+		if instruction != "" {
+			instruction += "\n\n"
+		}
+		instruction += extraSystemContent
+	}
+
 	// 从后往前找到第一条 role=user 的消息
 	firstUserIndex := -1
-	for i := len(r.opt.Messages) - 1; i >= 0; i-- {
-		if r.opt.Messages[i].Role == schema.User {
+	for i := len(otherMessages) - 1; i >= 0; i-- {
+		if otherMessages[i].Role == schema.User {
 			firstUserIndex = i
 			break
 		}
@@ -564,16 +593,16 @@ func (r *Runner) buildSystemAndPrompt() (system string, prompt string, err error
 	if firstUserIndex >= 0 {
 		// historyMessages: 第一条 user 之前的消息
 		if firstUserIndex > 0 {
-			historyMessages = r.opt.Messages[:firstUserIndex]
+			historyMessages = otherMessages[:firstUserIndex]
 		}
 		// promptMessages: 第一条 user 及之后的消息
-		promptMessages = r.opt.Messages[firstUserIndex:]
+		promptMessages = otherMessages[firstUserIndex:]
 	} else {
 		// 没有 user 消息，全部作为 prompt
-		promptMessages = r.opt.Messages
+		promptMessages = otherMessages
 	}
 
-	system, err = renderSystem(r.opt.Instruction, r.opt.OverallTask, historyMessages)
+	system, err = renderSystem(instruction, r.opt.OverallTask, historyMessages)
 	if err != nil {
 		return "", "", err
 	}

@@ -88,6 +88,14 @@ type SandboxType string
 // RunnerType 运行器类型。
 type RunnerType string
 
+// SystemMessageStrategy system 消息处理策略。
+type SystemMessageStrategy string
+
+const (
+	SystemMessageStrategyNone  SystemMessageStrategy = ""      // 不处理（默认）
+	SystemMessageStrategyMerge SystemMessageStrategy = "merge" // 合并所有 system 消息到第一位
+)
+
 // ============================================================================
 // 类型 - SandboxConfig
 // ============================================================================
@@ -151,8 +159,9 @@ type RunOption struct {
 	OutputDir                  string
 	Skills                     []Skill
 	Tools                      []Tool
-	MCPs                       []MCP         // MCP 服务器列表
-	Messages                   []adk.Message // 历史消息 + 当前问题（最后一条 User 消息）
+	MCPs                       []MCP                 // MCP 服务器列表
+	Messages                   []adk.Message         // 历史消息 + 当前问题（最后一条 User 消息）
+	SystemMessageStrategy      SystemMessageStrategy // system 消息处理策略，默认不处理
 	EnableThinking             bool
 	EnableHumanInTheLoop       bool // 是否启用人机交互
 	EnableHumanInTheLoopCustom bool // 是否允许用户自定义回答
@@ -281,6 +290,13 @@ func WithOutputDir(outputDir string) Option {
 func WithMessages(messages []adk.Message) Option {
 	return OptionFunc(func(opts *RunOption) error {
 		opts.Messages = append(opts.Messages, messages...)
+		return nil
+	})
+}
+
+func WithSystemMessageStrategy(strategy SystemMessageStrategy) Option {
+	return OptionFunc(func(opts *RunOption) error {
+		opts.SystemMessageStrategy = strategy
 		return nil
 	})
 }

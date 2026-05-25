@@ -332,6 +332,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 			RunID:    runID,
 		}),
 		wga_option.WithEnableHumanInTheLoop(config.WgaCfg().HumanInTheLoop, true),
+		wga_option.WithSystemMessageStrategy(wga_option.SystemMessageStrategyMerge),
 	}
 
 	// 校验并构建模型配置选项（由调用方提供 ModelConfig）
