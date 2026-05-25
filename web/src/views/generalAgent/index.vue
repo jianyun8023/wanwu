@@ -77,7 +77,7 @@
 
           <div v-if="isSkillType" class="header-right">
             <button
-              v-if="isSkillType && !workspacePanelVisible"
+              v-if="isSkillType && !panelVisible"
               class="header-icon-btn workspace-entry-btn"
               @click="handleViewSkillWorkspace"
             >
@@ -369,7 +369,13 @@
       <!-- 右侧区域：工作空间 + 预览（固定宽度或 60%） -->
       <div class="right-area">
         <!-- Workspace 面板 -->
-        <transition name="workspace-slide">
+        <transition
+          :name="
+            shouldShowSkillTabs || previewVisible
+              ? 'workspace-slide-inner'
+              : 'workspace-slide'
+          "
+        >
           <workspace-panel
             v-if="panelVisible && activeWorkspace"
             ref="workspacePanel"
@@ -382,38 +388,33 @@
         </transition>
 
         <!-- 预览面板：文件预览或 SkillTabs -->
-        <transition name="workspace-slide">
-          <div
-            v-if="previewVisible || shouldShowSkillTabs"
-            class="preview-panel"
-          >
-            <!-- 文件预览抽屉 -->
-            <file-preview-drawer
-              v-if="previewVisible"
-              :blob="previewBlob"
-              :file="previewFile"
-              :file-path="previewFilePath"
-              :loading="previewLoading"
-              :visible.sync="previewVisible"
-              @close="previewVisible = false"
-            />
+        <div v-if="previewVisible || shouldShowSkillTabs" class="preview-panel">
+          <!-- 文件预览抽屉 -->
+          <file-preview-drawer
+            v-if="previewVisible"
+            :blob="previewBlob"
+            :file="previewFile"
+            :file-path="previewFilePath"
+            :loading="previewLoading"
+            :visible.sync="previewVisible"
+            @close="previewVisible = false"
+          />
 
-            <!--
+          <!--
               预览会话面板生命周期说明：
               1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
               2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
               3. SkillTabs 和文件预览抽屉互斥显示，占用相同空间
             -->
-            <SkillTabs
-              v-if="shouldMountSkillTabs"
-              v-show="shouldShowSkillTabs"
-              :key="skillTabsKey"
-              :skillPreviewParams="skillPreviewParams"
-              @view-workspace="handleViewWorkspace"
-              @refresh-workspace="loadWorkspaceFiles"
-            />
-          </div>
-        </transition>
+          <SkillTabs
+            v-if="shouldMountSkillTabs"
+            v-show="shouldShowSkillTabs"
+            :key="skillTabsKey"
+            :skillPreviewParams="skillPreviewParams"
+            @view-workspace="handleViewWorkspace"
+            @refresh-workspace="loadWorkspaceFiles"
+          />
+        </div>
       </div>
 
       <!-- 配置弹窗 -->
@@ -462,7 +463,7 @@ import {
 import { getCustomSkillInfo } from '@/api/templateSquare';
 import { selectModelList } from '@/api/modelAccess';
 import { avatarSrc, resDownloadFile } from '@/utils/util';
-import { mapActions, mapGetters, mapState } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { SSEEventParser } from './utils/sse-parser';
 // 引入工具函数
 import { aggregateEventsToMessages } from './utils/message-aggregator';
@@ -524,9 +525,9 @@ export default {
       currentStage: '',
 
       // Workspace 相关
-      workspacePanelVisible: false,
-      workspaceLoading: false,
-      workspaceInfo: null,
+      activeWorkspace: null,
+      workspaceTrees: {},
+      panelVisible: false,
 
       // 文件预览
       previewVisible: false,
@@ -545,12 +546,16 @@ export default {
     };
   },
   computed: {
-    ...mapState('workspace', ['activeWorkspace', 'panelVisible']),
-    ...mapGetters('workspace', ['hasWorkspace', 'currentWorkspaceTree']),
     ...mapGetters('user', ['commonInfo']),
 
     assistantAvatar() {
       return avatarSrc(this.commonInfo?.data?.tab?.logo?.path);
+    },
+
+    currentWorkspaceTree() {
+      if (!this.activeWorkspace) return null;
+      const key = `${this.activeWorkspace.threadId}-${this.activeWorkspace.runId}`;
+      return this.workspaceTrees[key] || null;
     },
 
     currentTitle() {
@@ -627,7 +632,6 @@ export default {
   },
   watch: {
     panelVisible(val) {
-      this.workspacePanelVisible = val;
       if (val && this.activeWorkspace) {
         this.loadWorkspaceFiles();
         this.$nextTick(() => this.updateWorkspaceRect());
@@ -638,7 +642,13 @@ export default {
     },
     previewVisible(val) {
       if (val) {
+        this.sidebarCollapsed = true;
         this.$nextTick(() => this.updateWorkspaceRect());
+      }
+    },
+    shouldShowSkillTabs(val) {
+      if (val) {
+        this.sidebarCollapsed = true;
       }
     },
   },
@@ -655,23 +665,52 @@ export default {
     });
   },
   beforeDestroy() {
-    this.reset();
+    this.resetWorkspace();
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
   },
   methods: {
-    ...mapActions('workspace', [
-      'handleWorkspaceActivity',
-      'showPanel',
-      'hidePanel',
-      'setWorkspaceTree',
-      'setActiveWorkspace',
-      'clearWorkspace',
-      'reset',
-    ]),
     ...mapActions('user', ['getPermissionInfo', 'getCommonInfo']),
+
+    // Workspace 面板控制
+    handleWorkspaceActivity(content) {
+      if (!content) return;
+      const { runId, threadId, fileCount, totalSize, timestamp } = content;
+      this.activeWorkspace = {
+        runId,
+        threadId,
+        fileCount: fileCount || 0,
+        totalSize: totalSize || 0,
+        timestamp: timestamp || Date.now(),
+      };
+    },
+    setActiveWorkspace(payload) {
+      this.activeWorkspace = payload;
+    },
+    showPanel() {
+      this.panelVisible = true;
+    },
+    hidePanel() {
+      this.panelVisible = false;
+    },
+    setWorkspaceTree({ threadId, runId, data }) {
+      const key = `${threadId}-${runId}`;
+      this.$set(this.workspaceTrees, key, {
+        files: data.files || [],
+        fileCount: data.fileCount || 0,
+        totalSize: data.totalSize || 0,
+        isDisplay: data.isDisplay || false,
+        loaded: true,
+        loading: false,
+      });
+    },
+    resetWorkspace() {
+      this.activeWorkspace = null;
+      this.workspaceTrees = {};
+      this.panelVisible = false;
+    },
 
     async initUserInfo() {
       if (localStorage.getItem('access_cert')) {
@@ -748,7 +787,6 @@ export default {
       const { chatType, customSkillId, chatMode, threadId } =
         this.$route.query || {};
 
-      let isNewChatMode = false;
       let initialChatMode = '';
 
       if (chatType) {
@@ -758,7 +796,6 @@ export default {
         this.customSkillId = customSkillId;
       }
       if (chatMode) {
-        isNewChatMode = true;
         initialChatMode = chatMode;
         this.skillChatMode = 'normal';
 
@@ -877,13 +914,13 @@ export default {
               this.$nextTick(() => {
                 this.startSkillPresetConversation(initialChatMode);
               });
-            } else if (!isNewRefresh) {
-              // 非新创建会话，则走正常加载逻辑
-              this.selectConversation(targetThreadId);
-            } else {
+            } else if (isNewRefresh) {
               // 刚刷新后的新会话且无 initialChatMode，激活模式并加载配置即可
               this.addMode(MAIN_CHAT_MODES.SKILL_MODE);
               this.loadConfig();
+            } else {
+              // 非新创建会话，则走正常加载逻辑
+              this.selectConversation(targetThreadId);
             }
           }
         } else {
@@ -1479,7 +1516,6 @@ export default {
     async loadWorkspaceFiles() {
       if (!this.activeWorkspace || !this.currentThreadId) return;
 
-      this.workspaceLoading = true;
       try {
         const res = await getGeneralAgentWorkspace({
           threadId: this.currentThreadId,
@@ -1492,8 +1528,8 @@ export default {
             data: res.data,
           });
         }
-      } finally {
-        this.workspaceLoading = false;
+      } catch (error) {
+        console.error('loadWorkspaceFiles error:', error);
       }
     },
 
@@ -1726,14 +1762,18 @@ $message-max-width: 900px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
-  // 只有主对话时，主对话占据 100%
-  &:not(.has-sidebar):not(.has-workspace):not(.has-preview) {
-    .center-panel {
-      width: 100%;
-    }
-
+  // 没有工作空间且没有预览时，right-area 宽度为 0
+  &:not(.has-workspace):not(.has-preview) {
     .right-area {
-      display: none;
+      width: 0;
+      overflow: hidden;
+    }
+  }
+
+  // 有工作空间时，左侧自适应，右侧工作空间宽度
+  &.has-workspace:not(.has-preview) {
+    .right-area {
+      width: 400px;
     }
   }
 
@@ -1748,10 +1788,10 @@ $message-max-width: 900px;
     }
   }
 
-  // 没有工作空间且没有预览时，隐藏 right-area
-  &:not(.has-workspace):not(.has-preview) {
+  // 有工作空间 + 预览时，右侧同时包含两者
+  &.has-workspace.has-preview {
     .right-area {
-      display: none;
+      width: 60%;
     }
   }
 }
@@ -2463,7 +2503,7 @@ $message-max-width: 900px;
   }
 }
 
-// Workspace 面板过渡动画
+// Workspace 面板过渡动画 — 无预览时从页面右侧滑入
 .workspace-slide-enter-active,
 .workspace-slide-leave-active {
   transition: all 0.3s ease;
@@ -2473,5 +2513,21 @@ $message-max-width: 900px;
 .workspace-slide-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+// Workspace 面板过渡动画 — 有预览时从 right-area 左侧滑入
+.workspace-slide-inner-enter-active,
+.workspace-slide-inner-leave-active {
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.workspace-slide-inner-enter,
+.workspace-slide-inner-leave-to {
+  width: 0 !important;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>

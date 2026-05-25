@@ -5,19 +5,18 @@ import { login } from './module/login';
 import { user } from './module/user';
 import { app } from './module/app';
 import { workflow } from './module/workflow';
-import workspace from './module/generalAgentWorkspace';
 
 Vue.use(Vuex);
 // 用户信息持久化
 const vuexLocal = new VuexPersistence({
   key: 'access_cert',
-  storage: window.localStorage,
+  storage: localStorage,
   modules: ['user'],
 });
 //知识库全选权限持久化
 const permissionLocal = new VuexPersistence({
   key: 'permission_data',
-  storage: window.localStorage,
+  storage: localStorage,
   modules: ['app'],
   reducer: state => {
     return {
@@ -56,7 +55,6 @@ export const store = new Vuex.Store({
     user,
     app,
     workflow,
-    workspace,
   },
   plugins: [vuexLocal.plugin, permissionLocal.plugin],
 });

@@ -374,10 +374,6 @@ export default {
     handleStopClick() {
       this.stopStreaming(this.currentThreadId);
     },
-
-    handleWorkspaceActivity() {},
-
-    showPanel() {},
   },
 };
 </script>
