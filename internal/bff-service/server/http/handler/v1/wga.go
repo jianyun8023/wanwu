@@ -90,7 +90,7 @@ func GetGeneralAgentAssistantSelect(ctx *gin.Context) {
 	req := request.GetExplorationAppListRequest{
 		Name: ctx.Query("name"),
 	}
-	resp, err := service.GetAssistantSelect(ctx, getUserID(ctx), getOrgID(ctx), req)
+	resp, err := service.GetAssistantSelectSingle(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
 }
 

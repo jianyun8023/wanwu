@@ -405,6 +405,14 @@ func MultiAgentConfigUpdate(ctx *gin.Context, userId, orgId string, req request.
 }
 
 func GetAssistantSelect(ctx *gin.Context, userId, orgId string, req request.GetExplorationAppListRequest) (*response.ListResult, error) {
+	return getAssistantSelect(ctx, userId, orgId, req, false)
+}
+
+func GetAssistantSelectSingle(ctx *gin.Context, userId, orgId string, req request.GetExplorationAppListRequest) (*response.ListResult, error) {
+	return getAssistantSelect(ctx, userId, orgId, req, true)
+}
+
+func getAssistantSelect(ctx *gin.Context, userId, orgId string, req request.GetExplorationAppListRequest, singleOnly bool) (*response.ListResult, error) {
 	wlist, err := GetExplorationAppList(ctx, userId, orgId, request.GetExplorationAppListRequest{
 		Name:       req.Name,
 		AppType:    constant.AppTypeAgent,
@@ -417,6 +425,9 @@ func GetAssistantSelect(ctx *gin.Context, userId, orgId string, req request.GetE
 	if wlistSlice, ok := wlist.List.([]*response.ExplorationAppInfo); ok {
 		for _, w := range wlistSlice {
 			if w.User.UserId == userId {
+				if singleOnly && w.Category == constant.AgentCategoryMulti {
+					continue
+				}
 				appList = append(appList, w)
 			}
 		}
