@@ -20,6 +20,7 @@ from extensions.minio import minio_client
 from utils.build_prompt import build_docqa_prompt_from_search_list
 from utils.log import logger
 from utils.response import BizError
+from utils.tokenizers import CustomTokenizer
 
 
 def process_documents(query, file_urls):
@@ -166,7 +167,7 @@ def parse_doc(file_url):
     return docs
 
 
-def parse_doc_only(file_url):
+def parse_doc_only(file_url, max_token):
     """
     解析单个文档，不进行切分
 
@@ -179,7 +180,11 @@ def parse_doc_only(file_url):
     url = config.callback_cfg["URL"]["RAG_DOC_PARSER"]
     sentence_size = int(config.callback_cfg["DOC"]["CHUNK_SIZE"])
     overlap_size = float(config.callback_cfg["DOC"]["OVERLAP_RATIO"])
-    max_output_size = int(config.callback_cfg["DOC"]["MAX_OUTPUT_SIZE"])
+    limit_max_token = int(config.callback_cfg["DOC"]["DEFAULT_LIMIT_MAX_TOKEN"])
+
+    if max_token <= 0:
+        max_token = limit_max_token
+
     payload = json.dumps(
         {
             "url": file_url,
@@ -195,22 +200,6 @@ def parse_doc_only(file_url):
     if not docs:
         raise BizError("No document content parsed.")
 
-    # 在循环时截断
-    parts = []
-    current_size = 0
-
-    for doc in docs:
-        text = doc.get("text", "")
-        text_size = len(text.encode("utf-8"))
-        if max_output_size > 0 and current_size + text_size > max_output_size:
-            # 剩余空间不足，截断当前文本
-            remaining = max_output_size - current_size
-            if remaining > 0:
-                truncated = text.encode("utf-8")[:remaining].decode("utf-8", errors="ignore")
-                parts.append(truncated)
-            break
-        parts.append(text)
-        current_size += text_size
-
-    full_text = "\n".join(parts)
-    return full_text
+    full_text = "\n".join([doc.get("text", "") for doc in docs])
+    tokenizer = CustomTokenizer()
+    return tokenizer.truncate_text(full_text, max_token)

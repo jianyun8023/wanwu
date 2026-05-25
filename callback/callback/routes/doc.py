@@ -83,6 +83,10 @@ def req_parse_doc():
                 type: string
                 description: 已上传文档的下载 URL
                 example: "https://example.com/upload/file.pdf"
+              max_token:
+                type: int
+                description: 返回文档的最大token数
+                example: 200000
     responses:
       200:
         description: 解析成功
@@ -104,11 +108,12 @@ def req_parse_doc():
     data = request.get_json()
 
     file_url = data.get("upload_file_url")
+    max_token = data.get("max_token")
 
     if not file_url:
         raise BizError("upload_file_url is required")
 
-    content = doc_service.parse_doc_only(file_url)
+    content = doc_service.parse_doc_only(file_url, max_token)
 
     return response_ok(content)
 

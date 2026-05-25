@@ -62,11 +62,15 @@ func BuildDocReqStatusList(reqStatusList []int32) []int {
 //	 1 解析中      -> [110~114]           110=图谱开始解析，111=schema 解析成功，112=chunk 文本生成成功，
 //	                                    113=提取图谱成功，114=持久化存储成功
 //	 2 解析成功    -> [100]               graph 图谱提取成功（终态·成功）
-//	其它（失败）   -> [101~104, 119]      101=生成图谱获取 chunk 文本失败，102=提取图谱失败，
+//	3（失败）   -> [101~104, 119]      101=生成图谱获取 chunk 文本失败，102=提取图谱失败，
 //	                                    103=图谱持久化存储失败，104=graph schema 解析失败，
 //	                                    119=重启打断执行
 func BuildDocReqGraphStatusList(reqGraphStatusList []int32) []int {
 	var graphStatusList []int
+	// 四个状态都有的情况相当于全选
+	if checkAllGraphStatus(reqGraphStatusList) {
+		return graphStatusList
+	}
 	for _, v := range reqGraphStatusList {
 		switch v {
 		case -1: // 查全部
@@ -81,6 +85,19 @@ func BuildDocReqGraphStatusList(reqGraphStatusList []int32) []int {
 		}
 	}
 	return graphStatusList
+}
+
+func checkAllGraphStatus(reqGraphStatusList []int32) bool {
+	if len(reqGraphStatusList) >= 4 {
+		set := map[int32]bool{}
+		for _, v := range reqGraphStatusList {
+			set[v] = true
+		}
+		if set[0] && set[1] && set[2] && set[3] {
+			return true
+		}
+	}
+	return false
 }
 
 // BuildDocErrMessage 构造文档错误信息

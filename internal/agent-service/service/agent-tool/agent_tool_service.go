@@ -1,4 +1,4 @@
-package service
+package agent_tool
 
 import (
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
@@ -33,6 +33,11 @@ func BuildAgentToolsConfig(ctx *gin.Context, req *request.AgentChatParams, chatI
 	pluginToolList, pluginToolIDNameMap, _ := GetToolsFromOpenAPISchema(ctx, req.ToolParams.PluginToolList, changeToolName)
 	if len(pluginToolList) > 0 {
 		toolList = append(toolList, pluginToolList...)
+	}
+	//chatDoc 内置工具
+	docTool := GetChatDocTool(chatInfo)
+	if docTool != nil {
+		toolList = append(toolList, docTool)
 	}
 	//skill 工具
 	skillToolList, skillToolIDNameMap, _ := GetToolsFromSkills(ctx, req.ToolParams.SkillToolList, req.Input, req.AgentBaseParams.Name, req.UploadFile, chatInfo, changeToolName)

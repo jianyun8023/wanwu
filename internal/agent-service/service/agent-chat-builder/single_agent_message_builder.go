@@ -26,6 +26,9 @@ const (
 	toolEndJsonFormat     = "\n\n```工具%s调用结果：\n %s \n```\n\n"
 
 	unknownFileSize = -1 // 未知文件大小
+
+	contentLimitSize = 20 * 1024
+	contentLimitText = "\n... (因篇幅过长，后续内容已省略)"
 )
 
 type ToolMessageContent struct {
@@ -401,7 +404,7 @@ func processToolResult(respContext *response.AgentChatRespContext, subEventData 
 		if len(fileList) > 0 {
 			respContext.DownloadContext.AddDownloadFile(toolId, fileList)
 		}
-		toolResult = fmt.Sprintf(toolEndJsonFormat, "", content)
+		toolResult = fmt.Sprintf(toolEndJsonFormat, "", limitContent(content))
 		// 尝试判断是否是错误信息
 		errResp := extraErrMessage(content)
 		if len(errResp) > 0 {
@@ -409,9 +412,17 @@ func processToolResult(respContext *response.AgentChatRespContext, subEventData 
 			subEventData.Status = response.EventFailStatus
 		}
 	} else {
-		toolResult = fmt.Sprintf(toolEndFormat, "", content)
+		toolResult = fmt.Sprintf(toolEndFormat, "", limitContent(content))
 	}
 	return toolResult
+}
+
+// limitContent 限制content输出大小
+func limitContent(content string) string {
+	if len(content) <= contentLimitSize {
+		return content
+	}
+	return content[:contentLimitSize] + contentLimitText
 }
 
 // extraErrMessage 获取错误信息

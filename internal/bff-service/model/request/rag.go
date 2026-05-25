@@ -53,7 +53,6 @@ func (r RagBrief) Check() error {
 }
 
 func (r *RagConfig) Check() error {
-	r.RecommendQuestion = filterBlankStrings(r.RecommendQuestion)
 	return nil
 }
 
