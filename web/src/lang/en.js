@@ -1908,6 +1908,8 @@ export default {
       organization: '公开发布为应用：组织内可见',
       public: '公开发布为应用：全局可见',
     },
+    expiredAtBeforeNow:
+      'Expiration time cannot be earlier than the current time',
     chiChat: {
       title: '闲聊模式',
       tips: '开启闲聊模式，用户可进行大模型闲聊;禁用闲聊模式则只支持对知识库、问答库内涉及的内容进行问答。若只关联问答库，暂不支持开启闲聊模式',
