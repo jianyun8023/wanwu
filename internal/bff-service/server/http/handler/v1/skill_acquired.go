@@ -20,7 +20,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.AcquiredSkillListItem}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.AcquiredSkillInfo}}
 //	@Router			/agent/skill/acquired/list [get]
 func GetAcquiredSkillList(ctx *gin.Context) {
 	resp, err := service.GetAcquiredSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -98,7 +98,7 @@ func DownloadAcquiredSkill(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.AcquiredSkillVersionInfo}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SkillVersionInfo}}
 //	@Router			/agent/skill/acquired/version/list [get]
 func GetAcquiredSkillVersionList(ctx *gin.Context) {
 	skillId := ctx.Query("skillId")

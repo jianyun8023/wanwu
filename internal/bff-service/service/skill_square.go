@@ -43,20 +43,20 @@ func GetSquareSkillList(ctx *gin.Context, userId, orgId, name string) (*response
 
 func GetSquareBuiltinSkillList(ctx *gin.Context, userId, orgId, name string) (*response.ListResult, error) {
 	skillsCfgList := getSquareSkillConfigs(name)
-	list := buildSquareBuiltinSkillInfoList(skillsCfgList)
+	list := buildBuiltinSkillInfoList(skillsCfgList)
 	return &response.ListResult{
 		List:  list,
 		Total: int64(len(list)),
 	}, nil
 }
 
-func GetSquareBuiltinSkillDetail(ctx *gin.Context, skillId string) (*response.SquareBuiltinSkillDetail, error) {
+func GetSquareBuiltinSkillDetail(ctx *gin.Context, skillId string) (*response.BuiltinSkillDetail, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
 	}
-	return &response.SquareBuiltinSkillDetail{
-		SquareBuiltinSkillInfo: buildSquareBuiltinSkillInfo(skillsCfg),
+	return &response.BuiltinSkillDetail{
+		BuiltinSkillInfo: buildBuiltinSkillInfo(skillsCfg),
 		SkillMarkdown:          string(skillsCfg.SkillMarkdown),
 	}, nil
 }
@@ -80,7 +80,7 @@ func GetSquareShareSkillList(ctx *gin.Context, userId, orgId, name string) (*res
 		skillIds = append(skillIds, appInfo.GetAppId())
 	}
 	if len(skillIds) == 0 {
-		return &response.ListResult{List: []*response.SquareSkillInfo{}, Total: 0}, nil
+		return &response.ListResult{List: []*response.SharedSkillInfo{}, Total: 0}, nil
 	}
 
 	detailResp, err := mcp.GetCustomSkillDetailByIdList(ctx.Request.Context(), &mcp_service.CustomSkillDetailByIdListReq{
@@ -98,7 +98,7 @@ func GetSquareShareSkillList(ctx *gin.Context, userId, orgId, name string) (*res
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*response.SquareSkillInfo, 0, len(skillIds))
+	list := make([]*response.SharedSkillInfo, 0, len(skillIds))
 	for _, skillId := range skillIds {
 		skill := detailByID[skillId]
 		if skill == nil {
@@ -107,12 +107,14 @@ func GetSquareShareSkillList(ctx *gin.Context, userId, orgId, name string) (*res
 		if name != "" && !strings.Contains(skill.GetName(), name) {
 			continue
 		}
-		list = append(list, &response.SquareSkillInfo{
-			SkillId:  skill.GetSkillId(),
-			Name:     skill.GetName(),
-			Avatar:   cacheSkillAvatar(ctx, skill.GetAvatar()),
-			Author:   skill.GetAuthor(),
-			Desc:     skill.GetDesc(),
+		list = append(list, &response.SharedSkillInfo{
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.GetSkillId(),
+				Name:    skill.GetName(),
+				Avatar:  cacheSkillAvatar(ctx, skill.GetAvatar()),
+				Author:  skill.GetAuthor(),
+				Desc:    skill.GetDesc(),
+			},
 			IsShared: sharedMap[skill.GetSkillId()],
 		})
 	}
@@ -141,37 +143,41 @@ func buildSquareSkillInfoList(skillsCfgList []*config.SkillsConfig, sharedMap ma
 			iconUrl = skillsCfg.Avatar
 		}
 		list = append(list, &response.SquareSkillInfo{
-			SkillId:  skillsCfg.SkillId,
-			Name:     skillsCfg.Name,
-			Avatar:   request.Avatar{Path: iconUrl},
-			Author:   skillsCfg.Author,
-			Desc:     skillsCfg.Desc,
-			IsShared: sharedMap[skillsCfg.SkillId],
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId: skillsCfg.SkillId,
+			Name:    skillsCfg.Name,
+			Avatar:  request.Avatar{Path: iconUrl},
+			Author:  skillsCfg.Author,
+			Desc:    skillsCfg.Desc,
+		},
+		IsShared: sharedMap[skillsCfg.SkillId],
 		})
 	}
 	return list
 }
 
-func buildSquareBuiltinSkillInfoList(skillsCfgList []*config.SkillsConfig) []*response.SquareBuiltinSkillInfo {
-	list := make([]*response.SquareBuiltinSkillInfo, 0, len(skillsCfgList))
+func buildBuiltinSkillInfoList(skillsCfgList []*config.SkillsConfig) []*response.BuiltinSkillInfo {
+	list := make([]*response.BuiltinSkillInfo, 0, len(skillsCfgList))
 	for _, skillsCfg := range skillsCfgList {
-		info := buildSquareBuiltinSkillInfo(*skillsCfg)
+		info := buildBuiltinSkillInfo(*skillsCfg)
 		list = append(list, &info)
 	}
 	return list
 }
 
-func buildSquareBuiltinSkillInfo(skillsCfg config.SkillsConfig) response.SquareBuiltinSkillInfo {
+func buildBuiltinSkillInfo(skillsCfg config.SkillsConfig) response.BuiltinSkillInfo {
 	iconUrl := config.Cfg().DefaultIcon.SkillIcon
 	if skillsCfg.Avatar != "" {
 		iconUrl = skillsCfg.Avatar
 	}
-	return response.SquareBuiltinSkillInfo{
-		SkillId: skillsCfg.SkillId,
-		Name:    skillsCfg.Name,
-		Avatar:  request.Avatar{Path: iconUrl},
-		Author:  skillsCfg.Author,
-		Desc:    skillsCfg.Desc,
+	return response.BuiltinSkillInfo{
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId: skillsCfg.SkillId,
+			Name:    skillsCfg.Name,
+			Avatar:  request.Avatar{Path: iconUrl},
+			Author:  skillsCfg.Author,
+			Desc:    skillsCfg.Desc,
+		},
 	}
 }
 
@@ -187,7 +193,7 @@ func bindAcquiredCustomSkill(ctx *gin.Context, userId, orgId, skillId string) er
 	return err
 }
 
-func GetSquareShareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.SquareSkillDetail, error) {
+func GetSquareShareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.SharedSkillDetail, error) {
 	markdown, err := getLatestPublishedCustomSkillMarkdown(ctx, skillId)
 	if err != nil {
 		return nil, err
@@ -197,13 +203,15 @@ func GetSquareShareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) 
 		return nil, err
 	}
 	sharedMap, _ := getAcquiredSquareSkillMap(ctx, userId, orgId)
-	return &response.SquareSkillDetail{
-		SquareSkillInfo: response.SquareSkillInfo{
-			SkillId:  skill.GetSkillId(),
-			Name:     skill.GetName(),
-			Avatar:   cacheSkillAvatar(ctx, skill.GetAvatar()),
-			Author:   skill.GetAuthor(),
-			Desc:     skill.GetDesc(),
+	return &response.SharedSkillDetail{
+		SharedSkillInfo: response.SharedSkillInfo{
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.GetSkillId(),
+				Name:    skill.GetName(),
+				Avatar:  cacheSkillAvatar(ctx, skill.GetAvatar()),
+				Author:  skill.GetAuthor(),
+				Desc:    skill.GetDesc(),
+			},
 			IsShared: sharedMap[skill.GetSkillId()],
 		},
 		SkillMarkdown: config.FixFrontMatterFormat(markdown),
@@ -327,7 +335,7 @@ func GetSquareCreatedSkillList(ctx *gin.Context, userId, orgId, name string) (*r
 		skillIds = append(skillIds, appInfo.GetAppId())
 	}
 	if len(skillIds) == 0 {
-		return &response.ListResult{List: []*response.CustomSkillListItem{}, Total: 0}, nil
+		return &response.ListResult{List: []*response.PublishedSkillInfo{}, Total: 0}, nil
 	}
 
 	detailResp, err := mcp.GetCustomSkillDetailByIdList(ctx.Request.Context(), &mcp_service.CustomSkillDetailByIdListReq{
@@ -348,7 +356,7 @@ func GetSquareCreatedSkillList(ctx *gin.Context, userId, orgId, name string) (*r
 		log.Errorf("GetSquareCreatedSkillList version list failed, userId=%s orgId=%s err=%v", userId, orgId, err)
 	}
 
-	list := make([]*response.CustomSkillListItem, 0, len(skillIds))
+	list := make([]*response.PublishedSkillInfo, 0, len(skillIds))
 	for _, skill := range detailResp.GetSkillDetails() {
 		if skill == nil {
 			continue
@@ -356,12 +364,14 @@ func GetSquareCreatedSkillList(ctx *gin.Context, userId, orgId, name string) (*r
 		if name != "" && !strings.Contains(skill.GetName(), name) {
 			continue
 		}
-		item := &response.CustomSkillListItem{
-			SkillId:     skill.GetSkillId(),
-			Name:        skill.GetName(),
-			Avatar:      cacheSkillAvatar(ctx, skill.GetAvatar()),
-			Author:      skill.GetAuthor(),
-			Desc:        skill.GetDesc(),
+		item := &response.PublishedSkillInfo{
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.GetSkillId(),
+				Name:    skill.GetName(),
+				Avatar:  cacheSkillAvatar(ctx, skill.GetAvatar()),
+				Author:  skill.GetAuthor(),
+				Desc:    skill.GetDesc(),
+			},
 			ThreadID:    skill.GetWgaThreadId(),
 			PreviewID:   skill.GetPreviewThreadId(),
 			IsPublished: true,
@@ -380,7 +390,7 @@ func GetSquareCreatedSkillList(ctx *gin.Context, userId, orgId, name string) (*r
 }
 
 // GetSquareCreatedSkillDetail 获取我发布的skill详情
-func GetSquareCreatedSkillDetail(ctx *gin.Context, userId, orgId, customSkillId string) (*response.CustomSkillDetail, error) {
+func GetSquareCreatedSkillDetail(ctx *gin.Context, userId, orgId, customSkillId string) (*response.PublishedSkillDetail, error) {
 	if customSkillId == "" {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, "customSkillId is required")
 	}

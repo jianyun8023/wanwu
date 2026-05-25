@@ -35,12 +35,13 @@ func GetAgentSkillListDetail(ctx *gin.Context, skillIdList []string) (*response.
 }
 
 func GetBuiltinSkillList(ctx *gin.Context, name string) (*response.ListResult, error) {
-	var list []*response.SkillDetail
+	var list []*response.BuiltinSkillInfo
 	for _, skillsCfg := range config.Cfg().AgentSkills {
 		if name != "" && !strings.Contains(skillsCfg.Name, name) {
 			continue
 		}
-		list = append(list, buildSkillTempDetail(*skillsCfg, false))
+		info := buildBuiltinSkillInfo(*skillsCfg)
+		list = append(list, &info)
 	}
 	return &response.ListResult{
 		List:  list,
@@ -48,13 +49,16 @@ func GetBuiltinSkillList(ctx *gin.Context, name string) (*response.ListResult, e
 	}, nil
 }
 
-func GetBuiltinSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.SkillDetail, error) {
+func GetBuiltinSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.BuiltinSkillDetail, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
 	}
 
-	detail := buildSkillTempDetail(skillsCfg, true)
+	detail := &response.BuiltinSkillDetail{
+		BuiltinSkillInfo: buildBuiltinSkillInfo(skillsCfg),
+		SkillMarkdown:    string(skillsCfg.SkillMarkdown),
+	}
 	configResp, err := mcp.GetBuiltinSkillVars(ctx.Request.Context(), &mcp_service.GetBuiltinSkillVarsReq{
 		SkillId:  skillId,
 		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
@@ -84,11 +88,13 @@ func buildSkillTempDetail(skillsCfg config.SkillsConfig, needMd bool) *response.
 		iconUrl = skillsCfg.Avatar
 	}
 	ret := &response.SkillDetail{
-		SkillId: skillsCfg.SkillId,
-		Author:  skillsCfg.Author,
-		Avatar:  request.Avatar{Path: iconUrl},
-		Name:    skillsCfg.Name,
-		Desc:    skillsCfg.Desc,
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId: skillsCfg.SkillId,
+			Name:    skillsCfg.Name,
+			Avatar:  request.Avatar{Path: iconUrl},
+			Author:  skillsCfg.Author,
+			Desc:    skillsCfg.Desc,
+		},
 	}
 	if needMd {
 		ret.SkillMarkdown = string(skillsCfg.SkillMarkdown)

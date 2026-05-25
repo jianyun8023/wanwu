@@ -1750,6 +1750,7 @@ definitions:
         enum:
         - builtin
         - custom
+        - acquired
         type: string
       valid:
         type: boolean

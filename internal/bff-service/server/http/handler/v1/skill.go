@@ -20,7 +20,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.CustomSkillListItem}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.PublishedSkillInfo}}
 //	@Router			/agent/skill/custom/list [get]
 func GetCustomSkillList(ctx *gin.Context) {
 	resp, err := service.GetCustomSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -36,7 +36,7 @@ func GetCustomSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.CustomSkillDetail}
+//	@Success		200		{object}	response.Response{data=response.PublishedSkillDetail}
 //	@Router			/agent/skill/custom/detail [get]
 func GetCustomSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("skillId"))
@@ -59,7 +59,7 @@ func CreateCustomSkill(ctx *gin.Context) {
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	resp, err := service.CreateCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), req.Avatar.Key, req.Author, req.ZipUrl, "", "skill_import")
+	resp, err := service.CreateCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), req.Avatar.Key, req.Author, req.ZipUrl)
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -217,7 +217,7 @@ func GetSkillSelect(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SkillDetail}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.BuiltinSkillInfo}}
 //	@Router			/agent/skill/builtin/list [get]
 func GetBuiltinSkillList(ctx *gin.Context) {
 	resp, err := service.GetBuiltinSkillList(ctx, ctx.Query("name"))
@@ -233,7 +233,7 @@ func GetBuiltinSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.SkillDetail}
+//	@Success		200		{object}	response.Response{data=response.BuiltinSkillDetail}
 //	@Router			/agent/skill/builtin/detail [get]
 func GetBuiltinSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetBuiltinSkillDetail(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("skillId"))

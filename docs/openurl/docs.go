@@ -1614,7 +1614,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "builtin",
-                        "custom"
+                        "custom",
+                        "acquired"
                     ]
                 },
                 "valid": {

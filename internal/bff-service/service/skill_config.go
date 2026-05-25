@@ -11,6 +11,10 @@ import (
 )
 
 func CreateCustomSkillConfig(ctx *gin.Context, userId, orgId string, req request.SkillConfigReq) error {
+	// 验证 skill 归属
+	if err := checkCustomSkillOwnership(ctx, userId, orgId, req.SkillId); err != nil {
+		return err
+	}
 	_, err := mcp.CreateCustomSkillVar(ctx.Request.Context(), &mcp_service.CreateCustomSkillVarReq{
 		SkillId:  req.SkillId,
 		Variable: toMcpSkillVariable(req.Variable),
@@ -22,13 +26,15 @@ func UpdateCustomSkillConfig(ctx *gin.Context, userId, orgId string, req request
 	_, err := mcp.UpdateCustomSkillVar(ctx.Request.Context(), &mcp_service.UpdateCustomSkillVarReq{
 		Id:       req.ID,
 		Variable: toMcpSkillVariable(req.Variable),
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	return err
 }
 
 func DeleteCustomSkillConfig(ctx *gin.Context, userId, orgId string, req request.DeleteSkillConfigReq) error {
 	_, err := mcp.DeleteCustomSkillVar(ctx.Request.Context(), &mcp_service.DeleteCustomSkillVarReq{
-		Id: req.ID,
+		Id:       req.ID,
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	return err
 }
@@ -48,13 +54,15 @@ func UpdateAcquiredSkillConfig(ctx *gin.Context, userId, orgId string, req reque
 	_, err := mcp.UpdateAcquiredSkillVar(ctx.Request.Context(), &mcp_service.UpdateAcquiredSkillVarReq{
 		Id:       req.ID,
 		Variable: toMcpSkillVariable(req.Variable),
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	return err
 }
 
 func DeleteAcquiredSkillConfig(ctx *gin.Context, userId, orgId string, req request.DeleteSkillConfigReq) error {
 	_, err := mcp.DeleteAcquiredSkillVar(ctx.Request.Context(), &mcp_service.DeleteAcquiredSkillVarReq{
-		Id: req.ID,
+		Id:       req.ID,
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	return err
 }
@@ -88,22 +96,24 @@ func DeleteBuiltinSkillConfig(ctx *gin.Context, userId, orgId string, req reques
 	return err
 }
 
-func getOwnedAcquiredSkill(ctx *gin.Context, userId, orgId, skillId string) (*mcp_service.AcquiredSkill, error) {
-	if skillId == "" {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, "skillId is required")
+func getOwnedAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId string) (*mcp_service.AcquiredSkill, error) {
+	if acquiredSkillId == "" {
+		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, "acquiredSkillId is required")
 	}
-	resp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
-		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
+	skill, err := mcp.AcquiredSkillGet(ctx.Request.Context(), &mcp_service.AcquiredSkillGetReq{
+		AcquiredSkillId: acquiredSkillId,
 	})
 	if err != nil {
 		return nil, err
 	}
-	for _, skill := range resp.List {
-		if skill.AcquiredSkillId == skillId {
-			return skill, nil
-		}
+	if skill == nil {
+		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found")
 	}
-	return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found")
+	// 验证归属
+	if skill.UserId != userId || skill.OrgId != orgId {
+		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found or not owned by current user")
+	}
+	return skill, nil
 }
 
 func toMcpSkillVariable(v request.SkillVariable) *mcp_service.Variable {

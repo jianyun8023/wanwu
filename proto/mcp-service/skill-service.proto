@@ -120,10 +120,12 @@ message SkillVariableCreateResp {
 message UpdateCustomSkillVarReq {
   string id = 1;
   Variable variable = 2;
+  Identity identity = 3;
 }
 
 message DeleteCustomSkillVarReq {
   string id = 1;
+  Identity identity = 2;
 }
 
 message GetCustomSkillVarsReq {
@@ -192,6 +194,8 @@ message AcquiredSkill {
   PublishCustomSkill skill = 2;
   int64 createdAt = 4;
   int64 updatedAt = 5;
+  string userId = 6;
+  string orgId = 7;
 }
 
 message AcquiredSkillCreateReq {
@@ -248,10 +252,12 @@ message CreateAcquiredSkillVarReq {
 message UpdateAcquiredSkillVarReq {
   string id = 1;
   Variable variable = 2;
+  Identity identity = 3;
 }
 
 message DeleteAcquiredSkillVarReq {
   string id = 1;
+  Identity identity = 2;
 }
 
 message GetAcquiredSkillVarsReq {

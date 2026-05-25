@@ -36,7 +36,7 @@ func GetSquareSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SquareBuiltinSkillInfo}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.BuiltinSkillInfo}}
 //	@Router			/square/skill/builtin/list [get]
 func GetSquareBuiltinSkillList(ctx *gin.Context) {
 	resp, err := service.GetSquareBuiltinSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -52,7 +52,7 @@ func GetSquareBuiltinSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.SquareBuiltinSkillDetail}
+//	@Success		200		{object}	response.Response{data=response.BuiltinSkillDetail}
 //	@Router			/square/skill/builtin/detail [get]
 func GetSquareBuiltinSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetSquareBuiltinSkillDetail(ctx, ctx.Query("skillId"))
@@ -68,7 +68,7 @@ func GetSquareBuiltinSkillDetail(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SquareSkillInfo}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SharedSkillInfo}}
 //	@Router			/square/skill/share/list [get]
 func GetSquareShareSkillList(ctx *gin.Context) {
 	resp, err := service.GetSquareShareSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -104,7 +104,7 @@ func ShareSquareSkill(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.SquareSkillDetail}
+//	@Success		200		{object}	response.Response{data=response.SharedSkillDetail}
 //	@Router			/square/skill/share/detail [get]
 func GetSquareShareSkillDetail(ctx *gin.Context) {
 	skillId := ctx.Query("skillId")
@@ -146,7 +146,7 @@ func DownloadSquareShareSkill(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.AcquiredSkillVersionInfo}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SkillVersionInfo}}
 //	@Router			/square/skill/share/version/list [get]
 func GetSquareShareSkillVersionList(ctx *gin.Context) {
 	resp, err := service.GetSquareShareSkillVersionList(ctx, ctx.Query("skillId"))
@@ -162,7 +162,7 @@ func GetSquareShareSkillVersionList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.CustomSkillListItem}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.PublishedSkillInfo}}
 //	@Router			/square/skill/created/list [get]
 func GetSquareCreatedSkillList(ctx *gin.Context) {
 	resp, err := service.GetSquareCreatedSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -178,7 +178,7 @@ func GetSquareCreatedSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			customSkillId	query		string	true	"custom skill ID"
-//	@Success		200				{object}	response.Response{data=response.CustomSkillDetail}
+//	@Success		200				{object}	response.Response{data=response.PublishedSkillDetail}
 //	@Router			/square/skill/created/detail [get]
 func GetSquareCreatedSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetSquareCreatedSkillDetail(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("customSkillId"))
@@ -194,7 +194,7 @@ func GetSquareCreatedSkillDetail(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			customSkillId	query		string	true	"custom skill ID"
-//	@Success		200				{object}	response.Response{data=response.ListResult{list=[]response.AcquiredSkillVersionInfo}}
+//	@Success		200				{object}	response.Response{data=response.ListResult{list=[]response.SkillVersionInfo}}
 //	@Router			/square/skill/created/version/list [get]
 func GetSquareCreatedSkillVersionList(ctx *gin.Context) {
 	resp, err := service.GetSquareCreatedSkillVersionList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("customSkillId"))

@@ -147,6 +147,8 @@ func (s *Service) toProtoAcquiredSkills(ctx context.Context, acquiredSkills []*m
 			Skill:           toProtoPublishCustomSkill(customSkill, publishBySkillID[as.CustomSkillID]),
 			CreatedAt:       as.CreatedAt,
 			UpdatedAt:       as.UpdatedAt,
+			UserId:          as.UserID,
+			OrgId:           as.OrgID,
 		})
 	}
 	return list, nil

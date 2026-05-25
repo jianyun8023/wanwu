@@ -1495,6 +1495,7 @@ definitions:
         enum:
         - builtin
         - custom
+        - acquired
         type: string
     required:
     - assistantId
@@ -1511,6 +1512,7 @@ definitions:
         enum:
         - builtin
         - custom
+        - acquired
         type: string
     required:
     - assistantId
@@ -1529,6 +1531,7 @@ definitions:
         enum:
         - builtin
         - custom
+        - acquired
         type: string
     required:
     - assistantId
@@ -4791,7 +4794,7 @@ definitions:
           $ref: '#/definitions/response.SkillVariable'
         type: array
     type: object
-  response.AcquiredSkillListItem:
+  response.AcquiredSkillInfo:
     properties:
       author:
         type: string
@@ -4802,15 +4805,6 @@ definitions:
       name:
         type: string
       skillId:
-        type: string
-    type: object
-  response.AcquiredSkillVersionInfo:
-    properties:
-      desc:
-        type: string
-      updatedAt:
-        type: string
-      version:
         type: string
     type: object
   response.AgentFileMeta:
@@ -5203,6 +5197,7 @@ definitions:
         enum:
         - builtin
         - custom
+        - acquired
         type: string
       valid:
         type: boolean
@@ -5297,6 +5292,38 @@ definitions:
       workFlowDesc:
         type: string
       workFlowId:
+        type: string
+    type: object
+  response.BuiltinSkillDetail:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      name:
+        type: string
+      skillId:
+        type: string
+      skillMarkdown:
+        type: string
+      variables:
+        items:
+          $ref: '#/definitions/response.SkillVariable'
+        type: array
+    type: object
+  response.BuiltinSkillInfo:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      name:
+        type: string
+      skillId:
         type: string
     type: object
   response.Captcha:
@@ -5902,59 +5929,9 @@ definitions:
       name:
         type: string
     type: object
-  response.CustomSkillDetail:
-    properties:
-      author:
-        type: string
-      avatar:
-        $ref: '#/definitions/request.Avatar'
-      desc:
-        type: string
-      isPublished:
-        type: boolean
-      name:
-        type: string
-      previewId:
-        type: string
-      publishType:
-        type: string
-      skillId:
-        type: string
-      threadId:
-        type: string
-      variables:
-        items:
-          $ref: '#/definitions/response.SkillVariable'
-        type: array
-      version:
-        type: string
-    type: object
   response.CustomSkillIDResp:
     properties:
       skillId:
-        type: string
-    type: object
-  response.CustomSkillListItem:
-    properties:
-      author:
-        type: string
-      avatar:
-        $ref: '#/definitions/request.Avatar'
-      desc:
-        type: string
-      isPublished:
-        type: boolean
-      name:
-        type: string
-      previewId:
-        type: string
-      publishType:
-        type: string
-      skillId:
-        type: string
-      threadId:
-        type: string
-      version:
         type: string
     type: object
   response.CustomTab:
@@ -7964,6 +7941,58 @@ definitions:
       name:
         type: string
     type: object
+  response.PublishedSkillDetail:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      isPublished:
+        type: boolean
+      name:
+        type: string
+      previewId:
+        type: string
+      publishType:
+        type: string
+      skillId:
+        type: string
+      skillMarkdown:
+        type: string
+      threadId:
+        type: string
+      variables:
+        items:
+          $ref: '#/definitions/response.SkillVariable'
+        type: array
+      version:
+        type: string
+    type: object
+  response.PublishedSkillInfo:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      isPublished:
+        type: boolean
+      name:
+        type: string
+      previewId:
+        type: string
+      publishType:
+        type: string
+      skillId:
+        type: string
+      threadId:
+        type: string
+      version:
+        type: string
+    type: object
   response.QAHitSearchList:
     properties:
       answer:
@@ -8241,6 +8270,38 @@ definitions:
         description: 敏感词id
         type: string
     type: object
+  response.SharedSkillDetail:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      isShared:
+        type: boolean
+      name:
+        type: string
+      skillId:
+        type: string
+      skillMarkdown:
+        type: string
+    type: object
+  response.SharedSkillInfo:
+    properties:
+      author:
+        type: string
+      avatar:
+        $ref: '#/definitions/request.Avatar'
+      desc:
+        type: string
+      isShared:
+        type: boolean
+      name:
+        type: string
+      skillId:
+        type: string
+    type: object
   response.SkillConversationDetailInfo:
     properties:
       assistantId:
@@ -8297,55 +8358,21 @@ definitions:
         description: 会话标题
         type: string
     type: object
-  response.SkillDetail:
-    properties:
-      author:
-        description: 作者
-        type: string
-      avatar:
-        allOf:
-        - $ref: '#/definitions/request.Avatar'
-        description: 模板头像
-      desc:
-        description: 模板描述
-        type: string
-      name:
-        description: 模板名称
-        type: string
-      skillId:
-        description: 模板ID
-        type: string
-      skillMarkdown:
-        description: 模板markdown预览
-        type: string
-      skillPath:
-        description: markdown地址，内部使用，不要对外
-        type: string
-      variables:
-        items:
-          $ref: '#/definitions/response.SkillVariable'
-        type: array
-    type: object
   response.SkillInfo:
     properties:
       author:
-        description: 作者
         type: string
       avatar:
-        allOf:
-        - $ref: '#/definitions/request.Avatar'
-        description: 图标
+        $ref: '#/definitions/request.Avatar'
       desc:
-        description: 描述
+        type: string
+      name:
         type: string
       skillId:
-        description: skillId
         type: string
       skillName:
-        description: 名称
         type: string
       skillType:
-        description: 类型
         type: string
     type: object
   response.SkillVariable:
@@ -8361,34 +8388,13 @@ definitions:
       variableValue:
         type: string
     type: object
-  response.SquareBuiltinSkillInfo:
+  response.SkillVersionInfo:
     properties:
-      author:
-        type: string
-      avatar:
-        $ref: '#/definitions/request.Avatar'
       desc:
         type: string
-      name:
+      updatedAt:
         type: string
-      skillId:
-        type: string
-    type: object
-  response.SquareSkillDetail:
-    properties:
-      author:
-        type: string
-      avatar:
-        $ref: '#/definitions/request.Avatar'
-      desc:
-        type: string
-      isShared:
-        type: boolean
-      name:
-        type: string
-      skillId:
-        type: string
-      skillMarkdown:
+      version:
         type: string
     type: object
   response.SquareSkillInfo:
@@ -9282,7 +9288,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.AcquiredSkillListItem'
+                          $ref: '#/definitions/response.AcquiredSkillInfo'
                         type: array
                     type: object
               type: object
@@ -9317,7 +9323,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.AcquiredSkillVersionInfo'
+                          $ref: '#/definitions/response.SkillVersionInfo'
                         type: array
                     type: object
               type: object
@@ -9417,7 +9423,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/response.SkillDetail'
+                  $ref: '#/definitions/response.BuiltinSkillDetail'
               type: object
       security:
       - JWT: []
@@ -9449,7 +9455,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.SkillDetail'
+                          $ref: '#/definitions/response.BuiltinSkillInfo'
                         type: array
                     type: object
               type: object
@@ -9827,7 +9833,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/response.CustomSkillDetail'
+                  $ref: '#/definitions/response.PublishedSkillDetail'
               type: object
       security:
       - JWT: []
@@ -9859,7 +9865,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.CustomSkillListItem'
+                          $ref: '#/definitions/response.PublishedSkillInfo'
                         type: array
                     type: object
               type: object
@@ -9904,7 +9910,7 @@ paths:
         in: query
         name: name
         type: string
-      - description: skill类型(builtin/custom)
+      - description: skill类型(builtin/custom/acquired)
         in: query
         name: skillType
         type: string
@@ -13729,7 +13735,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.CustomSkillListItem'
+                          $ref: '#/definitions/response.PublishedSkillInfo'
                         type: array
                     type: object
               type: object
@@ -16653,6 +16659,7 @@ paths:
       description: 获取模型体验对话记录列表
       parameters:
       - description: 模型体验对话ID
+        format: int32
         in: query
         name: modelExperienceId
         required: true
@@ -18426,6 +18433,34 @@ paths:
       summary: 获取词表数据列表
       tags:
       - safety
+  /square/skill/builtin/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取探索广场中的内置skill详情
+      parameters:
+      - description: skill ID
+        in: query
+        name: skillId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.BuiltinSkillDetail'
+              type: object
+      security:
+      - JWT: []
+      summary: 获取广场内置skill详情
+      tags:
+      - exploration.skill
   /square/skill/builtin/list:
     get:
       consumes:
@@ -18451,7 +18486,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.SquareBuiltinSkillInfo'
+                          $ref: '#/definitions/response.BuiltinSkillInfo'
                         type: array
                     type: object
               type: object
@@ -18481,7 +18516,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/response.CustomSkillDetail'
+                  $ref: '#/definitions/response.PublishedSkillDetail'
               type: object
       security:
       - JWT: []
@@ -18513,7 +18548,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.CustomSkillListItem'
+                          $ref: '#/definitions/response.PublishedSkillInfo'
                         type: array
                     type: object
               type: object
@@ -18548,7 +18583,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.AcquiredSkillVersionInfo'
+                          $ref: '#/definitions/response.SkillVersionInfo'
                         type: array
                     type: object
               type: object
@@ -18636,7 +18671,7 @@ paths:
             - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/response.SquareSkillDetail'
+                  $ref: '#/definitions/response.SharedSkillDetail'
               type: object
       security:
       - JWT: []
@@ -18691,7 +18726,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.SquareSkillInfo'
+                          $ref: '#/definitions/response.SharedSkillInfo'
                         type: array
                     type: object
               type: object
@@ -18726,7 +18761,7 @@ paths:
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/response.AcquiredSkillVersionInfo'
+                          $ref: '#/definitions/response.SkillVersionInfo'
                         type: array
                     type: object
               type: object

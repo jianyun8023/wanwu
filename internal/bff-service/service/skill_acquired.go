@@ -21,9 +21,9 @@ func GetAcquiredSkillList(ctx *gin.Context, userId, orgId, name string) (*respon
 		return nil, err
 	}
 
-	list := make([]*response.AcquiredSkillListItem, 0, len(resp.List))
+	list := make([]*response.AcquiredSkillInfo, 0, len(resp.List))
 	for _, skill := range resp.List {
-		list = append(list, toAcquiredSkillListItem(ctx, skill))
+		list = append(list, toAcquiredSkillInfo(ctx, skill))
 	}
 
 	return &response.ListResult{
@@ -45,7 +45,7 @@ func DeleteAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId string
 
 // GetAcquiredSkill 资源库-获取已添加skill详情
 func GetAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId string) (*response.AcquiredSkillDetail, error) {
-	skill, err := getAcquiredSkillByID(ctx, acquiredSkillId)
+	skill, err := getOwnedAcquiredSkill(ctx, userId, orgId, acquiredSkillId)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func GetCallbackAcquiredSkillListDetail(ctx *gin.Context, acquiredSkillIdList []
 }
 
 func DownloadAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId string) ([]byte, error) {
-	skill, err := getAcquiredSkillByID(ctx, acquiredSkillId)
+	skill, err := getOwnedAcquiredSkill(ctx, userId, orgId, acquiredSkillId)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +103,9 @@ func DownloadAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId stri
 }
 
 func GetAcquiredSkillVersionList(ctx *gin.Context, userId, orgId, acquiredSkillId string) (*response.ListResult, error) {
+	if _, err := getOwnedAcquiredSkill(ctx, userId, orgId, acquiredSkillId); err != nil {
+		return nil, err
+	}
 	sourceSkillId, err := getAcquiredSourceCustomSkillID(ctx, acquiredSkillId)
 	if err != nil {
 		return nil, err
@@ -118,9 +121,9 @@ func GetSkillVersionList(ctx *gin.Context, skillId string) (*response.ListResult
 	if err != nil {
 		return nil, err
 	}
-	list := make([]*response.AcquiredSkillVersionInfo, 0, len(resp.GetHistoryList()))
+	list := make([]*response.SkillVersionInfo, 0, len(resp.GetHistoryList()))
 	for _, item := range resp.GetHistoryList() {
-		list = append(list, &response.AcquiredSkillVersionInfo{
+		list = append(list, &response.SkillVersionInfo{
 			Version:   item.GetVersion(),
 			Desc:      item.GetVersionDesc(),
 			UpdatedAt: util.Time2Str(item.GetCreatedAt()),
@@ -195,11 +198,15 @@ func toAcquiredSkillDetail(ctx *gin.Context, skill *mcp_service.AcquiredSkill, i
 	publish := skill.GetSkill()
 	customSkill := publish.GetSkill()
 	ret := &response.AcquiredSkillDetail{
-		SkillId:       skill.GetAcquiredSkillId(),
-		Name:          customSkill.GetName(),
-		Avatar:        cacheSkillAvatar(ctx, customSkill.GetAvatar()),
-		Author:        customSkill.GetAuthor(),
-		Desc:          customSkill.GetDesc(),
+		AcquiredSkillInfo: response.AcquiredSkillInfo{
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.GetAcquiredSkillId(),
+				Name:    customSkill.GetName(),
+				Avatar:  cacheSkillAvatar(ctx, customSkill.GetAvatar()),
+				Author:  customSkill.GetAuthor(),
+				Desc:    customSkill.GetDesc(),
+			},
+		},
 		SkillMarkdown: config.FixFrontMatterFormat(publish.GetMarkdown()),
 	}
 	if includeVariables {
@@ -224,25 +231,29 @@ func toCallbackAcquiredSkillDetail(ctx *gin.Context, skill *mcp_service.Acquired
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "skill_publish_package_not_available", "latest skill package objectPath is empty")
 	}
 	return &response.CallbackAcquiredSkillDetail{
-		SkillId:    skill.GetAcquiredSkillId(),
-		Name:       customSkill.GetName(),
-		Avatar:     cacheSkillAvatar(ctx, customSkill.GetAvatar()),
-		Author:     customSkill.GetAuthor(),
-		Desc:       customSkill.GetDesc(),
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId: skill.GetAcquiredSkillId(),
+			Name:    customSkill.GetName(),
+			Avatar:  cacheSkillAvatar(ctx, customSkill.GetAvatar()),
+			Author:  customSkill.GetAuthor(),
+			Desc:    customSkill.GetDesc(),
+		},
 		ObjectPath: publish.GetObjectPath(),
 	}, nil
 }
 
-func toAcquiredSkillListItem(ctx *gin.Context, skill *mcp_service.AcquiredSkill) *response.AcquiredSkillListItem {
+func toAcquiredSkillInfo(ctx *gin.Context, skill *mcp_service.AcquiredSkill) *response.AcquiredSkillInfo {
 	if skill == nil {
 		return nil
 	}
 	customSkill := skill.GetSkill().GetSkill()
-	return &response.AcquiredSkillListItem{
-		SkillId: skill.GetAcquiredSkillId(),
-		Name:    customSkill.GetName(),
-		Avatar:  cacheSkillAvatar(ctx, customSkill.GetAvatar()),
-		Author:  customSkill.GetAuthor(),
-		Desc:    customSkill.GetDesc(),
+	return &response.AcquiredSkillInfo{
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId: skill.GetAcquiredSkillId(),
+			Name:    customSkill.GetName(),
+			Avatar:  cacheSkillAvatar(ctx, customSkill.GetAvatar()),
+			Author:  customSkill.GetAuthor(),
+			Desc:    customSkill.GetDesc(),
+		},
 	}
 }

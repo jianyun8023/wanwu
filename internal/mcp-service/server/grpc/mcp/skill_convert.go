@@ -63,3 +63,29 @@ func toProtoVariablesFromCustom(vars []*model.CustomSkillVariable) []*mcp_servic
 	}
 	return ret
 }
+
+func toProtoVariableFromAcquired(v *model.AcquiredSkillVariable) *mcp_service.Variable {
+	if v == nil {
+		return nil
+	}
+	return &mcp_service.Variable{
+		Id:            util.Int2Str(v.ID),
+		Name:          v.Name,
+		Desc:          v.Desc,
+		VariableKey:   v.VariableKey,
+		VariableValue: v.VariableValue,
+	}
+}
+
+func toProtoVariableFromBuiltin(v *model.BuiltinSkillVariable) *mcp_service.Variable {
+	if v == nil {
+		return nil
+	}
+	return &mcp_service.Variable{
+		Id:            util.Int2Str(v.ID),
+		Name:          v.Name,
+		Desc:          v.Desc,
+		VariableKey:   v.VariableKey,
+		VariableValue: v.VariableValue,
+	}
+}

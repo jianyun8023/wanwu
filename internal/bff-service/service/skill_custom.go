@@ -28,7 +28,7 @@ const (
 	customSkillFileType = ".zip"
 )
 
-func CreateCustomSkill(ctx *gin.Context, userId, orgId string, avatarKey, author, zipUrl, saveId, sourceType string) (*response.CustomSkillIDResp, error) {
+func CreateCustomSkill(ctx *gin.Context, userId, orgId string, avatarKey, author, zipUrl string) (*response.CustomSkillIDResp, error) {
 	var skillName, skillDesc string
 
 	if zipUrl != "" {
@@ -68,7 +68,11 @@ func CreateCustomSkill(ctx *gin.Context, userId, orgId string, avatarKey, author
 	return &response.CustomSkillIDResp{SkillId: createResp.SkillId}, nil
 }
 
-func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.CustomSkillDetail, error) {
+func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.PublishedSkillDetail, error) {
+	// 验证 skill 归属
+	if err := checkCustomSkillOwnership(ctx, userId, orgId, skillId); err != nil {
+		return nil, err
+	}
 	publish, err := mcp.CustomSkillGet(ctx.Request.Context(), &mcp_service.CustomSkillGetReq{
 		SkillId: skillId,
 	})
@@ -84,15 +88,19 @@ func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.
 		return nil, err
 	}
 
-	detail := &response.CustomSkillDetail{
-		SkillId:       skill.SkillId,
-		Name:          skill.Name,
-		Avatar:        cacheSkillAvatar(ctx, skill.Avatar),
-		Author:        skill.Author,
-		Desc:          skill.Desc,
+	detail := &response.PublishedSkillDetail{
+		PublishedSkillInfo: response.PublishedSkillInfo{
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.SkillId,
+				Name:    skill.Name,
+				Avatar:  cacheSkillAvatar(ctx, skill.Avatar),
+				Author:  skill.Author,
+				Desc:    skill.Desc,
+			},
+			ThreadID:  skill.WgaThreadId,
+			PreviewID: skill.PreviewThreadId,
+		},
 		Variables:     toSkillVariables(variables),
-		ThreadID:      skill.WgaThreadId,
-		PreviewID:     skill.PreviewThreadId,
 		SkillMarkdown: config.FixFrontMatterFormat(publish.GetMarkdown()),
 	}
 
@@ -103,7 +111,7 @@ func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.
 }
 
 // enrichCustomSkillDetailPublishInfo 填充单个 skill 详情的发布信息
-func enrichCustomSkillDetailPublishInfo(ctx *gin.Context, detail *response.CustomSkillDetail) {
+func enrichCustomSkillDetailPublishInfo(ctx *gin.Context, detail *response.PublishedSkillDetail) {
 	if detail == nil || detail.SkillId == "" {
 		return
 	}
@@ -317,6 +325,10 @@ func isHTTPURL(rawURL string) bool {
 }
 
 func DeleteCustomSkill(ctx *gin.Context, userId, orgId, skillId string) error {
+	// 验证 skill 归属
+	if err := checkCustomSkillOwnership(ctx, userId, orgId, skillId); err != nil {
+		return err
+	}
 	publish, err := mcp.CustomSkillGet(ctx.Request.Context(), &mcp_service.CustomSkillGetReq{
 		SkillId: skillId,
 	})
@@ -362,7 +374,7 @@ func GetCustomSkillList(ctx *gin.Context, userId, orgId, name string) (*response
 		return nil, err
 	}
 
-	customSkillList := make([]*response.CustomSkillListItem, 0, len(resp.List))
+	customSkillList := make([]*response.PublishedSkillInfo, 0, len(resp.List))
 	for _, skill := range resp.List {
 		customSkillList = append(customSkillList, toCustomSkillListItem(ctx, skill))
 	}
@@ -394,11 +406,13 @@ func GetCustomSkillListDetail(ctx *gin.Context, skillIdList []string) (*response
 		}
 		skill := publish.GetSkill()
 		skillDetailList = append(skillDetailList, &response.CustomSkillListDetail{
-			SkillId:    skill.GetSkillId(),
-			Name:       skill.GetName(),
-			Avatar:     cacheSkillAvatar(ctx, skill.GetAvatar()),
-			Author:     skill.GetAuthor(),
-			Desc:       skill.GetDesc(),
+			SkillBasicInfo: response.SkillBasicInfo{
+				SkillId: skill.GetSkillId(),
+				Name:    skill.GetName(),
+				Avatar:  cacheSkillAvatar(ctx, skill.GetAvatar()),
+				Author:  skill.GetAuthor(),
+				Desc:    skill.GetDesc(),
+			},
 			ObjectPath: publish.GetObjectPath(),
 			// Variables:  toSkillVariables(skill.Variables),
 		})
@@ -418,18 +432,6 @@ func uniqueSkillIDs(skillIdList []string) []string {
 		result = append(result, skillId)
 	}
 	return result
-}
-
-func buildCustomSkillPermanentObjectPath(ctx *gin.Context, skillId string) (string, error) {
-	zipBytes, err := buildCustomSkillZipBytes(skillId)
-	if err != nil {
-		return "", err
-	}
-	fileName, _, err := minio.UploadFileCommon(ctx.Request.Context(), bytes.NewReader(zipBytes), customSkillFileType, int64(len(zipBytes)), true)
-	if err != nil {
-		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("upload custom skill %s zip err: %v", skillId, err))
-	}
-	return path.Join(minio.BucketFileUpload, minio.DirFileNotExpire, fileName), nil
 }
 
 func buildCustomSkillZipBytes(skillId string) ([]byte, error) {
@@ -549,40 +551,26 @@ func ensureNoSymlink(dir string) error {
 	})
 }
 
-func toCustomSkill(ctx *gin.Context, skill *mcp_service.CustomSkill) *response.CustomSkillDetail {
-	if skill == nil {
-		return nil
-	}
-
-	return &response.CustomSkillDetail{
-		SkillId:   skill.SkillId,
-		Name:      skill.Name,
-		Avatar:    cacheSkillAvatar(ctx, skill.Avatar),
-		Author:    skill.Author,
-		Desc:      skill.Desc,
-		ThreadID:  skill.WgaThreadId,
-		PreviewID: skill.PreviewThreadId,
-	}
-}
-
-func toCustomSkillListItem(ctx *gin.Context, publish *mcp_service.PublishCustomSkill) *response.CustomSkillListItem {
+func toCustomSkillListItem(ctx *gin.Context, publish *mcp_service.PublishCustomSkill) *response.PublishedSkillInfo {
 	skill := customSkillFromPublish(publish)
 	if skill == nil {
 		return nil
 	}
 
-	return &response.CustomSkillListItem{
-		SkillId:   skill.SkillId,
-		Name:      skill.Name,
-		Avatar:    cacheSkillAvatar(ctx, skill.Avatar),
-		Author:    skill.Author,
-		Desc:      skill.Desc,
+	return &response.PublishedSkillInfo{
+		SkillBasicInfo: response.SkillBasicInfo{
+			SkillId:   skill.SkillId,
+			Name:      skill.Name,
+			Avatar:    cacheSkillAvatar(ctx, skill.Avatar),
+			Author:    skill.Author,
+			Desc:      skill.Desc,
+		},
 		ThreadID:  skill.WgaThreadId,
 		PreviewID: skill.PreviewThreadId,
 	}
 }
 
-func enrichCustomSkillPublishInfo(ctx *gin.Context, userId, orgId string, customSkillList []*response.CustomSkillListItem) {
+func enrichCustomSkillPublishInfo(ctx *gin.Context, userId, orgId string, customSkillList []*response.PublishedSkillInfo) {
 	if len(customSkillList) == 0 {
 		return
 	}
@@ -670,12 +658,14 @@ func GetSkillSelect(ctx *gin.Context, userId, orgId, name, skillType string) (*r
 				iconUrl = skillsCfg.Avatar
 			}
 			allSkills = append(allSkills, &response.SkillInfo{
-				SkillId:   skillsCfg.SkillId,
+				SkillBasicInfo: response.SkillBasicInfo{
+					SkillId: skillsCfg.SkillId,
+					Desc:    skillsCfg.Desc,
+					Author:  skillsCfg.Author,
+					Avatar:  request.Avatar{Path: iconUrl},
+				},
 				SkillName: skillsCfg.Name,
 				SkillType: constant.SkillTypeBuiltIn,
-				Desc:      skillsCfg.Desc,
-				Author:    skillsCfg.Author,
-				Avatar:    request.Avatar{Path: iconUrl},
 			})
 		}
 	}
@@ -700,12 +690,14 @@ func GetSkillSelect(ctx *gin.Context, userId, orgId, name, skillType string) (*r
 				continue
 			}
 			allSkills = append(allSkills, &response.SkillInfo{
-				SkillId:   customSkill.SkillId,
+				SkillBasicInfo: response.SkillBasicInfo{
+					SkillId: customSkill.SkillId,
+					Desc:    customSkill.Desc,
+					Author:  customSkill.Author,
+					Avatar:  cacheSkillAvatar(ctx, customSkill.Avatar),
+				},
 				SkillName: customSkill.Name,
 				SkillType: constant.SkillTypeCustom,
-				Desc:      customSkill.Desc,
-				Author:    customSkill.Author,
-				Avatar:    cacheSkillAvatar(ctx, customSkill.Avatar),
 			})
 		}
 	}
@@ -726,12 +718,15 @@ func GetSkillSelect(ctx *gin.Context, userId, orgId, name, skillType string) (*r
 				continue
 			}
 			allSkills = append(allSkills, &response.SkillInfo{
-				SkillId:   acquired.AcquiredSkillId,
+				SkillBasicInfo: response.SkillBasicInfo{
+					SkillId: acquired.AcquiredSkillId,
+					Name:    customSkill.Name,
+					Desc:    customSkill.Desc,
+					Author:  customSkill.Author,
+					Avatar:  cacheSkillAvatar(ctx, customSkill.Avatar),
+				},
 				SkillName: customSkill.Name,
 				SkillType: constant.SkillTypeAcquired,
-				Desc:      customSkill.Desc,
-				Author:    customSkill.Author,
-				Avatar:    cacheSkillAvatar(ctx, customSkill.Avatar),
 			})
 		}
 	}
