@@ -2078,7 +2078,7 @@ export default {
       deleteHint: '确定删除敏感词-',
     },
     setSafety: {
-      title: '新增敏感词',
+      title: '配置敏感词',
       table: '敏感词表',
       tableMsg: '请选择敏感词表',
       create: '创建敏感词',
