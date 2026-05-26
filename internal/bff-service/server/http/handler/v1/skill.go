@@ -20,7 +20,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.CustomSkillDetail}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.PublishedSkillInfo}}
 //	@Router			/agent/skill/custom/list [get]
 func GetCustomSkillList(ctx *gin.Context) {
 	resp, err := service.GetCustomSkillList(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
@@ -36,7 +36,7 @@ func GetCustomSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.CustomSkillDetail}
+//	@Success		200		{object}	response.Response{data=response.PublishedSkillDetail}
 //	@Router			/agent/skill/custom/detail [get]
 func GetCustomSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("skillId"))
@@ -59,7 +59,7 @@ func CreateCustomSkill(ctx *gin.Context) {
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	resp, err := service.CreateCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), req.Avatar.Key, req.Author, req.ZipUrl, "", "skill_import")
+	resp, err := service.CreateCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), req.Avatar.Key, req.Author, req.ZipUrl)
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -81,6 +81,34 @@ func DeleteCustomSkill(ctx *gin.Context) {
 	}
 	err := service.DeleteCustomSkill(ctx, getUserID(ctx), getOrgID(ctx), req.SkillId)
 	gin_util.Response(ctx, nil, err)
+}
+
+// DownloadCustomSkillVersion
+//
+//	@Tags			resource.skill
+//	@Summary		下载自定义skill指定版本
+//	@Description	下载我创建的自定义skill指定版本ZIP包
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		application/octet-stream
+//	@Param			data	query		request.CustomSkillVersionDownloadReq	true	"skill版本"
+//	@Success		200		{object}	response.Response
+//	@Router			/agent/skill/custom/version/download [get]
+func DownloadCustomSkillVersion(ctx *gin.Context) {
+	var req request.CustomSkillVersionDownloadReq
+	if !gin_util.BindQuery(ctx, &req) {
+		return
+	}
+	fileName := fmt.Sprintf("%s-%s.zip", req.SkillId, req.Version)
+	resp, err := service.DownloadCustomSkillVersion(ctx, getUserID(ctx), getOrgID(ctx), req.SkillId, req.Version)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	ctx.Header("Content-Disposition", "attachment; filename*=utf-8''"+url.QueryEscape(fileName))
+	ctx.Header("Content-Type", "application/octet-stream")
+	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	ctx.Data(http.StatusOK, "application/octet-stream", resp)
 }
 
 // CreateCustomSkillConfig
@@ -172,7 +200,7 @@ func CheckCustomSkill(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name		query		string	false	"skill名称"
-//	@Param			skillType	query		string	false	"skill类型(builtin/custom)"
+//	@Param			skillType	query		string	false	"skill类型(builtin/custom/acquired)"
 //	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.SkillInfo}}
 //	@Router			/agent/skill/select [get]
 func GetSkillSelect(ctx *gin.Context) {
@@ -189,7 +217,7 @@ func GetSkillSelect(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			name	query		string	false	"skill名称"
-//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.SkillDetail}}
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.BuiltinSkillInfo}}
 //	@Router			/agent/skill/builtin/list [get]
 func GetBuiltinSkillList(ctx *gin.Context) {
 	resp, err := service.GetBuiltinSkillList(ctx, ctx.Query("name"))
@@ -205,7 +233,7 @@ func GetBuiltinSkillList(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			skillId	query		string	true	"skill ID"
-//	@Success		200		{object}	response.Response{data=response.SkillDetail}
+//	@Success		200		{object}	response.Response{data=response.BuiltinSkillDetail}
 //	@Router			/agent/skill/builtin/detail [get]
 func GetBuiltinSkillDetail(ctx *gin.Context) {
 	resp, err := service.GetBuiltinSkillDetail(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("skillId"))

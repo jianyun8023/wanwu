@@ -16,7 +16,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/agent/acquired/skill": {
+        "/agent/skill/acquired": {
             "delete": {
                 "security": [
                     {
@@ -55,7 +55,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/agent/acquired/skill/config": {
+        "/agent/skill/acquired/config": {
             "put": {
                 "security": [
                     {
@@ -168,7 +168,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/agent/acquired/skill/detail": {
+        "/agent/skill/acquired/detail": {
             "get": {
                 "security": [
                     {
@@ -217,7 +217,44 @@ const docTemplate = `{
                 }
             }
         },
-        "/agent/acquired/skill/list": {
+        "/agent/skill/acquired/download": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "下载资源库中我添加的最新版本skill",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "resource.skill"
+                ],
+                "summary": "下载我添加的skill",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/skill/acquired/list": {
             "get": {
                 "security": [
                     {
@@ -265,7 +302,71 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.AcquiredSkillDetail"
+                                                                "$ref": "#/definitions/response.AcquiredSkillInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/skill/acquired/version/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取资源库中我添加的skill历史版本列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resource.skill"
+                ],
+                "summary": "获取我添加的skill历史版本列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.SkillVersionInfo"
                                                             }
                                                         }
                                                     }
@@ -432,7 +533,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/response.SkillDetail"
+                                            "$ref": "#/definitions/response.BuiltinSkillDetail"
                                         }
                                     }
                                 }
@@ -490,7 +591,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.SkillDetail"
+                                                                "$ref": "#/definitions/response.BuiltinSkillInfo"
                                                             }
                                                         }
                                                     }
@@ -1134,7 +1235,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/response.CustomSkillDetail"
+                                            "$ref": "#/definitions/response.PublishedSkillDetail"
                                         }
                                     }
                                 }
@@ -1192,7 +1293,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.CustomSkillDetail"
+                                                                "$ref": "#/definitions/response.PublishedSkillInfo"
                                                             }
                                                         }
                                                     }
@@ -1202,6 +1303,48 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/skill/custom/version/download": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "下载我创建的自定义skill指定版本ZIP包",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "resource.skill"
+                ],
+                "summary": "下载自定义skill指定版本",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "version",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1234,7 +1377,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "skill类型(builtin/custom)",
+                        "description": "skill类型(builtin/custom/acquired)",
                         "name": "skillType",
                         "in": "query"
                     }
@@ -7740,7 +7883,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.CustomSkillDetail"
+                                                                "$ref": "#/definitions/response.PublishedSkillInfo"
                                                             }
                                                         }
                                                     }
@@ -12656,6 +12799,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -15745,6 +15889,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/square/skill/builtin/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取探索广场中的内置skill详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "获取广场内置skill详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.BuiltinSkillDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/square/skill/builtin/list": {
             "get": {
                 "security": [
@@ -15793,7 +15986,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.SquareBuiltinSkillInfo"
+                                                                "$ref": "#/definitions/response.BuiltinSkillInfo"
                                                             }
                                                         }
                                                     }
@@ -15808,14 +16001,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/square/skill/detail": {
+        "/square/skill/created/detail": {
             "get": {
                 "security": [
                     {
                         "JWT": []
                     }
                 ],
-                "description": "获取探索广场中的skill详情",
+                "description": "获取我发布的skill详情",
                 "consumes": [
                     "application/json"
                 ],
@@ -15825,12 +16018,12 @@ const docTemplate = `{
                 "tags": [
                     "exploration.skill"
                 ],
-                "summary": "获取广场skill详情",
+                "summary": "获取我发布skill详情",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "skill ID",
-                        "name": "skillId",
+                        "description": "custom skill ID",
+                        "name": "customSkillId",
                         "in": "query",
                         "required": true
                     }
@@ -15847,7 +16040,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/response.SquareSkillDetail"
+                                            "$ref": "#/definitions/response.PublishedSkillDetail"
                                         }
                                     }
                                 }
@@ -15857,29 +16050,92 @@ const docTemplate = `{
                 }
             }
         },
-        "/square/skill/download": {
+        "/square/skill/created/list": {
             "get": {
                 "security": [
                     {
                         "JWT": []
                     }
                 ],
-                "description": "下载探索广场中的skill ZIP包",
+                "description": "获取我发布的skill列表",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "application/octet-stream"
+                    "application/json"
                 ],
                 "tags": [
                     "exploration.skill"
                 ],
-                "summary": "下载广场skill",
+                "summary": "获取我发布skill列表",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "skill ID",
-                        "name": "skillId",
+                        "description": "skill名称",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.PublishedSkillInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/square/skill/created/version/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取我发布的skill版本历史列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "获取我发布skill版本列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "custom skill ID",
+                        "name": "customSkillId",
                         "in": "query",
                         "required": true
                     }
@@ -15888,7 +16144,34 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.SkillVersionInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -15964,7 +16247,7 @@ const docTemplate = `{
                         "JWT": []
                     }
                 ],
-                "description": "将广场中的skill添加到我的资源库",
+                "description": "将共享skill添加到我的资源库",
                 "consumes": [
                     "application/json"
                 ],
@@ -15974,7 +16257,7 @@ const docTemplate = `{
                 "tags": [
                     "exploration.skill"
                 ],
-                "summary": "添加广场skill到资源库",
+                "summary": "添加共享skill到资源库",
                 "parameters": [
                     {
                         "description": "skill ID",
@@ -15991,6 +16274,219 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/square/skill/share/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取共享skill详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "获取共享skill详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.SharedSkillDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/square/skill/share/download": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "下载共享skill ZIP包",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "下载共享skill",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/square/skill/share/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取探索广场中的共享skill列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "获取广场共享skill列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill名称",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.SharedSkillInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/square/skill/share/version/list": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取共享skill的版本历史列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exploration.skill"
+                ],
+                "summary": "获取共享skill版本列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill ID",
+                        "name": "skillId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.SkillVersionInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -20888,7 +21384,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "builtin",
-                        "custom"
+                        "custom",
+                        "acquired"
                     ]
                 }
             }
@@ -20911,7 +21408,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "builtin",
-                        "custom"
+                        "custom",
+                        "acquired"
                     ]
                 }
             }
@@ -20937,7 +21435,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "builtin",
-                        "custom"
+                        "custom",
+                        "acquired"
                     ]
                 }
             }
@@ -25699,9 +26198,6 @@ const docTemplate = `{
                 "desc": {
                     "type": "string"
                 },
-                "downloadUrl": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -25711,14 +26207,31 @@ const docTemplate = `{
                 "skillMarkdown": {
                     "type": "string"
                 },
-                "squareSkillId": {
-                    "type": "string"
-                },
                 "variables": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/response.SkillVariable"
                     }
+                }
+            }
+        },
+        "response.AcquiredSkillInfo": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
                 }
             }
         },
@@ -26309,7 +26822,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "builtin",
-                        "custom"
+                        "custom",
+                        "acquired"
                     ]
                 },
                 "valid": {
@@ -26445,6 +26959,55 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "workFlowId": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.BuiltinSkillDetail": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                },
+                "skillMarkdown": {
+                    "type": "string"
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SkillVariable"
+                    }
+                }
+            }
+        },
+        "response.BuiltinSkillInfo": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "skillId": {
                     "type": "string"
                 }
             }
@@ -27384,38 +27947,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                }
-            }
-        },
-        "response.CustomSkillDetail": {
-            "type": "object",
-            "properties": {
-                "author": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "$ref": "#/definitions/request.Avatar"
-                },
-                "desc": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "previewId": {
-                    "type": "string"
-                },
-                "skillId": {
-                    "type": "string"
-                },
-                "threadId": {
-                    "type": "string"
-                },
-                "variables": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.SkillVariable"
-                    }
                 }
             }
         },
@@ -30404,6 +30935,85 @@ const docTemplate = `{
                 }
             }
         },
+        "response.PublishedSkillDetail": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "isPublished": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "previewId": {
+                    "type": "string"
+                },
+                "publishType": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                },
+                "skillMarkdown": {
+                    "type": "string"
+                },
+                "threadId": {
+                    "type": "string"
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SkillVariable"
+                    }
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.PublishedSkillInfo": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "isPublished": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "previewId": {
+                    "type": "string"
+                },
+                "publishType": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                },
+                "threadId": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
         "response.QAHitSearchList": {
             "type": "object",
             "properties": {
@@ -30832,6 +31442,55 @@ const docTemplate = `{
                 }
             }
         },
+        "response.SharedSkillDetail": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "isShared": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                },
+                "skillMarkdown": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SharedSkillInfo": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "isShared": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                }
+            }
+        },
         "response.SkillConversationDetailInfo": {
             "type": "object",
             "properties": {
@@ -30915,78 +31574,28 @@ const docTemplate = `{
                 }
             }
         },
-        "response.SkillDetail": {
-            "type": "object",
-            "properties": {
-                "author": {
-                    "description": "作者",
-                    "type": "string"
-                },
-                "avatar": {
-                    "description": "模板头像",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "desc": {
-                    "description": "模板描述",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "模板名称",
-                    "type": "string"
-                },
-                "skillId": {
-                    "description": "模板ID",
-                    "type": "string"
-                },
-                "skillMarkdown": {
-                    "description": "模板markdown预览",
-                    "type": "string"
-                },
-                "skillPath": {
-                    "description": "markdown地址，内部使用，不要对外",
-                    "type": "string"
-                },
-                "variables": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.SkillVariable"
-                    }
-                }
-            }
-        },
         "response.SkillInfo": {
             "type": "object",
             "properties": {
                 "author": {
-                    "description": "作者",
                     "type": "string"
                 },
                 "avatar": {
-                    "description": "图标",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
+                    "$ref": "#/definitions/request.Avatar"
                 },
                 "desc": {
-                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "skillId": {
-                    "description": "skillId",
                     "type": "string"
                 },
                 "skillName": {
-                    "description": "名称",
                     "type": "string"
                 },
                 "skillType": {
-                    "description": "类型",
                     "type": "string"
                 }
             }
@@ -31011,51 +31620,16 @@ const docTemplate = `{
                 }
             }
         },
-        "response.SquareBuiltinSkillInfo": {
+        "response.SkillVersionInfo": {
             "type": "object",
             "properties": {
-                "author": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "$ref": "#/definitions/request.Avatar"
-                },
                 "desc": {
                     "type": "string"
                 },
-                "name": {
+                "updatedAt": {
                     "type": "string"
                 },
-                "skillId": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.SquareSkillDetail": {
-            "type": "object",
-            "properties": {
-                "author": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "$ref": "#/definitions/request.Avatar"
-                },
-                "desc": {
-                    "type": "string"
-                },
-                "downloadUrl": {
-                    "type": "string"
-                },
-                "isShared": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "skillId": {
-                    "type": "string"
-                },
-                "skillMarkdown": {
+                "version": {
                     "type": "string"
                 }
             }

@@ -109,7 +109,7 @@ func (a *AssistantMCPToolEnableRequest) Check() error { return nil }
 type AssistantSkillAddRequest struct {
 	AssistantId string `json:"assistantId" validate:"required"`
 	SkillId     string `json:"skillId" validate:"required"`
-	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom"`
+	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom acquired"`
 }
 
 func (a *AssistantSkillAddRequest) Check() error { return nil }
@@ -117,7 +117,7 @@ func (a *AssistantSkillAddRequest) Check() error { return nil }
 type AssistantSkillDelRequest struct {
 	AssistantId string `json:"assistantId" validate:"required"`
 	SkillId     string `json:"skillId" validate:"required"`
-	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom"`
+	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom acquired"`
 }
 
 func (a *AssistantSkillDelRequest) Check() error { return nil }
@@ -125,7 +125,7 @@ func (a *AssistantSkillDelRequest) Check() error { return nil }
 type AssistantSkillEnableSwitchRequest struct {
 	AssistantId string `json:"assistantId" validate:"required"`
 	SkillId     string `json:"skillId" validate:"required"`
-	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom"`
+	SkillType   string `json:"skillType" validate:"required,oneof=builtin custom acquired"`
 	Enable      bool   `json:"enable"`
 }
 

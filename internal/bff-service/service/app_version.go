@@ -6,6 +6,7 @@ import (
 	app_service "github.com/UnicomAI/wanwu/api/proto/app-service"
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
+	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	rag_service "github.com/UnicomAI/wanwu/api/proto/rag-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/pkg/constant"
@@ -67,6 +68,20 @@ func GetAppVersionList(ctx *gin.Context, userID, orgID, appType, appID string) (
 				CreatedAt: util.Time2Str(history.CreateAt),
 			})
 		}
+	case constant.AppTypeSkill:
+		resp, err := mcp.GetPublishCustomSkillHistoryList(ctx.Request.Context(), &mcp_service.GetPublishCustomSkillHistoryListReq{
+			SkillId: appID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, history := range resp.HistoryList {
+			list = append(list, response.AppVersionInfo{
+				Version:   history.Version,
+				Desc:      history.VersionDesc,
+				CreatedAt: util.Time2Str(history.CreatedAt),
+			})
+		}
 	default:
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFAppType)
 	}
@@ -110,6 +125,14 @@ func UpdateAppVersion(ctx *gin.Context, userID, orgID, appType, appID, descripti
 		if err != nil {
 			return err
 		}
+	case constant.AppTypeSkill:
+		_, err := mcp.UpdatePublishCustomSkill(ctx.Request.Context(), &mcp_service.UpdatePublishCustomSkillReq{
+			SkillId:     appID,
+			VersionDesc: description,
+		})
+		if err != nil {
+			return err
+		}
 	default:
 		return grpc_util.ErrorStatus(errs.Code_BFFAppType)
 	}
@@ -146,6 +169,8 @@ func RollbackAppVersion(ctx *gin.Context, userID, orgID, appType, appID, version
 			Version: version,
 		})
 		return err
+	case constant.AppTypeSkill:
+		return rollbackCustomSkillWorkspace(ctx, appID, version)
 	default:
 		return grpc_util.ErrorStatus(errs.Code_BFFAppType)
 	}
@@ -189,6 +214,15 @@ func GetAppLatestVersion(ctx *gin.Context, userID, orgID, appType, appID string)
 		}
 		ret.Version = resp.Version
 		ret.Desc = resp.Desc
+
+	case constant.AppTypeSkill:
+		resp, err := getLatestPublishCustomSkill(ctx, appID)
+		if err != nil {
+			return nil, err
+		}
+		ret.Version = resp.GetVersion()
+		ret.Desc = resp.GetVersionDesc()
+		ret.CreatedAt = util.Time2Str(resp.GetCreatedAt())
 
 	default:
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFAppType)

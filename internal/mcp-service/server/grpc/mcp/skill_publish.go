@@ -10,31 +10,21 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func (s *Service) PublishCustomSkill(ctx context.Context, req *mcp_service.PublishCustomSkillReq) (*emptypb.Empty, error) {
+func (s *Service) CreatePublishCustomSkill(ctx context.Context, req *mcp_service.PublishCustomSkillReq) (*emptypb.Empty, error) {
 	if req.GetIdentity() == nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_publish", "identity is empty"))
 	}
 	var snap *orm.CustomSkillPublishSnapshot
-	if len(req.GetVariables()) > 0 || req.GetMarkdown() != "" || req.GetObjectPath() != "" {
+	if req.GetMarkdown() != "" || req.GetObjectPath() != "" {
 		snap = &orm.CustomSkillPublishSnapshot{
 			Markdown:   req.GetMarkdown(),
 			ObjectPath: req.GetObjectPath(),
 		}
-		for _, v := range req.GetVariables() {
-			if v == nil {
-				continue
-			}
-			snap.Variables = append(snap.Variables, publishProtoToCustomSkillVariable(req.GetSkillId(), v))
-		}
 	}
-
 	publish := &model.CustomSkillPublish{
-		SkillID:     req.GetSkillId(),
-		Version:     req.GetVersion(),
-		Description: req.GetDesc(),
-		UserId:      req.Identity.UserId,
-		OrgId:       req.Identity.OrgId,
-		GitCommit:   req.GetGitCommit(),
+		SkillID:            req.GetSkillId(),
+		Version:            req.GetVersion(),
+		VersionDescription: req.GetVersionDesc(),
 	}
 	if err := s.cli.PublishCustomSkill(ctx, publish, snap); err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
@@ -42,18 +32,8 @@ func (s *Service) PublishCustomSkill(ctx context.Context, req *mcp_service.Publi
 	return &emptypb.Empty{}, nil
 }
 
-func publishProtoToCustomSkillVariable(skillID string, v *mcp_service.Variable) *model.CustomSkillVariable {
-	return &model.CustomSkillVariable{
-		SkillID:       skillID,
-		Name:          v.GetName(),
-		Desc:          v.GetDesc(),
-		VariableKey:   v.GetVariableKey(),
-		VariableValue: v.GetVariableValue(),
-	}
-}
-
 func (s *Service) UpdatePublishCustomSkill(ctx context.Context, req *mcp_service.UpdatePublishCustomSkillReq) (*emptypb.Empty, error) {
-	if err := s.cli.UpdatePublishCustomSkill(ctx, req.SkillId, req.Desc); err != nil {
+	if err := s.cli.UpdatePublishCustomSkill(ctx, req.SkillId, req.VersionDesc); err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
 	return &emptypb.Empty{}, nil
@@ -64,53 +44,61 @@ func (s *Service) GetPublishCustomSkillHistoryList(ctx context.Context, req *mcp
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
-	list := make([]*mcp_service.PublishCustomSkillHistory, 0, len(history))
+	customSkill, csErr := s.cli.GetCustomSkill(ctx, req.SkillId)
+	if csErr != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, csErr)
+	}
+	list := make([]*mcp_service.PublishCustomSkill, 0, len(history))
 	for _, item := range history {
-		list = append(list, &mcp_service.PublishCustomSkillHistory{
-			SkillId:   item.SkillID,
-			Version:   item.Version,
-			Desc:      item.Description,
-			CreatedAt: item.CreatedAt,
-		})
+		list = append(list, toProtoPublishCustomSkill(customSkill, item))
 	}
 	return &mcp_service.PublishCustomSkillHistoryListResp{HistoryList: list, Total: total}, nil
 }
 
-func (s *Service) OverwriteCustomSkillDraft(ctx context.Context, req *mcp_service.OverwriteCustomSkillDraftReq) (*emptypb.Empty, error) {
-	if err := s.cli.OverwriteCustomSkillDraft(ctx, req.SkillId, req.Version); err != nil {
-		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+func (s *Service) GetPublishCustomSkillByLatest(ctx context.Context, req *mcp_service.GetPublishCustomSkillByLatestReq) (*mcp_service.PublishCustomSkill, error) {
+	customSkill, csErr := s.cli.GetCustomSkill(ctx, req.SkillId)
+	if csErr != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, csErr)
 	}
-	return &emptypb.Empty{}, nil
-}
-
-func (s *Service) GetPublishCustomSkillDesc(ctx context.Context, req *mcp_service.GetPublishCustomSkillDescReq) (*mcp_service.PublishCustomSkillDescResp, error) {
-	publish, err := s.cli.GetPublishCustomSkillDesc(ctx, req.SkillId)
+	publish, err := s.cli.GetPublishCustomSkillByLatest(ctx, req.SkillId)
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
-	return toPublishCustomSkillDesc(publish), nil
+	return toProtoPublishCustomSkill(customSkill, publish), nil
 }
 
-func (s *Service) GetPublishCustomSkillDescBatch(ctx context.Context, req *mcp_service.GetPublishCustomSkillDescBatchReq) (*mcp_service.PublishCustomSkillDescBatchResp, error) {
-	publishList, err := s.cli.GetPublishCustomSkillDescBatch(ctx, req.SkillIdList)
+func (s *Service) GetPublishCustomSkillByVersion(ctx context.Context, req *mcp_service.GetPublishCustomSkillByVersionReq) (*mcp_service.PublishCustomSkill, error) {
+	customSkill, csErr := s.cli.GetCustomSkill(ctx, req.SkillId)
+	if csErr != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, csErr)
+	}
+	publish, err := s.cli.GetPublishCustomSkillByVersion(ctx, req.SkillId, req.Version)
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
-	list := make([]*mcp_service.PublishCustomSkillDescResp, 0, len(publishList))
-	for _, publish := range publishList {
-		list = append(list, toPublishCustomSkillDesc(publish))
-	}
-	return &mcp_service.PublishCustomSkillDescBatchResp{List: list}, nil
+	return toProtoPublishCustomSkill(customSkill, publish), nil
 }
 
-func toPublishCustomSkillDesc(publish *model.CustomSkillPublish) *mcp_service.PublishCustomSkillDescResp {
-	if publish == nil {
-		return nil
+// GetPublishCustomSkillList 与 CustomSkillGetList 共用 buildCustomSkillGetListResp（草稿 + 可选最新发布）。
+func (s *Service) GetPublishCustomSkillList(ctx context.Context, req *mcp_service.GetPublishCustomSkillListReq) (*mcp_service.GetPublishCustomSkillListResp, error) {
+	if req.GetIdentity() == nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, toErrStatus("mcp_custom_skill_publish_list", "identity is empty"))
 	}
-	return &mcp_service.PublishCustomSkillDescResp{
-		SkillId:   publish.SkillID,
-		Version:   publish.Version,
-		Desc:      publish.Description,
-		CreatedAt: publish.CreatedAt,
+	resp, st := s.listPublishCustomSkills(ctx, req.Identity.UserId, req.Identity.OrgId, req.Name)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
 	}
+	return &mcp_service.GetPublishCustomSkillListResp{List: resp.List}, nil
+}
+
+func (s *Service) GetPublishCustomSkillByIDList(ctx context.Context, req *mcp_service.GetPublishCustomSkillByIDListReq) (*mcp_service.GetPublishCustomSkillByIDListResp, error) {
+	customSkills, err := s.cli.GetCustomSkillBySkillIds(ctx, req.SkillIdList)
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	resp, st := s.buildCustomSkillGetListResp(ctx, customSkills)
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
+	}
+	return &mcp_service.GetPublishCustomSkillByIDListResp{List: resp.List}, nil
 }

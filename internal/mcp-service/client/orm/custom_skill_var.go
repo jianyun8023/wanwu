@@ -113,6 +113,20 @@ func (c *Client) DeleteCustomSkillVar(ctx context.Context, userId, orgId string,
 	return nil
 }
 
+func (c *Client) GetCustomSkillVarByID(ctx context.Context, id uint32) (*model.CustomSkillVariable, *errs.Status) {
+	if id == 0 {
+		return nil, toErrStatus("mcp_skill_var_invalid_arg")
+	}
+	var row model.CustomSkillVariable
+	if err := sqlopt.SQLOptions(sqlopt.WithID(id)).Apply(c.db).WithContext(ctx).First(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, toErrStatus("mcp_custom_skill_var_not_found")
+		}
+		return nil, toErrStatus("mcp_custom_skill_var_get", err.Error())
+	}
+	return &row, nil
+}
+
 func (c *Client) GetCustomSkillVars(ctx context.Context, userId, orgId, skillId string) ([]*model.CustomSkillVariable, *errs.Status) {
 	if skillId == "" {
 		return nil, toErrStatus("mcp_skill_var_invalid_arg")

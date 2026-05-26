@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/UnicomAI/wanwu/pkg/util"
 
@@ -14,11 +15,27 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// skill 发布改造后 acquired_skill 仅保留 custom_skill_id，清理无关联键的历史数据
+	initLegacyAcquiredSkillFlagKey = "v0.5.5_acquired_skill_legacy_cleared"
+)
+
+type Metadata struct {
+	MetaKey   string `gorm:"primaryKey;column:key"`
+	MetaValue string `gorm:"column:value"`
+	CreatedAt int64  `gorm:"autoCreateTime:milli"`
+	UpdatedAt int64  `gorm:"autoUpdateTime:milli"`
+}
+
 type Client struct {
 	db *gorm.DB
 }
 
 func NewClient(ctx context.Context, db *gorm.DB) (*Client, error) {
+	if err := db.AutoMigrate(&Metadata{}); err != nil {
+		return nil, err
+	}
+
 	// auto migrate
 	if err := db.AutoMigrate(
 		model.MCPClient{},
@@ -42,9 +59,34 @@ func NewClient(ctx context.Context, db *gorm.DB) (*Client, error) {
 	if err := initMCPClientTransport(db); err != nil {
 		return nil, err
 	}
+	if err := initLegacyAcquiredSkillCleanup(db); err != nil {
+		return nil, err
+	}
 	return &Client{
 		db: db,
 	}, nil
+}
+
+func initLegacyAcquiredSkillCleanup(db *gorm.DB) error {
+	var meta Metadata
+	err := db.Where(&Metadata{MetaKey: initLegacyAcquiredSkillFlagKey}).First(&meta).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("query metadata failed: %w", err)
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("custom_skill_id = '' OR custom_skill_id IS NULL").
+			Delete(&model.AcquiredSkill{}).Error; err != nil {
+			return fmt.Errorf("delete legacy acquired_skill failed: %w", err)
+		}
+		if err := tx.Create(&Metadata{MetaKey: initLegacyAcquiredSkillFlagKey}).Error; err != nil {
+			return fmt.Errorf("failed to set init flag: %w", err)
+		}
+		return nil
+	})
 }
 
 func initCustomToolAuthJson(dbClient *gorm.DB) error {

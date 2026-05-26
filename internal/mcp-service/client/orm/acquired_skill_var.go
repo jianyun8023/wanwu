@@ -11,10 +11,10 @@ import (
 )
 
 func (c *Client) CreateAcquiredSkillVar(ctx context.Context, userId, orgId string, variable *model.AcquiredSkillVariable) (uint32, *errs.Status) {
-	if variable == nil || variable.SkillID == "" || variable.Name == "" {
+	if variable == nil || variable.AcquiredSkillID == "" || variable.Name == "" {
 		return 0, toErrStatus("mcp_skill_var_invalid_arg")
 	}
-	cnt, err := c.countSkillVarByName(ctx, &model.AcquiredSkillVariable{}, variable.SkillID, userId, orgId, variable.Name, 0)
+	cnt, err := c.countAcquiredSkillVarByName(ctx, variable.AcquiredSkillID, userId, orgId, variable.Name, 0)
 	if err != nil {
 		return 0, toErrStatus("mcp_acquired_skill_var_create", err.Error())
 	}
@@ -44,7 +44,7 @@ func (c *Client) UpdateAcquiredSkillVar(ctx context.Context, userId, orgId strin
 		}
 		return toErrStatus("mcp_acquired_skill_var_update", err.Error())
 	}
-	cnt, err := c.countSkillVarByName(ctx, &model.AcquiredSkillVariable{}, row.SkillID, userId, orgId, variable.Name, id)
+	cnt, err := c.countAcquiredSkillVarByName(ctx, row.AcquiredSkillID, userId, orgId, variable.Name, id)
 	if err != nil {
 		return toErrStatus("mcp_acquired_skill_var_update", err.Error())
 	}
@@ -92,13 +92,27 @@ func (c *Client) DeleteAcquiredSkillVar(ctx context.Context, userId, orgId strin
 	return nil
 }
 
-func (c *Client) GetAcquiredSkillVars(ctx context.Context, userId, orgId, skillId string) ([]*model.AcquiredSkillVariable, *errs.Status) {
-	if skillId == "" {
+func (c *Client) GetAcquiredSkillVarByID(ctx context.Context, id uint32) (*model.AcquiredSkillVariable, *errs.Status) {
+	if id == 0 {
+		return nil, toErrStatus("mcp_skill_var_invalid_arg")
+	}
+	var row model.AcquiredSkillVariable
+	if err := sqlopt.SQLOptions(sqlopt.WithID(id)).Apply(c.db).WithContext(ctx).First(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, toErrStatus("mcp_acquired_skill_var_not_found")
+		}
+		return nil, toErrStatus("mcp_acquired_skill_var_get", err.Error())
+	}
+	return &row, nil
+}
+
+func (c *Client) GetAcquiredSkillVars(ctx context.Context, userId, orgId, acquiredSkillId string) ([]*model.AcquiredSkillVariable, *errs.Status) {
+	if acquiredSkillId == "" {
 		return nil, toErrStatus("mcp_skill_var_invalid_arg")
 	}
 	var list []*model.AcquiredSkillVariable
 	if err := sqlopt.SQLOptions(
-		sqlopt.WithSkillID(skillId),
+		sqlopt.WithAcquiredSkillID(acquiredSkillId),
 		sqlopt.WithUserID(userId),
 		sqlopt.WithOrgID(orgId),
 	).Apply(c.db).WithContext(ctx).Find(&list).Error; err != nil {
@@ -107,13 +121,13 @@ func (c *Client) GetAcquiredSkillVars(ctx context.Context, userId, orgId, skillI
 	return list, nil
 }
 
-func (c *Client) GetAcquiredSkillVarsBySkillIDs(ctx context.Context, userId, orgId string, skillIds []string) (map[string][]*model.AcquiredSkillVariable, *errs.Status) {
-	if len(skillIds) == 0 {
+func (c *Client) GetAcquiredSkillVarsByAcquiredSkillIDs(ctx context.Context, userId, orgId string, acquiredSkillIDs []string) (map[string][]*model.AcquiredSkillVariable, *errs.Status) {
+	if len(acquiredSkillIDs) == 0 {
 		return map[string][]*model.AcquiredSkillVariable{}, nil
 	}
 	var list []*model.AcquiredSkillVariable
 	if err := sqlopt.SQLOptions(
-		sqlopt.WithSkillIDs(skillIds),
+		sqlopt.WithAcquiredSkillIDs(acquiredSkillIDs),
 		sqlopt.WithUserID(userId),
 		sqlopt.WithOrgID(orgId),
 	).Apply(c.db.WithContext(ctx)).Find(&list).Error; err != nil {
@@ -121,7 +135,22 @@ func (c *Client) GetAcquiredSkillVarsBySkillIDs(ctx context.Context, userId, org
 	}
 	out := make(map[string][]*model.AcquiredSkillVariable)
 	for _, v := range list {
-		out[v.SkillID] = append(out[v.SkillID], v)
+		out[v.AcquiredSkillID] = append(out[v.AcquiredSkillID], v)
 	}
 	return out, nil
+}
+
+func (c *Client) countAcquiredSkillVarByName(ctx context.Context, acquiredSkillID, userID, orgID, name string, excludeID uint32) (int64, error) {
+	var cnt int64
+	db := sqlopt.SQLOptions(
+		sqlopt.WithAcquiredSkillID(acquiredSkillID),
+		sqlopt.WithUserID(userID),
+		sqlopt.WithOrgID(orgID),
+		sqlopt.WithVariableName(name),
+	).Apply(c.db.WithContext(ctx).Model(&model.AcquiredSkillVariable{}))
+	if excludeID > 0 {
+		db = db.Where("id <> ?", excludeID)
+	}
+	err := db.Count(&cnt).Error
+	return cnt, err
 }

@@ -327,6 +327,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/callback/v1/skill/acquired/list": {
+            "post": {
+                "description": "获取我添加skill详情列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skill"
+                ],
+                "summary": "获取我添加skill详情列表",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.SearchAcquiredSkillListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.CallbackAcquiredSkillDetailListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/callback/v1/skill/builtin/list": {
             "post": {
                 "description": "获取内置skill详情列表",
@@ -4337,6 +4383,20 @@ const docTemplate = `{
                 }
             }
         },
+        "request.SearchAcquiredSkillListReq": {
+            "type": "object",
+            "required": [
+                "skillIdList"
+            ],
+            "properties": {
+                "skillIdList": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "request.SearchBuiltinSkillListReq": {
             "type": "object",
             "required": [
@@ -4599,6 +4659,40 @@ const docTemplate = `{
                 "schema": {
                     "description": "OpenAPI 3.0 schema JSON 字符串",
                     "type": "string"
+                }
+            }
+        },
+        "response.CallbackAcquiredSkillDetail": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/request.Avatar"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "objectPath": {
+                    "type": "string"
+                },
+                "skillId": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.CallbackAcquiredSkillDetailListResp": {
+            "type": "object",
+            "properties": {
+                "skillList": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.CallbackAcquiredSkillDetail"
+                    }
                 }
             }
         },
@@ -4989,35 +5083,24 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "author": {
-                    "description": "作者",
                     "type": "string"
                 },
                 "avatar": {
-                    "description": "模板头像",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
+                    "$ref": "#/definitions/request.Avatar"
                 },
                 "desc": {
-                    "description": "模板描述",
                     "type": "string"
                 },
                 "name": {
-                    "description": "模板名称",
                     "type": "string"
                 },
                 "skillId": {
-                    "description": "模板ID",
                     "type": "string"
                 },
                 "skillMarkdown": {
-                    "description": "模板markdown预览",
                     "type": "string"
                 },
                 "skillPath": {
-                    "description": "markdown地址，内部使用，不要对外",
                     "type": "string"
                 },
                 "variables": {

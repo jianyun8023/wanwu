@@ -112,6 +112,7 @@ func (s *Service) ConvertAppType(ctx context.Context, req *app_service.ConvertAp
 func toProtoExpApp(record *orm.ExplorationAppInfo) *app_service.ExplorationAppInfo {
 	return &app_service.ExplorationAppInfo{
 		UserId:      record.UserID,
+		OrgId:       record.OrgID,
 		AppId:       record.AppId,
 		AppType:     record.AppType,
 		CreatedAt:   record.CreatedAt,
