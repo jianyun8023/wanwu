@@ -17,6 +17,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	minio_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/minio-util"
+	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
@@ -44,7 +45,7 @@ func ImportGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string,
 	previewID := util.GenUUID()
 
 	threadResp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
-		Prompt: "Import Skill",
+		Prompt: gin_util.I18nKey(ctx, "wga_skill_import_title"),
 		ModelConfig: &common.AppModelConfig{
 			ModelId:   req.ModelConfig.ModelId,
 			Provider:  req.ModelConfig.Provider,
@@ -66,7 +67,7 @@ func ImportGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string,
 		author = skillConversationAuthor
 	}
 	customSkillResp, err := mcp.CustomSkillCreate(ctx.Request.Context(), &mcp_service.CustomSkillCreateReq{
-		Name:            "Import Skill",
+		Name:            gin_util.I18nKey(ctx, "wga_skill_import_title"),
 		Avatar:          req.Avatar.Key,
 		Author:          author,
 		WgaThreadId:     threadResp.ThreadId,
