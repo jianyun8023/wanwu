@@ -292,11 +292,16 @@ func buildQAPairBatchProcessor(knowledgeBase *model.KnowledgeBase, importTask *m
 		var chunks []*service.RagQAPairItem
 		var QAPairs []*model.KnowledgeQAPair
 		var successCount int64 = 0
+		questionMd5Map := map[string]struct{}{}
 		for _, lineData := range batchData {
 			qaPairId := util.NewID()
 			question := strings.Trim(lineData[0], " ")
 			answer := strings.Trim(lineData[1], " ")
 			questionMD5 := util.MD5([]byte(question))
+			if _, ok := questionMd5Map[questionMD5]; ok {
+				continue
+			}
+			questionMd5Map[questionMD5] = struct{}{}
 			err := orm.CheckKnowledgeQAPairQuestion(ctx, "", knowledgeBase.KnowledgeId, questionMD5)
 			if err != nil {
 				continue
