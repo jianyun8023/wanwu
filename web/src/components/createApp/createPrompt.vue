@@ -34,7 +34,7 @@
         </el-form-item>
         <el-form-item :label="$t('tempSquare.promptName') + ':'" prop="name">
           <el-input
-            :placeholder="$t('tempSquare.namePlaceholder')"
+            :placeholder="$t('common.hint.text')"
             :disabled="type === detail"
             v-model="form.name"
             maxlength="30"
@@ -48,7 +48,7 @@
             :disabled="type === detail"
             v-model="form.desc"
             show-word-limit
-            maxlength="50"
+            maxlength="200"
           ></el-input>
         </el-form-item>
         <el-form-item
@@ -148,10 +148,10 @@ export default {
           },
           {
             validator: (rule, value, callback) => {
-              if (/^[A-Za-z0-9.\u4e00-\u9fa5_-]+$/.test(value)) {
+              if (this.$config.commonTextReg.test(value)) {
                 callback();
               } else {
-                callback(new Error(this.$t('tempSquare.namePlaceholder')));
+                callback(new Error(this.$t('common.hint.text')));
               }
             },
             trigger: 'change',
@@ -164,7 +164,7 @@ export default {
             trigger: 'blur',
           },
           {
-            max: 50,
+            max: 200,
             message: this.$t('tempSquare.promptLimitRules'),
             trigger: 'blur',
           },

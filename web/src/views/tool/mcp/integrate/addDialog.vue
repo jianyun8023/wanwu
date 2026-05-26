@@ -34,6 +34,8 @@
             <el-input
               type="textarea"
               rows="5"
+              show-word-limit
+              maxlength="200"
               v-model="ruleForm.desc"
             ></el-input>
           </el-form-item>

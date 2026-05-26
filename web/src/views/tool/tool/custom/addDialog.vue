@@ -46,6 +46,8 @@
                 <el-input
                   class="name-input"
                   v-model="form.description"
+                  show-word-limit
+                  maxlength="200"
                   :placeholder="
                     $t('common.input.placeholder') + $t('tool.custom.desc')
                   "

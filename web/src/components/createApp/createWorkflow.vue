@@ -33,7 +33,7 @@
         </el-form-item>
         <el-form-item :label="$t('list.pluginName') + ':'" prop="name">
           <el-input
-            :placeholder="$t('list.nameplaceholder')"
+            :placeholder="$t('common.hint.text')"
             v-model="form.name"
             maxlength="30"
             show-word-limit
@@ -118,10 +118,10 @@ export default {
           {
             validator: (rule, value, callback) => {
               // 工作流名称规则，之前不支持中文: /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/
-              if (/^[A-Za-z0-9.\u4e00-\u9fa5_-]+$/.test(value)) {
+              if (this.$config.commonTextReg.test(value)) {
                 callback();
               } else {
-                callback(new Error(this.$t('list.nameplaceholder')));
+                callback(new Error(this.$t('common.hint.text')));
               }
             },
             trigger: 'change',

@@ -137,6 +137,8 @@
             v-model="createForm.modelDesc"
             :placeholder="$t('common.input.placeholder')"
             :disabled="!allowEdit"
+            show-word-limit
+            maxlength="200"
           ></el-input>
         </el-form-item>
         <el-form-item

@@ -19,7 +19,7 @@
         <el-form-item :label="$t('safety.create.tableName')" prop="tableName">
           <el-input
             v-model="ruleForm.tableName"
-            :placeholder="$t('safety.create.tableNamePlaceholder')"
+            :placeholder="$t('common.hint.text')"
             maxlength="15"
             show-word-limit
           />
@@ -29,6 +29,8 @@
             v-model="ruleForm.remark"
             type="textarea"
             :rows="4"
+            maxlength="200"
+            show-word-limit
             :placeholder="$t('safety.create.remarkPlaceholder')"
           />
         </el-form-item>
@@ -53,9 +55,9 @@ export default {
   },
   data() {
     var checkName = (rule, value, callback) => {
-      const reg = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/;
+      const reg = this.$config.commonTextReg;
       if (!reg.test(value)) {
-        callback(new Error(this.$t('safety.create.tableNamePlaceholder')));
+        callback(new Error(this.$t('common.hint.text')));
       } else {
         return callback();
       }

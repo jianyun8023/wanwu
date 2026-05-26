@@ -27,7 +27,11 @@
             ></el-input>
           </el-form-item>
           <el-form-item :label="$t('tool.server.desc')" prop="desc">
-            <el-input v-model="ruleForm.desc"></el-input>
+            <el-input
+              show-word-limit
+              maxlength="200"
+              v-model="ruleForm.desc"
+            ></el-input>
           </el-form-item>
         </el-form>
       </div>
