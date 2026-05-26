@@ -813,6 +813,7 @@ services:
       - ./configs/microservice/bff-service/configs/agent-skills/wanwu/pdf:/home/root/.claude/skills/pdf
     environment:
       USER: root
+      OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: 600000
       # COZELOOP_ENABLED: ${COZELOOP_ENABLED}
       # COZELOOP_WORKSPACE_ID: ${COZELOOP_WORKSPACE_ID}
       # COZELOOP_API_TOKEN: ${COZELOOP_API_TOKEN}
