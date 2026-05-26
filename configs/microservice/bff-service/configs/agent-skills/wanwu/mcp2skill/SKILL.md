@@ -21,10 +21,10 @@ description: 将 MCP Server 的工具列表转换为 Skill 格式的结构化 Ma
 
 ```bash
 # 通过 streamable URL 转换
-mcp2skill name=天气查询 streamableUrl=http://192.168.0.21:8081/mcp/server/streamable?key=xxx output=./skills
+mcp2skill name=天气查询 streamableUrl=http://192.168.0.21:8081/mcp/server/streamable?key=xxx description="查询天气" output=./skills
 
 # 通过 SSE URL 转换
-mcp2skill name=天气查询 sseUrl=http://192.168.0.21:8081/mcp/server/sse?key=xxx transport=sse output=./skills
+mcp2skill name=天气查询 sseUrl=http://192.168.0.21:8081/mcp/server/sse?key=xxx transport=sse description="查询天气" output=./skills
 ```
 
 ## Tools

@@ -43,8 +43,9 @@ type WgaSandboxSkill struct {
 }
 
 type WgaSandboxMCP struct {
-	Name string `json:"name" validate:"required"`
-	URL  string `json:"url" validate:"required"`
+	Name        string `json:"name" validate:"required"`
+	URL         string `json:"url" validate:"required"`
+	Description string `json:"description"`
 }
 
 func (r *WgaSandboxRunReq) Check() error {

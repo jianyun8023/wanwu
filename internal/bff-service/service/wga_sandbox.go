@@ -92,8 +92,9 @@ func WgaSandboxRun(ctx *gin.Context, req *request.WgaSandboxRunReq) error {
 		mcps := make([]wga_sandbox_option.MCP, len(req.MCPs))
 		for i, mcp := range req.MCPs {
 			mcps[i] = wga_sandbox_option.MCP{
-				Name: mcp.Name,
-				URL:  mcp.URL,
+				Name:        mcp.Name,
+				URL:         mcp.URL,
+				Description: mcp.Description,
 			}
 		}
 		opts = append(opts, wga_sandbox_option.WithMCPs(mcps))

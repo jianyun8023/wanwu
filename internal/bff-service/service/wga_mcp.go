@@ -79,14 +79,16 @@ func buildWgaMCPOptions(ctx *gin.Context, userId, orgId string, mcpList []*assis
 	var opts []wga_option.Option
 	for _, item := range mcpResp.Infos {
 		opts = append(opts, wga_option.WithMCP(wga_option.MCP{
-			Name: item.Info.GetName(),
-			URL:  util.IfElse(item.Transport == constant.MCPTransportStreamable, item.StreamableUrl, item.SseUrl),
+			Name:        item.Info.GetName(),
+			URL:         util.IfElse(item.Transport == constant.MCPTransportStreamable, item.StreamableUrl, item.SseUrl),
+			Description: item.Info.GetDesc(),
 		}))
 	}
 	for _, item := range mcpResp.Servers {
 		opts = append(opts, wga_option.WithMCP(wga_option.MCP{
-			Name: item.Name,
-			URL:  util.IfElse(item.Transport == constant.MCPTransportStreamable, item.StreamableUrl, item.SseUrl),
+			Name:        item.Name,
+			URL:         util.IfElse(item.Transport == constant.MCPTransportStreamable, item.StreamableUrl, item.SseUrl),
+			Description: item.Desc,
 		}))
 	}
 	return opts, nil

@@ -19,13 +19,13 @@
 ### 通过 streamable URL 转换
 
 ```bash
-mcp2skill name=天气查询 streamableUrl=http://192.168.0.21:8081/mcp/server/streamable?key=xxx output=./skills
+mcp2skill name=天气查询 streamableUrl=http://192.168.0.21:8081/mcp/server/streamable?key=xxx description="查询天气" output=./skills
 ```
 
 ### 通过 SSE URL 转换
 
 ```bash
-mcp2skill name=地图服务 sseUrl=http://192.168.0.21:8081/mcp/server/sse?key=xxx transport=sse output=./skills
+mcp2skill name=地图服务 sseUrl=http://192.168.0.21:8081/mcp/server/sse?key=xxx transport=sse description="地图服务" output=./skills
 ```
 
 ### 输出结构
