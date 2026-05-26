@@ -19,6 +19,10 @@ type CheckResult = option.CheckResult
 
 type ToolCategoryInfo = config.ToolCategory
 
+type SystemMessageStrategy = option.SystemMessageStrategy
+
+const SystemMessageStrategyMerge = option.SystemMessageStrategyMerge
+
 // WithModelConfig 设置模型配置。
 func WithModelConfig(model ModelConfig) Option {
 	return option.WithModelConfig(model)
@@ -67,6 +71,10 @@ func WithRunSession(session RunSession) Option {
 // WithMessages 设置历史消息。
 func WithMessages(messages []adk.Message) Option {
 	return option.WithMessages(messages)
+}
+
+func WithSystemMessageStrategy(strategy SystemMessageStrategy) Option {
+	return option.WithSystemMessageStrategy(strategy)
 }
 
 // WithEnableHumanInTheLoop 设置是否启用人机交互。

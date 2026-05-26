@@ -177,6 +177,11 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 		opts = append(opts, wga_sandbox_option.WithMCPs(mcps))
 	}
 
+	// 传递 SystemMessageStrategy 到 wga-sandbox
+	if a.options.SystemMessageStrategy == option.SystemMessageStrategyMerge {
+		opts = append(opts, wga_sandbox_option.WithSystemMessageStrategy(wga_sandbox_option.SystemMessageStrategyMerge))
+	}
+
 	return opts, nil
 }
 

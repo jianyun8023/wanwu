@@ -10,6 +10,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
 	"github.com/cloudwego/eino/adk/prebuilt/supervisor"
+	"github.com/cloudwego/eino/schema"
 )
 
 // NewAgent 创建智能体实例。
@@ -56,16 +57,41 @@ func newReactAgent(ctx context.Context, cfg *config.Agent, options option.Option
 		middlewares = append(middlewares, option.DeepSeekCompatMiddleware())
 	}
 
-	return adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Name:        cfg.ID,
-		Description: cfg.Description,
-		Instruction: instruction,
-		Model:       model,
-		ToolsConfig: tools,
-		Middlewares: middlewares,
-
+	config := &adk.ChatModelAgentConfig{
+		Name:          cfg.ID,
+		Description:   cfg.Description,
+		Instruction:   instruction,
+		Model:         model,
+		ToolsConfig:   tools,
+		Middlewares:   middlewares,
 		MaxIterations: cfg.Configure.MaxIterations,
-	})
+	}
+
+	if options.SystemMessageStrategy == option.SystemMessageStrategyMerge {
+		config.GenModelInput = func(ctx context.Context, instr string, input *adk.AgentInput) ([]adk.Message, error) {
+			msgs := make([]adk.Message, 0, len(input.Messages)+1)
+
+			extraSystem, otherMessages := option.ExtractSystemMessage(input.Messages)
+
+			systemPrompt := instr
+			if extraSystem != "" {
+				if systemPrompt != "" {
+					systemPrompt += "\n\n"
+				}
+				systemPrompt += extraSystem
+			}
+
+			if systemPrompt != "" {
+				msgs = append(msgs, schema.SystemMessage(systemPrompt))
+			}
+
+			msgs = append(msgs, otherMessages...)
+
+			return msgs, nil
+		}
+	}
+
+	return adk.NewChatModelAgent(ctx, config)
 }
 
 func newSequentialAgent(ctx context.Context, cfg *config.Agent, options option.Options) (adk.ResumableAgent, error) {
