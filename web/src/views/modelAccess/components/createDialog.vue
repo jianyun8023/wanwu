@@ -471,16 +471,6 @@ import LinkIcon from '@/components/linkIcon.vue';
 export default {
   components: { LinkIcon },
   data() {
-    const validateUrls = (rule, value, callback) => {
-      const reg =
-        /^(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?$/;
-
-      if (!reg.test(value)) {
-        callback(new Error(this.$t('modelAccess.hint.urlError')));
-      } else {
-        return callback();
-      }
-    };
     return {
       isSystem: this.$store.state.user.permission.isSystem || false,
       allowEdit: true,
@@ -546,8 +536,8 @@ export default {
             message: this.$t('common.input.placeholder'),
             trigger: 'blur',
           },
-          // { min: 2, max: 50, message: this.$t('common.hint.textLimit'), trigger: 'blur'},
           // { pattern: this.$config.commonTextReg, message: this.$t('common.hint.text'), trigger: "blur"}
+          // { min: 2, max: 50, message: this.$t('common.hint.textLimit'), trigger: 'blur'},
         ],
         appKey: [
           {
@@ -608,7 +598,12 @@ export default {
             message: this.$t('common.input.placeholder'),
             trigger: 'blur',
           },
-          { validator: validateUrls, trigger: 'blur' },
+          {
+            pattern:
+              /^(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?$/,
+            message: this.$t('modelAccess.hint.urlError'),
+            trigger: 'blur',
+          },
         ],
         scopeType: [
           {

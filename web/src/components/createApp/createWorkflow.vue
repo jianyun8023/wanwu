@@ -111,21 +111,15 @@ export default {
             trigger: 'change',
           },
           {
+            pattern: this.$config.commonTextReg,
+            message: this.$t('common.hint.text'),
+            trigger: 'change',
+          },
+          {
             min: 2,
             max: 50,
             message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
-          },
-          {
-            validator: (rule, value, callback) => {
-              // 工作流名称规则，之前不支持中文: /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/
-              if (this.$config.commonTextReg.test(value)) {
-                callback();
-              } else {
-                callback(new Error(this.$t('common.hint.text')));
-              }
-            },
-            trigger: 'change',
           },
         ],
         desc: [

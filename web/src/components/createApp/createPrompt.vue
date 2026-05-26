@@ -142,20 +142,15 @@ export default {
             trigger: 'change',
           },
           {
+            pattern: this.$config.commonTextReg,
+            message: this.$t('common.hint.text'),
+            trigger: 'change',
+          },
+          {
             min: 2,
             max: 50,
             message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
-          },
-          {
-            validator: (rule, value, callback) => {
-              if (this.$config.commonTextReg.test(value)) {
-                callback();
-              } else {
-                callback(new Error(this.$t('common.hint.text')));
-              }
-            },
-            trigger: 'change',
           },
         ],
         desc: [

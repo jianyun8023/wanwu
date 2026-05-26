@@ -54,14 +54,6 @@ export default {
     type: '',
   },
   data() {
-    var checkName = (rule, value, callback) => {
-      const reg = this.$config.commonTextReg;
-      if (!reg.test(value)) {
-        callback(new Error(this.$t('common.hint.text')));
-      } else {
-        return callback();
-      }
-    };
     return {
       title: this.$t('safety.create.createTitle'),
       dialogVisible: false,
@@ -77,12 +69,16 @@ export default {
             trigger: 'blur',
           },
           {
+            pattern: this.$config.commonTextReg,
+            message: this.$t('common.hint.text'),
+            trigger: 'blur',
+          },
+          {
             min: 2,
             max: 50,
             message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
           },
-          { validator: checkName, trigger: 'blur' },
         ],
         remark: [
           {
