@@ -803,6 +803,7 @@ export default {
       publishType: 'Private release as Skill: Only visible to yourself',
       publishType1: 'Public release as Skill: Visible within organization',
       publishType2: 'Public release as Skill: Globally visible',
+      noAcquired: '可前往Skill广场--共享--点击发送到资源库进行添加',
     },
   },
 

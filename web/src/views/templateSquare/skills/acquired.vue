@@ -30,7 +30,14 @@
               </div>
             </div>
             <div v-else class="empty">
-              <el-empty :description="$t('common.noData')"></el-empty>
+              <el-empty>
+                <template #description>
+                  <div>
+                    <p>{{ $t('common.noData') }}</p>
+                    <p>{{ $t('tempSquare.skills.noAcquired') }}</p>
+                  </div>
+                </template>
+              </el-empty>
             </div>
           </div>
         </div>

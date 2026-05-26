@@ -822,6 +822,7 @@ export default {
       publishType: '私密发布：仅自己可见',
       publishType1: '公开发布：组织内可见',
       publishType2: '公开发布：全平台可见',
+      noAcquired: '可前往Skill广场--共享--点击发送到资源库进行添加',
     },
   },
 
