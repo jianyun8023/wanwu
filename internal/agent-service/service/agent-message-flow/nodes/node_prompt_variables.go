@@ -104,7 +104,7 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			}
 			parts = append(parts, *message)
 		}
-		input = buildUrlInput(input, req.UploadFile)
+		input = buildVisionSupportUrlInput(input, req.UploadFile)
 		parts = append(parts, schema.MessageInputPart{
 			Type: schema.ChatMessagePartTypeText,
 			Text: input,
@@ -127,6 +127,13 @@ func buildUrlInput(query string, fileUrl []string) string {
 		return query
 	}
 	return query + "\n用户上传的文档连接为:" + rebuildUlr(fileUrl[0])
+}
+
+func buildVisionSupportUrlInput(query string, fileUrl []string) string {
+	if len(fileUrl) == 0 {
+		return query
+	}
+	return query + "\n用户上传的文档连接为（无需读取，供工具调用使用）:" + rebuildUlr(fileUrl[0])
 }
 
 func rebuildUlr(fileUrl string) (retUrl string) {
