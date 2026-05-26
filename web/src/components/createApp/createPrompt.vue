@@ -37,7 +37,7 @@
             :placeholder="$t('common.hint.text')"
             :disabled="type === detail"
             v-model="form.name"
-            maxlength="30"
+            maxlength="50"
             show-word-limit
           ></el-input>
         </el-form-item>
@@ -142,9 +142,10 @@ export default {
             trigger: 'change',
           },
           {
-            max: 30,
-            message: this.$t('tempSquare.promptNameRules'),
-            trigger: 'change',
+            min: 2,
+            max: 50,
+            message: this.$t('common.hint.textLimit'),
+            trigger: 'blur',
           },
           {
             validator: (rule, value, callback) => {

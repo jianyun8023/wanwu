@@ -101,6 +101,8 @@
             v-model="createForm.displayName"
             :placeholder="$t('common.hint.text')"
             :disabled="!allowEdit"
+            maxlength="50"
+            show-word-limit
           ></el-input>
         </el-form-item>
         <el-form-item :label="$t('modelAccess.table.picPath')" prop="avatar">

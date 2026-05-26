@@ -33,9 +33,9 @@
         </el-form-item>
         <el-form-item :label="$t('list.chatName') + ':'" prop="name">
           <el-input
-            :placeholder="$t('list.chatNamePlaceholder')"
+            :placeholder="$t('common.hint.text')"
             v-model="form.name"
-            maxlength="30"
+            maxlength="50"
             show-word-limit
           ></el-input>
         </el-form-item>
@@ -88,16 +88,17 @@ export default {
             trigger: 'change',
           },
           {
-            max: 30,
-            message: this.$t('list.chatNameLimit'),
-            trigger: 'change',
+            min: 2,
+            max: 50,
+            message: this.$t('common.hint.textLimit'),
+            trigger: 'blur',
           },
           {
             validator: (rule, value, callback) => {
-              if (/^[A-Za-z0-9.\u4e00-\u9fa5_-]+$/.test(value)) {
+              if (this.$config.commonTextReg.test(value)) {
                 callback();
               } else {
-                callback(new Error(this.$t('list.chatNamePlaceholder')));
+                callback(new Error(this.$t('common.hint.text')));
               }
             },
             trigger: 'change',

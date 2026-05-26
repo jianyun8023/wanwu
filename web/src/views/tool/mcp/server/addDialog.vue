@@ -24,6 +24,8 @@
             <el-input
               v-model="ruleForm.name"
               :placeholder="$t('common.hint.text')"
+              show-word-limit
+              maxlength="50"
             ></el-input>
           </el-form-item>
           <el-form-item :label="$t('tool.server.desc')" prop="desc">

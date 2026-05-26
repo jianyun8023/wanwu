@@ -20,7 +20,7 @@
           <el-input
             v-model="ruleForm.tableName"
             :placeholder="$t('common.hint.text')"
-            maxlength="15"
+            maxlength="50"
             show-word-limit
           />
         </el-form-item>
@@ -74,6 +74,12 @@ export default {
           {
             required: true,
             message: this.$t('safety.create.tableNameMsg'),
+            trigger: 'blur',
+          },
+          {
+            min: 2,
+            max: 50,
+            message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
           },
           { validator: checkName, trigger: 'blur' },

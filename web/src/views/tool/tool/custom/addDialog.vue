@@ -34,6 +34,8 @@
                   class="name-input"
                   v-model="form.name"
                   :placeholder="$t('common.hint.text')"
+                  maxlength="50"
+                  show-word-limit
                 />
               </el-form-item>
             </div>
