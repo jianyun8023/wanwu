@@ -8,9 +8,9 @@ $text-secondary: #4b5563;
 $text-muted: #6b7280;
 
 // Brand Colors
-$claude-primary: #10a37f;
-$claude-primary-light: #1ab38b;
-$claude-primary-dark: #0d8a6a;
+$wga-primary: #10a37f;
+$wga-primary-light: #1ab38b;
+$wga-primary-dark: #0d8a6a;
 $accent-color: #10a37f;
 $accent-dark: #0d8a6a;
 
@@ -35,6 +35,21 @@ $purple-primary: #8b5cf6;
 $purple-dark: #7c3aed;
 $workspace-color: #3b82f6;
 $workspace-light: #60a5fa;
+
+// Background Colors
+$wga-bg: #ffffff;
+$wga-bg-secondary: #f7f7f8;
+
+// Border Colors
+$wga-border: #e5e5e5;
+
+// Text Colors
+$wga-text: #1a1a1a;
+$wga-text-secondary: #666666;
+$wga-text-muted: #999999;
+
+// Layout Heights
+$header-height: 56px;
 
 // Message Max Width
 $message-max-width: 900px;

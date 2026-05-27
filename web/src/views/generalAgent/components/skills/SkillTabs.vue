@@ -112,12 +112,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import '../../styles/variables';
+
 .skill-tabs-container {
-  width: 100%;
-  flex-shrink: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   background: #fff;
   border-left: 1px solid #f0f0f0;
   position: relative;
@@ -125,6 +127,7 @@ export default {
 }
 
 .tabs-header-wrapper {
+  height: $header-height;
   position: relative;
   padding: 0 16px;
   border-bottom: 1px solid #f0f0f0;

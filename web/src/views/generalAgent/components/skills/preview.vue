@@ -3,7 +3,6 @@
     <div
       ref="messageArea"
       class="preview-message-area"
-      :class="{ empty: isEmptyConversation }"
       @scroll="handleMessageAreaScroll"
     >
       <div v-if="messageList.length > 0 || isStreaming" class="message-list">
@@ -195,6 +194,10 @@ export default {
   },
   mounted() {
     this.initConversationFromProps();
+    this.setupInputResizeObserver();
+  },
+  activated() {
+    this.$nextTick(() => this.recalcTextarea());
   },
   watch: {
     'skillPreviewParams.previewId': {
@@ -207,6 +210,7 @@ export default {
   },
   beforeDestroy() {
     this.cleanupAllStreams();
+    this.teardownInputResizeObserver();
   },
   methods: {
     async initConversationFromProps() {
@@ -373,6 +377,30 @@ export default {
 
     handleStopClick() {
       this.stopStreaming(this.currentThreadId);
+    },
+
+    setupInputResizeObserver() {
+      if (typeof ResizeObserver === 'undefined') return;
+      const container = this.$el?.querySelector('.input-container');
+      if (!container) return;
+      this._inputResizeObserver = new ResizeObserver(() => {
+        this.recalcTextarea();
+      });
+      this._inputResizeObserver.observe(container);
+    },
+
+    teardownInputResizeObserver() {
+      if (this._inputResizeObserver) {
+        this._inputResizeObserver.disconnect();
+        this._inputResizeObserver = null;
+      }
+    },
+
+    recalcTextarea() {
+      const input = this.$refs.input;
+      if (input && input.resizeTextarea) {
+        input.resizeTextarea();
+      }
     },
   },
 };

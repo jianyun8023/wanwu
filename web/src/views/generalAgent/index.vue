@@ -1647,7 +1647,6 @@ export default {
           this.customSkillId = '';
           this.previewId = '';
           this.syncConversationRoute();
-          this.messageList = [];
           this.hidePanel();
         }
         this.fetchConversationList();
@@ -1724,16 +1723,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$claude-primary: #10a37f;
-$claude-primary-light: #1ab38b;
-$claude-primary-dark: #0d8a6a;
-$claude-bg: #ffffff;
-$claude-bg-secondary: #f7f7f8;
-$claude-border: #e5e5e5;
-$claude-text: #1a1a1a;
-$claude-text-secondary: #666666;
-$claude-text-muted: #999999;
-$message-max-width: 900px;
+@import './styles/variables';
 
 .general-agent-page {
   display: flex;
@@ -1822,13 +1812,13 @@ $message-max-width: 900px;
     .new-chat-btn {
       width: 100%;
       border-radius: 12px;
-      background: $claude-primary;
-      border-color: $claude-primary;
+      background: $wga-primary;
+      border-color: $wga-primary;
       font-weight: 500;
 
       &:hover {
-        background: $claude-primary-dark;
-        border-color: $claude-primary-dark;
+        background: $wga-primary-dark;
+        border-color: $wga-primary-dark;
       }
     }
   }
@@ -1869,7 +1859,7 @@ $message-max-width: 900px;
     transition: background-color 0.2s;
 
     &:hover {
-      background: rgba($claude-primary, 0.08);
+      background: rgba($wga-primary, 0.08);
 
       .conversation-delete {
         opacity: 1;
@@ -1877,7 +1867,7 @@ $message-max-width: 900px;
     }
 
     &.active {
-      background: rgba($claude-primary, 0.12);
+      background: rgba($wga-primary, 0.12);
 
       .conversation-title {
         font-weight: 500;
@@ -1886,14 +1876,14 @@ $message-max-width: 900px;
 
     i:first-child {
       margin-right: 10px;
-      color: $claude-text-muted;
+      color: $wga-text-muted;
       font-size: 16px;
     }
 
     .conversation-title {
       flex: 1;
       font-size: 14px;
-      color: $claude-text;
+      color: $wga-text;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -1901,7 +1891,7 @@ $message-max-width: 900px;
 
     .conversation-delete {
       opacity: 0;
-      color: $claude-text-muted;
+      color: $wga-text-muted;
       padding: 4px;
       font-size: 16px;
       transition: all 0.2s;
@@ -1947,13 +1937,15 @@ $message-max-width: 900px;
     flex: 1;
     min-width: 0;
     height: 100%;
+    display: flex;
+    flex-direction: column;
     border-left: 1px solid #f0f0f0;
   }
 }
 
 .header {
   flex: none;
-  height: 56px;
+  height: $header-height;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1980,9 +1972,12 @@ $message-max-width: 900px;
   }
 
   .header-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     font-size: 16px;
     font-weight: 600;
-    color: $claude-text;
+    color: $wga-text;
   }
 
   .header-icon-btn {
@@ -1991,17 +1986,17 @@ $message-max-width: 900px;
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     background: #fff;
     border-radius: 8px;
     cursor: pointer;
-    color: $claude-text-muted;
+    color: $wga-text-muted;
     transition: all 0.2s;
 
     &:hover {
-      border-color: $claude-primary;
-      color: $claude-primary;
-      background: rgba($claude-primary, 0.05);
+      border-color: $wga-primary;
+      color: $wga-primary;
+      background: rgba($wga-primary, 0.05);
     }
 
     i {
@@ -2009,16 +2004,16 @@ $message-max-width: 900px;
     }
 
     &.workspace-entry-btn {
-      width: auto;
+      min-width: 80px;
       padding: 0 12px;
       gap: 6px;
       font-size: 13px;
       font-weight: 500;
 
       &:hover {
-        background: $claude-primary;
+        background: $wga-primary;
         color: #fff;
-        border-color: $claude-primary;
+        border-color: $wga-primary;
       }
     }
   }
@@ -2165,7 +2160,7 @@ $message-max-width: 900px;
 
       .welcome-title {
         font-size: 28px;
-        color: $claude-text;
+        color: $wga-text;
         font-weight: 600;
       }
     }
@@ -2188,7 +2183,7 @@ $message-max-width: 900px;
       box-shadow 0.2s;
 
     &:focus-within {
-      border-color: $claude-primary;
+      border-color: $wga-primary;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     }
   }
@@ -2291,7 +2286,7 @@ $message-max-width: 900px;
         resize: none;
         font-size: 16px;
         line-height: 1.6;
-        color: $claude-text;
+        color: $wga-text;
 
         &::placeholder {
           color: #9ca3af;
@@ -2321,7 +2316,7 @@ $message-max-width: 900px;
           border: none;
           padding-left: 32px;
           font-size: 13px;
-          color: $claude-text;
+          color: $wga-text;
         }
 
         ::v-deep .el-input__prefix {
@@ -2337,15 +2332,15 @@ $message-max-width: 900px;
 
       .action-icon {
         font-size: 18px;
-        color: $claude-text-muted;
+        color: $wga-text-muted;
         cursor: pointer;
         padding: 8px;
         border-radius: 8px;
         transition: all 0.2s;
 
         &:hover {
-          color: $claude-primary;
-          background: rgba($claude-primary, 0.08);
+          color: $wga-primary;
+          background: rgba($wga-primary, 0.08);
         }
       }
 
@@ -2398,15 +2393,15 @@ $message-max-width: 900px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
-    color: $claude-text-secondary;
+    color: $wga-text-secondary;
     background: transparent;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     transition: all 0.2s;
 
     &:hover {
-      background: rgba($claude-primary, 0.08);
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
+      background: rgba($wga-primary, 0.08);
+      color: $wga-primary;
+      border-color: rgba($wga-primary, 0.3);
     }
 
     i {
@@ -2425,9 +2420,9 @@ $message-max-width: 900px;
     gap: 6px;
     padding: 6px 14px;
     border-radius: 20px;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     background: #fff;
-    color: $claude-text-secondary;
+    color: $wga-text-secondary;
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2445,9 +2440,9 @@ $message-max-width: 900px;
     }
 
     &:hover {
-      background: rgba($claude-primary, 0.06);
-      border-color: rgba($claude-primary, 0.3);
-      color: $claude-primary;
+      background: rgba($wga-primary, 0.06);
+      border-color: rgba($wga-primary, 0.3);
+      color: $wga-primary;
     }
 
     .el-icon--right {
@@ -2458,14 +2453,14 @@ $message-max-width: 900px;
 
   // 已选模式样式
   .mode-btn-selected {
-    background: rgba($claude-primary, 0.08);
-    border-color: rgba($claude-primary, 0.3);
-    color: $claude-primary;
+    background: rgba($wga-primary, 0.08);
+    border-color: rgba($wga-primary, 0.3);
+    color: $wga-primary;
     cursor: default;
 
     &:hover {
-      background: rgba($claude-primary, 0.12);
-      border-color: rgba($claude-primary, 0.4);
+      background: rgba($wga-primary, 0.12);
+      border-color: rgba($wga-primary, 0.4);
     }
 
     .el-icon-close {
@@ -2477,7 +2472,7 @@ $message-max-width: 900px;
       margin-left: 4px;
 
       &:hover {
-        background: rgba($claude-primary, 0.2);
+        background: rgba($wga-primary, 0.2);
       }
     }
   }
@@ -2485,7 +2480,7 @@ $message-max-width: 900px;
   .input-footer {
     text-align: center;
     font-size: 12px;
-    color: $claude-text-muted;
+    color: $wga-text-muted;
     margin-top: 12px;
   }
 

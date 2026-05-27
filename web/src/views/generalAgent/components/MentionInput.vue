@@ -263,6 +263,9 @@ export default {
           closeNames: [],
           backspace: false,
         },
+        chatStyle: {
+          maxHeight: '300px',
+        },
       });
 
       const { EVENT_COMMON_CHANGE } = XSender.EventSet;
