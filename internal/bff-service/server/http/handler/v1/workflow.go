@@ -35,11 +35,11 @@ func ListLlmModelsByWorkflow(ctx *gin.Context) {
 //	@Security	JWT
 //	@Accept		json
 //	@Produce	json
-//	@Param		data	body		request.AppBriefConfig	true	"创建Workflow的请求参数"
+//	@Param		data	body		request.CreateWorkflowReq	true	"创建Workflow的请求参数"
 //	@Success	200		{object}	response.Response{data=response.CozeWorkflowIDData}
 //	@Router		/appspace/workflow [post]
 func CreateWorkflow(ctx *gin.Context) {
-	var req request.AppBriefConfig
+	var req request.CreateWorkflowReq
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}

@@ -102,11 +102,11 @@ func CreateRag(ctx *gin.Context) {
 //	@Security	JWT
 //	@Accept		json
 //	@Produce	json
-//	@Param		data	body		request.RagBrief	true	"更新RAG基本信息的请求参数"
+//	@Param		data	body		request.RagUpdateReq	true	"更新RAG基本信息的请求参数"
 //	@Success	200		{object}	response.Response
 //	@Router		/appspace/rag [put]
 func UpdateRag(ctx *gin.Context) {
-	var req request.RagBrief
+	var req request.RagUpdateReq
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}

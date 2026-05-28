@@ -32,7 +32,14 @@ func CreateSensitiveWordTable(ctx *gin.Context, userId, orgId string, req *reque
 }
 
 func UpdateSensitiveWordTable(ctx *gin.Context, userId, orgId string, req *request.UpdateSensitiveWordTableReq) error {
-	_, err := safety.UpdateSensitiveWordTable(ctx, &safety_service.UpdateSensitiveWordTableReq{
+	existingTable, err := safety.GetSensitiveWordTableByID(ctx, &safety_service.GetSensitiveWordTableByIDReq{TableId: req.TableId})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.TableName, existingTable.TableName, &req.Remark, existingTable.Remark, util.SubjectSensitiveWordTable); err != nil {
+		return grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = safety.UpdateSensitiveWordTable(ctx, &safety_service.UpdateSensitiveWordTableReq{
 		OrgId:     orgId,
 		UserId:    userId,
 		TableId:   req.TableId,

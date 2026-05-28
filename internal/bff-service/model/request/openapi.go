@@ -1,6 +1,10 @@
 package request
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/UnicomAI/wanwu/pkg/util"
+)
 
 type OpenAPIAgentCreateConversationRequest struct {
 	Title string `json:"title"`
@@ -59,7 +63,7 @@ type OpenAPICreateAgentRequest struct {
 }
 
 func (req *OpenAPICreateAgentRequest) Check() error {
-	return validateAppBrief(req.AppBriefConfig, "智能体")
+	return util.ValidateBriefCreate(&req.Name, &req.Desc, util.SubjectAssistant)
 }
 
 type OpenAPIWorkflowRunReq struct {

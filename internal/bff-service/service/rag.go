@@ -42,8 +42,15 @@ func CreateRag(ctx *gin.Context, userId, orgId string, req request.AppBriefConfi
 	}, err
 }
 
-func UpdateRag(ctx *gin.Context, req request.RagBrief, userId, orgId string) error {
-	_, err := rag.UpdateRag(ctx.Request.Context(), &rag_service.UpdateRagReq{
+func UpdateRag(ctx *gin.Context, req request.RagUpdateReq, userId, orgId string) error {
+	existingRag, err := rag.GetRagDetail(ctx.Request.Context(), &rag_service.RagDetailReq{RagId: req.RagID})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.Name, existingRag.BriefConfig.Name, &req.Desc, existingRag.BriefConfig.Desc, util.SubjectRag); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = rag.UpdateRag(ctx.Request.Context(), &rag_service.UpdateRagReq{
 		RagId:    req.RagID,
 		AppBrief: appBriefConfigModel2Proto(req.AppBriefConfig),
 		Identity: &rag_service.Identity{

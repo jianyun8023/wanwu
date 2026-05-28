@@ -3,7 +3,6 @@ package rag
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
@@ -298,11 +297,13 @@ func (s *Service) CopyRag(ctx context.Context, in *rag_service.CopyRagReq) (*rag
 	if err != nil {
 		return nil, errStatus(errs.Code_RagGetErr, err)
 	}
+	// 获取序列号
 	index, err := s.cli.FetchRagCopyIndex(ctx, info.BriefConfig.Name, in.Identity.UserId, in.Identity.OrgId)
 	if err != nil {
 		return nil, errStatus(errs.Code_RagGetErr, err)
 	}
-	replicaName := fmt.Sprintf("%s_%d", info.BriefConfig.Name, index)
+	// 生成新名字
+	replicaName := util.GenCopyName(info.BriefConfig.Name, index)
 	replicaId := util.NewID()
 	err = s.cli.CreateRag(ctx, &model.RagInfo{
 		RagID: replicaId,

@@ -1,6 +1,8 @@
 package request
 
-type RagBrief struct {
+import "github.com/UnicomAI/wanwu/pkg/util"
+
+type RagUpdateReq struct {
 	RagID string `json:"ragId" validate:"required"`
 	AppBriefConfig
 }
@@ -10,7 +12,7 @@ type RagCreateReq struct {
 }
 
 func (r *RagCreateReq) Check() error {
-	return validateAppBrief(r.AppBriefConfig, "知识问答")
+	return util.ValidateBriefCreate(&r.Name, &r.Desc, util.SubjectRag)
 }
 
 type RagConfig struct {
@@ -48,8 +50,9 @@ type RagReq struct {
 	Version string `form:"version" json:"version"`
 }
 
-func (r RagBrief) Check() error {
-	return validateAppBrief(r.AppBriefConfig, "知识问答")
+func (r RagUpdateReq) Check() error {
+	// name/desc 校验在 service 层处理
+	return nil
 }
 
 func (r *RagConfig) Check() error {

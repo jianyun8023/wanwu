@@ -83,7 +83,14 @@ func CreateMCPServer(ctx *gin.Context, userID, orgID string, req request.MCPServ
 }
 
 func UpdateMCPServer(ctx *gin.Context, req request.MCPServerUpdateReq) error {
-	_, err := mcp.UpdateMCPServer(ctx.Request.Context(), &mcp_service.UpdateMCPServerReq{
+	existingMCPServer, err := mcp.GetMCPServer(ctx.Request.Context(), &mcp_service.GetMCPServerReq{McpServerId: req.MCPServerID})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.Name, existingMCPServer.Name, &req.Desc, existingMCPServer.Desc, util.SubjectMCPServer); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = mcp.UpdateMCPServer(ctx.Request.Context(), &mcp_service.UpdateMCPServerReq{
 		McpServerId: req.MCPServerID,
 		Name:        req.Name,
 		Desc:        req.Desc,

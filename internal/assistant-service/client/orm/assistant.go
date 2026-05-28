@@ -175,10 +175,11 @@ func (c *Client) CopyAssistant(ctx context.Context, assistant *model.Assistant, 
 	// 智能体名称前缀
 	prefix := assistant.Name + "_"
 
-	// 查询所有以“原名称_”为前缀的名称
+	// 查询所有以"原名称_"为前缀的名称
 	var existingNames []string
-	err := c.db.WithContext(ctx).Model(&model.Assistant{}).
-		Where("name LIKE ?", prefix+"%").
+	err := sqlopt.DataPerm(assistant.UserId, assistant.OrgId).Apply(
+		c.db.WithContext(ctx).Model(&model.Assistant{}),
+	).Where("name LIKE ?", prefix+"%").
 		Pluck("name", &existingNames).Error
 
 	if err != nil {
@@ -199,7 +200,7 @@ func (c *Client) CopyAssistant(ctx context.Context, assistant *model.Assistant, 
 	}
 
 	// 生成新名称
-	newName := prefix + strconv.Itoa(maxNum+1)
+	newName := util.GenCopyName(assistant.Name, maxNum+1)
 
 	var newAssistantId uint32
 	return newAssistantId, c.transaction(ctx, func(tx *gorm.DB) *err_code.Status {

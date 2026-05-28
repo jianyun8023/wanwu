@@ -1,6 +1,10 @@
 package request
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+
+	"github.com/UnicomAI/wanwu/pkg/util"
+)
 
 type WorkflowIDReq struct {
 	WorkflowID string `json:"workflow_id" validate:"required"`
@@ -19,13 +23,29 @@ func (g *GetWorkflowListReq) Check() error {
 	return nil
 }
 
+type CreateWorkflowReq struct {
+	AppBriefConfig
+}
+
+func (r *CreateWorkflowReq) Check() error {
+	return util.ValidateBriefCreate(&r.Name, &r.Desc, util.SubjectWorkflow)
+}
+
+type CreateChatflowReq struct {
+	AppBriefConfig
+}
+
+func (r *CreateChatflowReq) Check() error {
+	return util.ValidateBriefCreate(&r.Name, &r.Desc, util.SubjectChatflow)
+}
+
 type CreateWorkflowByTemplateReq struct {
 	TemplateId string `json:"templateId" validate:"required"`
 	AppBriefConfig
 }
 
 func (r *CreateWorkflowByTemplateReq) Check() error {
-	return nil
+	return util.ValidateBriefCreate(&r.Name, &r.Desc, util.SubjectWorkflow)
 }
 
 type WorkflowUploadFileReq struct {

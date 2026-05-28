@@ -91,7 +91,17 @@ func UpdateCustomTool(ctx *gin.Context, userID, orgID string, req request.Custom
 	if err := openapi3_util.ValidateSchema(ctx.Request.Context(), []byte(req.Schema)); err != nil {
 		return grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, err.Error())
 	}
-	_, err := mcp.UpdateCustomTool(ctx.Request.Context(), &mcp_service.UpdateCustomToolReq{
+	existingTool, err := mcp.GetCustomToolInfo(ctx.Request.Context(), &mcp_service.GetCustomToolInfoReq{
+		CustomToolId: req.CustomToolID,
+		Identity:     &mcp_service.Identity{UserId: userID, OrgId: orgID},
+	})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.Name, existingTool.Name, &req.Description, existingTool.Description, util.SubjectCustomTool); err != nil {
+		return grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = mcp.UpdateCustomTool(ctx.Request.Context(), &mcp_service.UpdateCustomToolReq{
 		CustomToolId: req.CustomToolID,
 		AvatarPath:   req.Avatar.Key,
 		Name:         req.Name,

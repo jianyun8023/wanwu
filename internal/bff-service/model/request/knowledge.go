@@ -2,7 +2,6 @@ package request
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/UnicomAI/wanwu/pkg/util"
 )
@@ -276,7 +275,6 @@ type CreateKnowledgeExternalAPIReq struct {
 	Description string `json:"description"`                 //外部知识库API描述
 	BaseUrl     string `json:"baseUrl" validate:"required"` //外部知识库API endpoint
 	ApiKey      string `json:"apiKey" validate:"required"`  //外部知识库API Key
-	CommonCheck
 }
 
 type UpdateKnowledgeExternalAPIReq struct {
@@ -299,7 +297,6 @@ type CreateKnowledgeExternalReq struct {
 	ExternalSource      string `json:"externalSource" validate:"required"`      //外部来源
 	ExternalAPIId       string `json:"externalApiId" validate:"required"`       //外部知识库API id
 	ExternalKnowledgeId string `json:"externalKnowledgeId" validate:"required"` //外部知识库 id
-	CommonCheck
 }
 
 type UpdateKnowledgeExternalReq struct {
@@ -339,9 +336,11 @@ func (c *UpdateMetaValueReq) Check() error {
 }
 
 func (c *CreateKnowledgeReq) Check() error {
-	if !util.IsAlphanumeric(c.Name) {
-		errMsg := fmt.Sprintf("知识库名称只能包含中文、数字、小写英文，符号之只能包含下划线和减号 参数(%v)", c.Name)
-		return errors.New(errMsg)
+	if err := util.ValidateName(&c.Name, util.SubjectKnowledge); err != nil {
+		return err
+	}
+	if err := util.ValidateDesc(&c.Description, util.SubjectKnowledge); err != nil {
+		return err
 	}
 	if c.Category == CategoryKnowledge {
 		if c.KnowledgeGraph == nil {
@@ -352,6 +351,17 @@ func (c *CreateKnowledgeReq) Check() error {
 		}
 	}
 	return nil
+}
+
+func (c *CreateKnowledgeExternalAPIReq) Check() error {
+	if err := util.ValidateName(&c.Name, util.SubjectKnowledgeExternalAPI); err != nil {
+		return err
+	}
+	return util.ValidateDesc(&c.Description, util.SubjectKnowledgeExternalAPI)
+}
+
+func (c *CreateKnowledgeExternalReq) Check() error {
+	return util.ValidateBriefCreate(&c.Name, &c.Description, util.SubjectKnowledge)
 }
 
 func (c *RagSearchKnowledgeBaseReq) Check() error {

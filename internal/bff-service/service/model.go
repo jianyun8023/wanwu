@@ -32,6 +32,9 @@ func DefaultModelInfoOptions() *ModelInfoOptions {
 }
 
 func ImportModel(ctx *gin.Context, userId, orgId string, req *request.ImportOrUpdateModelRequest) error {
+	if err := util.ValidateBriefCreate(&req.DisplayName, &req.ModelDesc, util.SubjectModel); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
 	clientReq, err := parseImportAndUpdateClientReq(userId, orgId, req)
 	if err != nil {
 		return err
@@ -49,6 +52,17 @@ func ImportModel(ctx *gin.Context, userId, orgId string, req *request.ImportOrUp
 func UpdateModel(ctx *gin.Context, userId, orgId string, req *request.ImportOrUpdateModelRequest) error {
 	if req.ModelId == "" {
 		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, "modelId cannot be empty")
+	}
+	existingModel, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{
+		ModelId: req.ModelId,
+		UserId:  userId,
+		OrgId:   orgId,
+	})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.DisplayName, existingModel.DisplayName, &req.ModelDesc, existingModel.ModelDesc, util.SubjectModel); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
 	}
 	clientReq, err := parseImportAndUpdateClientReq(userId, orgId, req)
 	if err != nil {

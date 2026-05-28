@@ -38,12 +38,12 @@ func AssistantCreate(ctx *gin.Context) {
 //	@Security		JWT
 //	@Accept			json
 //	@Produce		json
-//	@Param			data	body		request.AssistantBrief	true	"智能体基本信息参数"
+//	@Param			data	body		request.AssistantUpdateReq	true	"智能体基本信息参数"
 //	@Success		200		{object}	response.Response
 //	@Router			/assistant [put]
 func AssistantUpdate(ctx *gin.Context) {
 	userId, orgId := getUserID(ctx), getOrgID(ctx)
-	var req request.AssistantBrief
+	var req request.AssistantUpdateReq
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}

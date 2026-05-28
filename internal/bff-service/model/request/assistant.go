@@ -1,18 +1,25 @@
 package request
 
-type AssistantBrief struct {
+import "github.com/UnicomAI/wanwu/pkg/util"
+
+type AssistantUpdateReq struct {
 	AssistantId string `json:"assistantId"  validate:"required"`
 	AppBriefConfig
 }
 
-func (a *AssistantBrief) Check() error { return validateAppBrief(a.AppBriefConfig, "智能体") }
+func (a *AssistantUpdateReq) Check() error {
+	// name/desc 校验在 service 层处理
+	return nil
+}
 
 type AssistantCreateReq struct {
 	Category int `json:"category"` // 1:单智能体 2:多智能体
 	AppBriefConfig
 }
 
-func (a *AssistantCreateReq) Check() error { return validateAppBrief(a.AppBriefConfig, "智能体") }
+func (a *AssistantCreateReq) Check() error {
+	return util.ValidateBriefCreate(&a.Name, &a.Desc, util.SubjectAssistant)
+}
 
 type AssistantConfig struct {
 	AssistantId         string                  `json:"assistantId"  validate:"required"`

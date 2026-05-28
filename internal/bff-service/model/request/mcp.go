@@ -24,7 +24,10 @@ type MCPCreate struct {
 }
 
 func (req *MCPCreate) Check() error {
-	return nil
+	if err := util.ValidateName(&req.Name, util.SubjectMCP); err != nil {
+		return err
+	}
+	return util.ValidateDesc(&req.Desc, util.SubjectMCP)
 }
 
 type MCPUpdate struct {

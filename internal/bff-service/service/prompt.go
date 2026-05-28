@@ -2,8 +2,10 @@ package service
 
 import (
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
+	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
+	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
 )
@@ -53,7 +55,17 @@ func DeleteCustomPrompt(ctx *gin.Context, userId, orgId string, req request.Cust
 }
 
 func UpdateCustomPrompt(ctx *gin.Context, userId, orgId string, req request.UpdateCustomPrompt) error {
-	_, err := assistant.CustomPromptUpdate(ctx.Request.Context(), &assistant_service.CustomPromptUpdateReq{
+	existingPrompt, err := assistant.CustomPromptGet(ctx.Request.Context(), &assistant_service.CustomPromptGetReq{
+		CustomPromptId: req.CustomPromptID,
+		Identity:       &assistant_service.Identity{UserId: userId, OrgId: orgId},
+	})
+	if err != nil {
+		return err
+	}
+	if err := util.ValidateBriefUpdate(&req.Name, existingPrompt.Name, &req.Desc, existingPrompt.Desc, util.SubjectPrompt); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = assistant.CustomPromptUpdate(ctx.Request.Context(), &assistant_service.CustomPromptUpdateReq{
 		CustomPromptId: req.CustomPromptID,
 		AvatarPath:     req.Avatar.Key,
 		Name:           req.Name,

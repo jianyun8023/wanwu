@@ -18,6 +18,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	bff_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/constant"
+	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
@@ -41,8 +42,18 @@ func AssistantCreate(ctx *gin.Context, userId, orgId string, req request.Assista
 	}, nil
 }
 
-func AssistantUpdate(ctx *gin.Context, userId, orgId string, req request.AssistantBrief) (interface{}, error) {
-	_, err := assistant.AssistantUpdate(ctx.Request.Context(), &assistant_service.AssistantUpdateReq{
+func AssistantUpdate(ctx *gin.Context, userId, orgId string, req request.AssistantUpdateReq) (interface{}, error) {
+	existingAssistant, err := assistant.GetAssistantInfo(ctx.Request.Context(), &assistant_service.GetAssistantInfoReq{
+		AssistantId: req.AssistantId,
+		Identity:    &assistant_service.Identity{UserId: userId, OrgId: orgId},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := util.ValidateBriefUpdate(&req.Name, existingAssistant.AssistantBrief.Name, &req.Desc, existingAssistant.AssistantBrief.Desc, util.SubjectAssistant); err != nil {
+		return nil, grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = assistant.AssistantUpdate(ctx.Request.Context(), &assistant_service.AssistantUpdateReq{
 		AssistantId:    req.AssistantId,
 		AssistantBrief: appBriefConfigModel2Proto(req.AppBriefConfig),
 		Identity: &assistant_service.Identity{

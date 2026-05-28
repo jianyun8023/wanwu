@@ -188,7 +188,18 @@ func CreateKnowledgeOpenapi(ctx *gin.Context, userId, orgId string, r *request.C
 
 // UpdateKnowledge 更新知识库
 func UpdateKnowledge(ctx *gin.Context, userId, orgId string, r *request.UpdateKnowledgeReq) error {
-	_, err := knowledgeBase.UpdateKnowledge(ctx.Request.Context(), &knowledgebase_service.UpdateKnowledgeReq{
+	existingKnowledge, err := knowledgeBase.SelectKnowledgeDetailById(ctx.Request.Context(), &knowledgebase_service.KnowledgeDetailSelectReq{
+		UserId:      userId,
+		OrgId:       orgId,
+		KnowledgeId: r.KnowledgeId,
+	})
+	if err != nil {
+		return err
+	}
+	if err := utils.ValidateBriefUpdate(&r.Name, existingKnowledge.Name, &r.Description, existingKnowledge.Description, utils.SubjectKnowledge); err != nil {
+		return grpc_util.ErrorStatus(err_code.Code_BFFInvalidArg, err.Error())
+	}
+	_, err = knowledgeBase.UpdateKnowledge(ctx.Request.Context(), &knowledgebase_service.UpdateKnowledgeReq{
 		KnowledgeId: r.KnowledgeId,
 		Name:        r.Name,
 		Description: r.Description,
