@@ -608,6 +608,9 @@ export default {
 .preview-image-wrapper {
   background: #f5f7fa;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-image {
@@ -619,6 +622,9 @@ export default {
 .preview-video-wrapper {
   background: #000;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-video {
@@ -628,6 +634,9 @@ export default {
 
 .preview-audio-wrapper {
   gap: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-excel-wrapper {
