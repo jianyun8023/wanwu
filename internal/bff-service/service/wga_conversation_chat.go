@@ -280,8 +280,8 @@ func filterWgaHistoryMessages(ctx *gin.Context, userId, orgId, threadId string) 
 				case aguievents.EventTypeReasoningMessageContent:
 					if delta, ok := event["delta"].(string); ok {
 						message = &schema.Message{
-							Role:             ag_ui_util.RoleAssistant,
-							ReasoningContent: delta,
+							Role:    ag_ui_util.RoleAssistant,
+							Content: "[思考过程] " + delta,
 						}
 					}
 				case aguievents.EventTypeTextMessageContent:
