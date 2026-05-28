@@ -1,10 +1,5 @@
 <template>
-  <div
-    class="ppt-preview-container"
-    tabindex="0"
-    @keydown="handleKeydown"
-    ref="container"
-  >
+  <div ref="container" class="ppt-preview-container" @keydown="handleKeydown">
     <!-- 加载状态 -->
     <div v-if="loading" class="ppt-loading">
       <div class="loading-spinner"></div>
@@ -206,6 +201,8 @@ export default {
       themeColors: [],
       currentSlide: 0,
       currentScale: 1,
+      containerWidth: 0,
+      containerHeight: 0,
     };
   },
   computed: {
@@ -219,18 +216,18 @@ export default {
       return [...(slide.elements || []), ...(slide.layoutElements || [])];
     },
     slideStyle() {
-      // pptxtojson 输出的尺寸单位是 pt
-      // 1pt ≈ 1.333px (96 DPI)
       const ptToPx = 1.333;
       const originalWidthPx = this.slideSize.width * ptToPx;
       const originalHeightPx = this.slideSize.height * ptToPx;
+      const aspectRatio = originalWidthPx / originalHeightPx;
 
-      // 固定高度，宽度按比例
-      const height = 450;
-      const width = height * (originalWidthPx / originalHeightPx);
+      // 宽度填满容器，高度按比例自适应
+      const width =
+        this.containerWidth > 0 ? this.containerWidth : originalWidthPx;
+      const height = width / aspectRatio;
+      const scale = width / originalWidthPx;
 
-      // 计算缩放比例，用于元素定位
-      this.currentScale = height / originalHeightPx;
+      this.currentScale = scale;
 
       return {
         width: `${width}px`,
@@ -247,14 +244,34 @@ export default {
         }
       },
     },
+    slides() {
+      this.$nextTick(() => {
+        if (this.$refs.slideWrapper && this._resizeObserver) {
+          this._resizeObserver.disconnect();
+          this._resizeObserver.observe(this.$refs.slideWrapper);
+        }
+      });
+    },
   },
   mounted() {
     // 添加全局键盘事件监听，确保无论焦点在哪里都能响应翻页
-    window.addEventListener('keydown', this.handleKeydown);
+    addEventListener('keydown', this.handleKeydown);
+    // 监听容器尺寸变化，自适应幻灯片大小
+    this._resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        this.containerWidth = entry.contentRect.width;
+        this.containerHeight = entry.contentRect.height;
+      }
+    });
   },
   beforeDestroy() {
     // 移除全局键盘事件监听
-    window.removeEventListener('keydown', this.handleKeydown);
+    removeEventListener('keydown', this.handleKeydown);
+    // 移除 ResizeObserver
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
   },
   methods: {
     async loadPpt() {
@@ -276,7 +293,7 @@ export default {
           }
           arrayBuffer = await response.arrayBuffer();
         } else {
-          throw new Error('无效的文件源');
+          throw new TypeError('无效的文件源');
         }
 
         // 使用 pptxtojson 解析
@@ -337,8 +354,8 @@ export default {
         const r = color.substring(1, 3);
         const g = color.substring(3, 5);
         const b = color.substring(5, 7);
-        const a = parseInt(color.substring(7, 9), 16) / 255;
-        return `rgba(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}, ${a.toFixed(2)})`;
+        const a = Number.parseInt(color.substring(7, 9), 16) / 255;
+        return `rgba(${Number.parseInt(r, 16)}, ${Number.parseInt(g, 16)}, ${Number.parseInt(b, 16)}, ${a.toFixed(2)})`;
       }
       return color;
     },
@@ -369,7 +386,6 @@ export default {
 
     // 文本样式
     getTextStyle(element) {
-      const scale = this.currentScale || 1;
       const style = {
         width: '100%',
         height: '100%',
@@ -522,49 +538,49 @@ export default {
       const scale = this.currentScale || 1;
       // 替换不常见字体为系统字体，并缩放字体大小
       return content
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Arial Black["']?/gi,
           'font-family: Arial Black, Arial, sans-serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Arial["']?/gi,
           'font-family: Arial, Helvetica, sans-serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Calibri["']?/gi,
           'font-family: Calibri, Arial, sans-serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Times New Roman["']?/gi,
           'font-family: Times New Roman, Times, serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Courier New["']?/gi,
           'font-family: Courier New, Courier, monospace',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Verdana["']?/gi,
           'font-family: Verdana, Geneva, sans-serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?Georgia["']?/gi,
           'font-family: Georgia, serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?微软雅黑["']?/gi,
           'font-family: "Microsoft YaHei", Arial, sans-serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?宋体["']?/gi,
           'font-family: SimSun, serif',
         )
-        .replace(
+        .replaceAll(
           /font-family:\s*["']?黑体["']?/gi,
           'font-family: SimHei, sans-serif',
         )
-        .replace(/font-size:\s*(\d+(?:\.\d+)?)pt/gi, (match, size) => {
+        .replaceAll(/font-size:\s*(\d+(?:\.\d+)?)pt/gi, (match, size) => {
           // pt 转 px 并按缩放比例调整
-          const pxSize = parseFloat(size) * 1.333 * scale;
+          const pxSize = Number.parseFloat(size) * 1.333 * scale;
           return `font-size: ${pxSize.toFixed(1)}px`;
         });
     },
