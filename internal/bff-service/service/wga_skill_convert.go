@@ -11,6 +11,7 @@ import (
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
+	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
@@ -26,7 +27,7 @@ func ConvertGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string
 	}
 
 	sourceType := normalizeGeneralAgentSkillConvertType(req.Type)
-	title := generalAgentSkillConvertTitle(sourceType)
+	title := generalAgentSkillConvertTitle(ctx, sourceType)
 	previewID := util.GenUUID()
 
 	threadResp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
@@ -124,19 +125,19 @@ func normalizeGeneralAgentSkillConvertType(sourceType string) string {
 	return strings.TrimSpace(strings.ToLower(sourceType))
 }
 
-func generalAgentSkillConvertTitle(sourceType string) string {
+func generalAgentSkillConvertTitle(ctx *gin.Context, sourceType string) string {
 	switch sourceType {
 	case "mcp":
-		return "Convert MCP Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_mcp_title")
 	case "tool":
-		return "Convert Tool Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_tool_title")
 	case "agent":
-		return "Convert Agent Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_agent_title")
 	case "workflow":
-		return "Convert Workflow Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_workflow_title")
 	case "rag":
-		return "Convert RAG Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_rag_title")
 	default:
-		return "Convert Skill"
+		return gin_util.I18nKey(ctx, "wga_skill_convert_default_title")
 	}
 }

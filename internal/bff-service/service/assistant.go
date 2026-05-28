@@ -689,14 +689,14 @@ func assistantSkillConvert(ctx *gin.Context, assistantSkillInfos []*assistant_se
 		}
 	}
 
-	// 获取自定义技能
-	customSkillResp, err := mcp.GetCustomSkillDetailByIdList(ctx.Request.Context(), &mcp_service.CustomSkillDetailByIdListReq{
-		SkillIds: customSkillIds,
-	})
-	customSkillMap := make(map[string]*mcp_service.CustomSkill)
-	if err == nil && customSkillResp != nil {
-		for _, item := range customSkillResp.SkillDetails {
-			customSkillMap[item.SkillId] = item
+	// 获取自定义技能（只获取已发布的）
+	customSkillMap := make(map[string]*mcp_service.PublishCustomSkill)
+	if len(customSkillIds) > 0 {
+		var err error
+		customSkillMap, err = getLatestPublishCustomSkillMap(ctx, customSkillIds)
+		if err != nil {
+			log.Warnf("获取自定义 skill 详情失败，err: %v", err)
+			customSkillMap = make(map[string]*mcp_service.PublishCustomSkill)
 		}
 	}
 
@@ -718,11 +718,18 @@ func assistantSkillConvert(ctx *gin.Context, assistantSkillInfos []*assistant_se
 
 		switch info.SkillType {
 		case constant.SkillTypeCustom:
-			if item, ok := customSkillMap[info.SkillId]; ok {
-				exists = true
-				skillName = item.Name
-				author = item.Author
-				avatar = cacheSkillAvatar(ctx, item.Avatar)
+			if publish, ok := customSkillMap[info.SkillId]; ok {
+				// 只返回已发布的 custom skill
+				if strings.TrimSpace(publish.GetVersion()) == "" {
+					continue
+				}
+				customSkill := customSkillFromPublish(publish)
+				if customSkill != nil {
+					exists = true
+					skillName = customSkill.GetName()
+					author = customSkill.GetAuthor()
+					avatar = cacheSkillAvatar(ctx, customSkill.GetAvatar())
+				}
 			}
 		case constant.SkillTypeAcquired:
 			if item, ok := acquiredSkillMap[info.SkillId]; ok {
