@@ -60,6 +60,7 @@ const (
 {{range $i, $mcp := .MCPs}}    "{{$mcp.Name}}": {
       "type": "remote",
       "url": "{{$mcp.URL}}",
+      "description": "{{$mcp.Description}}",
       "enabled": true
     }{{if ne $i (sub (len $.MCPs) 1)}},{{end}}
 {{end}}  }{{end}}

@@ -50,8 +50,9 @@ type Skill struct {
 
 // MCP MCP 服务器配置。
 type MCP struct {
-	Name string // MCP 名称
-	URL  string // MCP SSE/STREAMABLE 服务器地址
+	Name        string // MCP 名称
+	URL         string // MCP SSE/STREAMABLE 服务器地址
+	Description string // MCP 描述
 }
 
 // WorkspaceConfig 工作空间配置。
