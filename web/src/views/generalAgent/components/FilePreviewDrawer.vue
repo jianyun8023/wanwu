@@ -293,8 +293,16 @@ export default {
         if (
           ['image', 'video', 'audio', 'pdf', 'html'].includes(this.previewType)
         ) {
-          // 对于图片、视频、音频、PDF、HTML，创建 Object URL
-          this.previewBlobUrl = URL.createObjectURL(this.blob);
+          // SVG 需要正确的 MIME 类型才能在 <img> 中渲染，
+          // API 返回的 Blob 通常是 application/octet-stream，浏览器无法据此识别 SVG
+          if (this.previewType === 'image' && this.fileExt === 'svg') {
+            const svgBlob = new Blob([this.blob], {
+              type: 'image/svg+xml',
+            });
+            this.previewBlobUrl = URL.createObjectURL(svgBlob);
+          } else {
+            this.previewBlobUrl = URL.createObjectURL(this.blob);
+          }
           this.previewUrl = this.previewBlobUrl;
         } else if (['markdown', 'text'].includes(this.previewType)) {
           this.previewContent = await this.blob.text();
