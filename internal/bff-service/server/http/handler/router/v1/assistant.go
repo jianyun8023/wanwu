@@ -51,4 +51,12 @@ func registerAssistant(apiV1 *gin.RouterGroup) {
 	mid.Sub("app.agent").Reg(apiV1, "/assistant/conversation/draft/detail", http.MethodGet, v1.DraftAssistantConversationDetailList, "草稿智能体对话详情历史列表")
 	mid.Sub("app.agent").Reg(apiV1, "/assistant/conversation/draft", http.MethodDelete, v1.DraftAssistantConversationDelete, "草稿智能体对话删除")
 
+	// 其他权限接口
+	mid.Sub("app.agent").Reg(apiV1, "/prompt/template/list", http.MethodGet, v1.GetPromptTemplateList, "获取提示词模板列表")
+	mid.Sub("app.agent").Reg(apiV1, "/prompt/template/detail", http.MethodGet, v1.GetPromptTemplateDetail, "获取提示词模板详情")
+	mid.Sub("app.agent").Reg(apiV1, "/prompt/custom/list", http.MethodGet, v1.GetCustomPromptList, "获取自定义Prompt列表")
+	mid.Sub("app.agent").Reg(apiV1, "/mcp/select", http.MethodGet, v1.GetMCPSelect, "智能体mcp下拉列表")
+	mid.Sub("app.agent").Reg(apiV1, "/agent/skill/select", http.MethodGet, v1.GetSkillSelect, "智能体skills下拉列表")
+	mid.Sub("app.agent").Reg(apiV1, "/tool/select", http.MethodGet, v1.GetToolSelect, "智能体工具下拉列表（自定义与内置）")
+
 }

@@ -56,7 +56,7 @@ func CreateRole(ctx *gin.Context, creatorID, orgID string, roleCreate *request.R
 			return nil, fmt.Errorf("当前用户没有 %v 权限", perm)
 		}
 		for _, r := range routes {
-			if strings.HasPrefix(perm, r.Tag) {
+			if perm == r.Tag || strings.HasPrefix(perm, r.Tag+".") {
 				var add bool
 				for _, p := range req.Perms {
 					if p.Perm == r.Tag {
@@ -105,7 +105,7 @@ func ChangeRole(ctx *gin.Context, userID, orgID string, roleUpdate *request.Role
 			return fmt.Errorf("当前用户没有 %v 权限", perm)
 		}
 		for _, r := range routes {
-			if strings.HasPrefix(perm, r.Tag) {
+			if perm == r.Tag || strings.HasPrefix(perm, r.Tag+".") {
 				var add bool
 				for _, p := range req.Perms {
 					if p.Perm == r.Tag {

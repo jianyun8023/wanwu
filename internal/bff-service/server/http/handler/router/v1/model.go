@@ -25,4 +25,7 @@ func registerModel(apiV1 *gin.RouterGroup) {
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialogs", http.MethodGet, v1.ModelExperienceListDialogs, "获取模型体验对话列表")
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialog", http.MethodDelete, v1.ModelExperienceDeleteDialog, "删除模型体验对话")
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialog/records", http.MethodGet, v1.ModelExperienceListDialogRecords, "查询模型体验对话历史记录")
+
+	mid.Sub("model.model_management").Reg(apiV1, "/prompt/custom/list", http.MethodGet, v1.GetCustomPromptList, "获取自定义Prompt列表")
+	mid.Sub("model.model_management").Reg(apiV1, "/prompt/template/list", http.MethodGet, v1.GetPromptTemplateList, "获取提示词模板列表")
 }
