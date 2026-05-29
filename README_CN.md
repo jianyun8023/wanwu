@@ -24,9 +24,9 @@
 </div>
 
 
+&emsp;&emsp;&emsp;**元景万悟智能体平台**是一款面向**企业级**场景的**一站式**、**商用license友好**的智能体开发平台。我们以“技术开放、生态共建”为核心理念，致力于为企业提供安全、高效、合规的AI解决方案。
 
-
-&emsp;&emsp;&emsp;**元景万悟智能体平台**是一款面向**企业级**场景的**一站式**、**商用license友好**的**智能体开发平台**，致力于为企业提供安全、高效、合规的一站式AI解决方案。我们以"技术开放、生态共建"为核心理念，通过整合大语言模型、业务流程自动化等前沿技术，构建了覆盖模型全生命周期管理、MCP、联网检索、**通用智能体与Skills编排**、企业知识库建设、复杂工作流编排等完整功能体系的AI工程化平台。平台现已全面跃升为**“通用智能体+垂直场景Skills”的双引擎开发平台**，在确保企业数据安全和隐私保护的同时，大幅降低了AI技术的应用门槛，助力企业加速数字化转型进程，实现降本增效和业务创新。 
+&emsp;&emsp;&emsp;万悟致力于提供**FDE（前沿部署工程师）所需要的所有工具能力，形成全站FDE工具链**！我们不仅能力覆盖企业核心资产，更以客户为中心，把能力真正嵌入客户系统，**大幅降低AI项目交付门槛**，打通从“构建”到“现场”的最后一公里，让每一次业务决策更简单，让每一位FDE更强大！
 
 ------
 
@@ -39,26 +39,66 @@
 
 ------
 
-### 📢 生态开放
+### 🌟 全站FDE工具链：5大能力对症下药
 
-- [外部知识库兼容](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93/%E8%BF%9E%E6%8E%A5%E5%A4%96%E6%8E%A5%E7%9F%A5%E8%AF%86%E5%BA%93.md)：支持API导入Dify内创建的知识库，并在智能体、文本问答、工作流中进行检索召回
-- [MCP广场](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FMCP%E6%9C%8D%E5%8A%A1.md)：支持导入并使用不同服务商的MCP协议
-- [Skills](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FSkills.md)：支持一句话创建Skills并下载，可无缝对接OpenClaw
-- [OpenClaw沙箱](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/8.%E9%80%9A%E7%94%A8%E6%99%BA%E8%83%BD%E4%BD%93%2F%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8A%A9%E6%89%8B-OPENCLAW%2F%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%87%E6%82%9F%E4%B8%AD%E6%8E%A5%E5%85%A5OpenClaw%E6%9C%BA%E5%99%A8%E4%BA%BA.md)：我们为每一个“龙虾机器人”都提供了独立Docker容器部署的选项。可在元景万悟中直接访问您本地部署的OpenClaw机器人。
+面对企业复杂的业务场景，万悟提供5大核心智能体能力，对症下药解决各类交付痛点，让AI不仅“想得到”，更“做得到”：
+
+#### 1️⃣ RAG/知识库智能体：搞定分散文档，让AI有靠谱记忆
+
+![image-20260520120033925](assets/image-20260520120033925.png)
+
+针对企业海量分散的文档与制度，提供全流程知识管理能力，构建高精准度、带记忆的知识大脑，让AI不再胡说八道。
+- **高精度解析与检索**：支持12种文件格式及URL抓取；支持OCR与MinerU模型私有化解析；集成多模态检索、级联/自适应切分与智能精排，支持图文并茂生成与出处引用。
+- **知识图谱增强（GraphRAG）**：内置UniAI-GraphRAG，结合领域本体建模，显著提升跨多文档总结与多跳关系推理的完整性与逻辑性，F1值业界领先。
+- **[外部知识库兼容](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93/%E8%BF%9E%E6%8E%A5%E5%A4%96%E6%8E%A5%E7%9F%A5%E8%AF%86%E5%BA%93.md)**: 支持API导入Dify内创建的知识库，并在智能体、文本问答、工作流中进行检索召回
+#### 2️⃣ 本体智能体：搞定结构化数据，实现多步推理与决策
+
+![image-20260520120151847](assets/image-20260520120151847.png)
+
+打破大模型仅懂文本的局限，应对复杂的结构化业务数据。
+- **深度推理与决策**：基于企业数据与文档自动构建业务知识网络，赋予AI深度推理与闭环行动能力，让大模型真正懂业务、会决策，从“知识问答”跃升为“业务分析大脑”。
+#### 3️⃣ 工作流智能体：搞定复杂流程，让AI按规矩办事
+
+![image-20260520120309946](assets/image-20260520120309946.png)
+
+针对合同审核、报销审批等复杂业务，通过低代码方式规范AI的执行路径，确保交付稳定可靠。
+- **可视化编排**：低代码拖拽画布，内置条件分支、API、大模型、知识库、代码、MCP等丰富节点，支持端到端流程调试与性能分析，让AI严格按照业务规矩办事。
+- **零代码编排闭环**：行业内首个支持在智能体开发中零代码调用Skill，从“意图识别”到“技能执行”完美闭环；灵活调用内置工具、MCP、工作流等，秒读百页文档，统一工作区展示成果。
+#### 4️⃣ GUI智能体：搞定各类应用系统，无API也能直接操作
+
+![image-20260520124423864](assets/image-20260520124423864.png)
+
+面对老旧系统或无API场景，赋予AI“看”与“点”的能力，彻底消除系统集成壁垒。
+- **界面级交互**：无需对接底层API，AI直接操作应用界面完成任务。
+- **[沙箱支持](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/8.%E9%80%9A%E7%94%A8%E6%99%BA%E8%83%BD%E4%BD%93%2F%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8A%A9%E6%89%8B-OPENCLAW%2F%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%87%E6%82%9F%E4%B8%AD%E6%8E%A5%E5%85%A5OpenClaw%E6%9C%BA%E5%99%A8%E4%BA%BA.md)**：为每一个“机器人”提供独立Docker容器部署选项，安全执行界面操作。
+#### 5️⃣ 通用智能体+Skill开发：搞定交互系统，一句话串起所有能力
+
+![image-20260520120505258](assets/image-20260520120505258.png)
+
+行业首创“通用智能体+垂直场景Skills”双引擎，打造既“博学”又“专业”的超级智能体，一站式满足复杂交互需求。
+- **[全能大脑与极简构建](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FSkills.md)**：具备专业分析师级别的多步推理能力；支持“一句话创建Skill”，用自然语言即可将业务经验沉淀为专属“工具箱”。也支持将平台内的应用一键转换为Skill。
+------
+### 🚀 3大落地方式：直达业务现场，降低交付门槛
+能力建成之后，万悟更以客户为中心提供3大落地方式，确保从平台直达业务现场，极大降低FDE的交付难度：
+#### 📦 方式一：万悟平台开箱即用
+直接提供万悟平台，业务人员无需任何代码开发，即可通过可视化界面创建和使用智能体、工作流与知识问答，零门槛将AI转化为生产力，快速完成现场验证与交付。
+#### 🔗 方式二：API无缝嵌入现有系统
+提供RESTful API（BaaS后端即服务），支持将万悟的智能能力无缝嵌入客户现有的OA、CRM、ERP等系统，配合细粒度权限控制，在不改变用户习惯的前提下，实现AI能力的深度集成与平稳交付。
+#### 🖥️ 方式三：Skill + UniClaw专有客户端执行
+对于需要高权限操作的场景（如控制本地电脑、发送钉钉消息等），FDE可通过万悟开发Skill，结合UniClaw专有客户端执行，轻松搞定跨系统的高权限现场操作，真正实现“想得到，做得到”，攻克交付最后一道壁垒。
+
+UniClaw下载地址：https://maas.ai-yuanjing.com/app/uniclaw/uniclaw-official.html
 
 ------
 
-### &#x1F525; 采用宽松友好的 Apache 2.0 License，支持开发者自由扩展与二次开发
-
-✔ **企业级工程化**：提供从模型纳管到应用落地的完整工具链，解决LLM技术落地"最后一公里"问题  
-
-✔ **开放开源生态**：采用宽松友好的 **Apache 2.0 License**，支持开发者自由扩展与二次开发  
-
-✔ **全栈技术支持**：配备专业团队为生态伙伴提供 **架构咨询、性能优化** 全周期赋能  
-
-✔ **多租户架构**：提供多租户账号体系，满足用户成本控制、数据安全隔离、业务弹性扩展、行业定制化、快速上线及生态协同等核心需求
-
-✔ **信创适配**：已获得《信创人工智能软硬件系统检验证书》，硬件层面支持华为鲲鹏CPU，软件层面兼容欧拉、CULinux、麒麟等国产操作系统，以及TiDB平凯数据库、OceanBase等国产数据库
+### 🛠️ 基座与生态：强悍底层，开放开源
+万悟的全站工具链离不开强大的底层基座支撑：
+- 🔥 **宽松友好的 Apache 2.0 License**：支持开发者自由扩展与二次开发，商用无忧。
+- ✔ **模型纳管**：支持数百种专有/开源大模型统一接入，深度适配OpenAI API标准及联通元景生态，提供多推理后端支持。
+- ✔ **Skill广场**：支持内置100+行业Skill即选即用，连接外部能力无需单独开发适配器。
+- ✔ **联网检索**：具备实时信息获取、多源数据整合与智能检索策略，提升回答时效性。
+- ✔ **多租户架构**：提供多租户账号体系，满足成本控制、数据安全隔离与业务弹性扩展。
+- ✔ **信创适配**：已获得《信创人工智能软硬件系统检验证书》，硬件层面支持华为鲲鹏CPU，软件层面兼容欧拉、CULinux、麒麟等国产操作系统，以及TiDB平凯数据库、OceanBase等国产数据库。
 
 ------
 
@@ -107,6 +147,8 @@
 ▸ **全能大脑**：通用智能体作为核心引擎，现已在深度研究、数据分析等复杂场景展现出专业分析师级别的多步推理与信息整合能力
 
 ▸ **极简Skill构建**：支持**“一句话创建Skill”**，无需代码，用自然语言描述需求即可自动生成垂直场景技能，将业务经验沉淀为专属“工具箱”
+
+▸ **极简Skill构建**：支持选择“本体智能体”进行交互问答，帮助用户进行快速分析决策。并支持自动创建“本体智能体”。
 
 ▸ **零代码编排闭环**：行业内**首个支持在智能体开发过程中零代码调用Skill**。在可视化界面直接关联Skill，实现从“意图识别”到“技能执行”的完美闭环
 
@@ -365,7 +407,7 @@
 |                             功能                             |                           详细描述                           |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
 | [通用智能体](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/8.%e9%80%9a%e7%94%a8%e6%99%ba%e8%83%bd%e4%bd%93) | 平台深度整合了深度研究与数据分析等高级能力，实现从简单问答到复杂业务处理的全面跨越，打造你的全能AI数字助理。 |
-|                          本体智能体                          | 基于企业数据与文档自动构建业务知识网络，赋予AI深度推理与闭环行动能力，让大模型真正懂业务、会决策。 |
+| [本体智能体](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/10.%E6%9C%AC%E4%BD%93%E6%99%BA%E8%83%BD%E4%BD%93/%E6%95%B0%E6%8D%AE%E8%BF%9E%E6%8E%A5/%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86.md) | 基于企业数据与文档自动构建业务知识网络，赋予AI深度推理与闭环行动能力，让大模型真正懂业务、会决策。 |
 | [模型管理](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/1.%E6%A8%A1%E5%9E%8B%E7%AE%A1%E7%90%86.md) | 支持用户导入包括联通元景、OpenAI-API-compatible、Ollama、通义千问、火山引擎等模型供应商的LLM、Embedding、Rerank模型。[ 模型导入方式-详细版](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%85%A5%E6%96%B9%E5%BC%8F-%E8%AF%A6%E7%BB%86%E7%89%88.md) |
 | [知识库](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93) | 在文档解析能力方面:支持12种文件类型的上传，支持url解析;文档解析方式支持OCR和[ MinerU模型解析(标题/表格/公式等场景)](https://github.com/UnicomAI/DocParserServer/tree/main)的私有化部署及接入，文档分段设置支持通用分段和父子分段。在调优能力方面:支持知识图谱、元数据管理及元数据过滤查询，支持分段内容增删改，支持对分段设置关键词标签提升召回效果，支持分段启停操作，支持命中测试等功能。在检索能力方面:支持向量检索、全文检索、混合检索多种检索模式;在问答能力方面:支持自动引用出处，支持图文并茂的生成答案。 |
 | [资源库](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/3.%E5%B7%A5%E5%85%B7%E5%B9%BF%E5%9C%BA.md) | 同时支持导入自己的MCP服务或自定义工具或提示词，并在工作流和智能体中使用；支持用户创建MCP Server |

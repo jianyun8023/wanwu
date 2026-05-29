@@ -24,7 +24,9 @@
 </div>
 
 
-The **Yuanjing Wanwu AI Agent Platform** is an **enterprise-oriented**, **one-stop**, and **commercial-license-friendly** **agent development platform**, dedicated to providing enterprises with secure, efficient, and compliant one-stop AI solutions. With the core philosophy of "open technology and collaborative ecosystem building," we integrate cutting-edge technologies such as large language models and business process automation to build an AI engineering platform with a complete functional system covering full-lifecycle model management, MCP, web search, **General agent & Skills orchestration**, enterprise knowledge base construction, and complex workflow orchestration. The platform has now fully upgraded to a **"General Agent + Vertical Scenario Skills" dual-engine development platform**. While ensuring enterprise data security and privacy protection, it significantly lowers the application threshold of AI technology, helping enterprises accelerate their digital transformation processes to achieve cost reduction, efficiency enhancement, and business innovation.
+Yuanjing Wanwu Agent Platform is an **all-in-one, commercial-friendly licensed agent development platform** designed for enterprise scenarios. Guided by the core philosophy of *open technology and co-construction of ecosystem*, we are committed to providing enterprises with **secure, efficient, and compliant AI solutions**.
+
+Wanwu aims to deliver **all tooling capabilities required by Forward Deployed Engineer (FDEs)**, forming a full‑stack FDE toolchain. It covers core enterprise assets, centers on customers, deeply integrates capabilities into customer systems, drastically lowers the barrier to AI project delivery, and bridges the final mile from *build* to *field*. It simplifies every business decision and empowers every FDE.
 
 ------
 
@@ -37,26 +39,86 @@ The **Yuanjing Wanwu AI Agent Platform** is an **enterprise-oriented**, **one-st
 
 ------
 
-### 📢 Open Ecosystem
+### 🌟 Full‑Stack FDE Toolchain: 5 Core Capabilities
 
-- [External Knowledge Base Compatibility](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93/%E8%BF%9E%E6%8E%A5%E5%A4%96%E6%8E%A5%E7%9F%A5%E8%AF%86%E5%BA%93.md): Supports API-based import of knowledge bases created in Dify, with retrieval and recall in agents, Q&A, and workflows.
-- [MCP Hub](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FMCP%E6%9C%8D%E5%8A%A1.md): Supports importing and using MCP from different service providers.
-- [Skills](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FSkills.md): Supports creating and downloading Skills, with seamless integration to OpenClaw.
-- [OpenClaw Sandbox](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/8.%E9%80%9A%E7%94%A8%E6%99%BA%E8%83%BD%E4%BD%93%2F%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8A%A9%E6%89%8B-OPENCLAW%2F%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%87%E6%82%9F%E4%B8%AD%E6%8E%A5%E5%85%A5OpenClaw%E6%9C%BA%E5%99%A8%E4%BA%BA.md): We provide the option to deploy each “OpenClaw Robot” in a standalone Docker container. You can directly access your locally deployed OpenClaw robot within Yuanjing Wanwu.
+To address complex enterprise scenarios, Wanwu provides 5 core agent capabilities to solve delivery pain points, making AI not only thinkable but also doable.
+
+#### 1️⃣ RAG/Knowledge Base Agent
+
+![image-20260520120033925](assets/image-20260520120033925.png)
+
+Solves scattered documents and gives AI reliable memory. Provides end‑to‑end knowledge management for massive enterprise documents and policies, building a high‑precision, memory‑enabled knowledge brain to prevent AI hallucinations.
+
+- **High‑precision parsing & retrieval:** Supports 12 file formats and URL crawling; OCR and MinerU model private deployment; multimodal retrieval, cascaded/adaptive chunking, intelligent ranking, illustrated generation, and source citation.
+- **GraphRAG enhancement:** Built‑in UniAI‑GraphRAG with domain ontology modeling, greatly improving completeness and logic in cross‑document summarization and multi‑hop reasoning, with industry‑leading F1 score.
+- **External knowledge base compatibility:** Supports API import of knowledge bases created in Dify for retrieval in agents, chat, and workflows.
+
+#### 2️⃣ Ontology Agent
+
+![image-20260520120151847](assets/image-20260520120151847.png)
+
+Handles structured data and enables multi‑step reasoning and decision‑making. Breaks the limitation that LLMs only understand text, adapting to complex structured business data.
+
+- **Deep reasoning & decision‑making:** Automatically builds business knowledge networks from enterprise data and documents, empowering AI with deep reasoning and closed‑loop action. It elevates LLMs from knowledge Q&A to business analysis brains.
+
+#### 3️⃣ Workflow Agent
+
+![image-20260520120309946](assets/image-20260520120309946.png)
+
+Manages complex processes and ensures AI follows business rules.
+
+For contract review, expense approval, and other complex workflows, standardizes AI execution paths via low‑code for stable delivery.
+
+- **Visual orchestration:** Low‑code drag‑and‑drop canvas with built‑in conditional branches, APIs, LLMs, knowledge bases, code, MCP, etc. Supports end‑to‑end debugging and performance analysis.
+- **Zero‑code orchestration closed‑loop:** Industry‑first zero‑code Skill invocation in agent development, closing the loop from intent recognition to skill execution. Flexibly calls built‑in tools, MCP, workflows, etc., parses hundreds of pages in seconds, and displays results in a unified workspace.
+
+#### 4️⃣ GUI Agent
+
+![image-20260520124423864](assets/image-20260520124423864.png)
+
+Operates various applications without APIs. Eliminates integration barriers for legacy or non‑API systems by giving AI vision and click capabilities.
+
+- **UI‑level interaction:** AI directly operates application interfaces without underlying API integration.
+- **Sandbox support:** Isolated Docker containers for each bot to safely execute UI operations.
+
+#### 5️⃣ General Agent + Skill Development
+
+![image-20260520120505258](assets/image-20260520120505258.png)
+
+Unifies all capabilities with natural language. Industry‑first dual engine of General Agent + Vertical‑scene Skills, building a super agent that is both knowledgeable and professional for complex interactive needs.
+
+- **All‑around brain & minimal construction:** Professional analyst‑level multi‑step reasoning; one‑sentence Skill creation turns business experience into a dedicated toolbox via natural language; one‑click conversion of platform apps to Skills.
 
 ------
 
-### &#x1F525; Adopt a permissive and friendly Apache 2.0 License, supporting developers to freely expand and develop secondary
+### 🚀 3 Deployment Methods: Reach Business On‑Site
 
-✔ **Enterprise-level engineering**: Provides a complete toolchain from model management to application landing, solving the "last mile" problem of LLM technology landing
+After capability building, Wanwu provides 3 deployment paths to minimize FDE delivery difficulty:
 
-✔ **Open-source ecological**: Adopt a permissive and friendly **Apache 2.0 License**, supporting developers to freely expand and develop
+#### 📦 Method 1: Out‑of‑the‑Box Platform
 
-✔ **Full-stack technology support**: Equipped with a professional team to provide **architecture consulting, performance optimization** and full-cycle empowerment for ecological partners
+Use directly via visual interface; no coding required for creating agents, workflows, and Q&A. Zero‑threshold AI productivity for rapid on‑site validation and delivery.
 
-✔ **Multi-tenant architecture**: Provides a multi-tenant account system to meet the core needs of users in cost control, data security isolation, business elasticity expansion, industry customization, rapid online and ecological collaboration
+#### 🔗 Method 2: API Seamless Integration
 
-✔ **XinChuang adaptation**: The product has been awarded the **“Xinchuang AI Hardware and Software System Inspection Certificate“**，featuring hardware support for Huawei Kunpeng CPUs and software compatibility with domestic operating systems (e.g., openEuler, CULinux, Kylin) and databases (e.g., TiDB, OceanBase).
+RESTful API (BaaS) for embedding into OA, CRM, ERP, etc. Fine‑grained permission control enables deep AI integration without changing user habits.
+
+#### 🖥️Method 3: Skill + UniClaw Dedicated Client
+
+For high‑privilege scenarios (local PC control, DingTalk messages, etc.). FDEs develop Skills and execute via UniClaw to handle cross‑system high‑privilege on‑site operations.
+
+UniClaw download: https://maas.ai-yuanjing.com/app/uniclaw/uniclaw-official.html
+
+------
+
+### 🛠️ Infrastructure & Ecosystem
+
+- 🔥 **Apache‑2.0 License**: Free extension, secondary development, and commercial use.
+- ✔ **Model Hub**: Unified access to hundreds of proprietary/open‑source models; deep OpenAI API compatibility and Yuanjing ecosystem support; multiple inference backends.
+- ✔ **Skill Plaza**: 100+ built‑in industry Skills ready to use; no adapters needed for external capabilities.
+- ✔ **Web Search**: Real‑time information, multi‑source integration, intelligent retrieval strategies.
+- ✔ **Multi‑tenant architecture**: Isolated accounts for cost control, data security, and elastic scaling.
+- **✔ Xinchuang compliance**: Certified *Xinchuang AI Software/Hardware System Inspection Certificate*. Supports Kunpeng CPUs, Euler, Kylin, CULinux, TiDB, OceanBase, etc.
 
 ------
 
@@ -345,7 +407,7 @@ To help you quickly get started with this project, we strongly recommend that yo
 | Feature                                                      | Detailed Description                                         |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
 | [General Agent](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/8.%e9%80%9a%e7%94%a8%e6%99%ba%e8%83%bd%e4%bd%93) | The platform deeply integrates advanced capabilities such as deep research and data analysis, achieving a comprehensive leap from simple Q&A to complex business processing, creating your all-around AI digital assistant. |
-| Ontology Agent                                               | Automatically constructs business knowledge networks from enterprise data and documents, empowering AI with deep reasoning and closed-loop action capabilities to truly understand business and make decisions. |
+| [Ontology Agent](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/10.%E6%9C%AC%E4%BD%93%E6%99%BA%E8%83%BD%E4%BD%93/%E6%95%B0%E6%8D%AE%E8%BF%9E%E6%8E%A5/%E8%BF%9E%E6%8E%A5%E7%AE%A1%E7%90%86.md) | Automatically constructs business knowledge networks from enterprise data and documents, empowering AI with deep reasoning and closed-loop action capabilities to truly understand business and make decisions. |
 | [Model Management](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/1.%E6%A8%A1%E5%9E%8B%E7%AE%A1%E7%90%86.md) | Supports users to import LLM, Embedding, and Rerank models from various model providers, including Unicom Yuanjing, OpenAI-API-compatible, Ollama, Tongyi Qianwen, and Volcano Engine. [Model Import Methods - Detailed Version](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/%E6%A8%A1%E5%9E%8B%E5%AF%BC%E5%85%A5%E6%96%B9%E5%BC%8F-%E8%AF%A6%E7%BB%86%E7%89%88.md) |
 | [Knowledge Base](https://github.com/UnicomAI/wanwu/tree/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93) | In terms of document parsing capabilities: supports uploading of 12 file types and URL parsing; Supports private deployment and integration for document parsing via two methods: OCR and [a proprietary MinerU model (for scenarios like titles, tables, and formulas)](https://github.com/UnicomAI/DocParserServer/tree/main) ; document segmentation settings support both general segmentation and parent-child segmentation. In terms of optimization capabilities: supports metadata management 、Graph RAG and metadata filtering queries, supports adding, deleting, and modifying segmented content, supports setting keyword tags for segments to improve recall performance, supports segment enable/disable operations, and supports hit testing. In terms of retrieval capabilities: supports multiple retrieval modes including vector search, full-text search, and hybrid search. In terms of Q&A capabilities: supports automatic citation of sources and generating answers with both text and images.<br |
 | [Resource Library](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/3.%E5%B7%A5%E5%85%B7%E5%B9%BF%E5%9C%BA.md) | Supports importing your own MCP services or custom tools or skills for use in workflows and agents. |
