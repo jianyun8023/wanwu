@@ -14,7 +14,7 @@ var (
 	BucketFileUpload = "file-upload"
 	DirFileExpire    = "file-expire"
 	DirFileNotExpire = "file-not-expire"
-	StoreExpireDays  = 1
+	StoreExpireDays  = 7
 	// BucketAAA = "aaa-upload"
 	// BucketBBB = "bbb-upload"
 )
