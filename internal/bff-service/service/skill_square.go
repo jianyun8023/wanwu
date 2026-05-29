@@ -27,7 +27,7 @@ func GetSquareBuiltinSkillList(ctx *gin.Context, userId, orgId, name string) (*r
 func GetSquareBuiltinSkillDetail(ctx *gin.Context, skillId string) (*response.BuiltinSkillDetail, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_builtin_not_found", "skill not found in builtin skills")
 	}
 	return &response.BuiltinSkillDetail{
 		BuiltinSkillInfo: buildBuiltinSkillInfo(skillsCfg),
@@ -214,7 +214,7 @@ func getPublishedCustomSkillForShare(ctx *gin.Context, skillId string) (*mcp_ser
 	}
 	skill := publish.GetSkill()
 	if skill == nil || skill.GetSkillId() == "" {
-		return nil, nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "custom skill not found")
+		return nil, nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_custom_not_found", "custom skill not found")
 	}
 	return skill, publish, nil
 }
@@ -379,7 +379,7 @@ func checkCustomSkillOwnership(ctx *gin.Context, userId, orgId, skillId string) 
 			return nil
 		}
 	}
-	return grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found or not owned by current user")
+	return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_not_owned", "skill not found or not owned by current user")
 }
 
 // checkCustomSkillPublished 验证 skill 是否已发布

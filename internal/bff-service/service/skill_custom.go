@@ -81,7 +81,7 @@ func GetCustomSkill(ctx *gin.Context, userId, orgId, skillId string) (*response.
 	}
 	skill := customSkillFromPublish(publish)
 	if skill == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "custom skill not found")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_custom_not_found", "custom skill not found")
 	}
 	variables, err := getCustomSkillVariables(ctx, skill.SkillId)
 	if err != nil {
@@ -337,7 +337,7 @@ func DeleteCustomSkill(ctx *gin.Context, userId, orgId, skillId string) error {
 	}
 	skill := customSkillFromPublish(publish)
 	if skill == nil {
-		return grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "custom skill not found")
+		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_custom_not_found", "custom skill not found")
 	}
 
 	if _, err := app.DeleteApp(ctx.Request.Context(), &app_service.DeleteAppReq{
@@ -712,7 +712,26 @@ func GetSkillSelect(ctx *gin.Context, userId, orgId, name, skillType string) (*r
 			return nil, err
 		}
 
+		// 批量获取源 Skill 的发布信息用于权限校验
+		sourceSkillIds := make([]string, 0, len(acquiredResp.List))
 		for _, acquired := range acquiredResp.List {
+			if acquired == nil {
+				continue
+			}
+			if sourceSkillId := acquired.GetSkill().GetSkill().GetSkillId(); sourceSkillId != "" {
+				sourceSkillIds = append(sourceSkillIds, sourceSkillId)
+			}
+		}
+		appInfoMap, err := getSourceSkillAppInfoMap(ctx, sourceSkillIds)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, acquired := range acquiredResp.List {
+			// 过滤无权限访问的 acquired skill
+			if !isAcquiredSkillAccessible(ctx, acquired, appInfoMap) {
+				continue
+			}
 			customSkill := customSkillFromPublish(acquired.GetSkill())
 			if !validCustomSkillForSelect(customSkill) {
 				continue

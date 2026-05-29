@@ -732,6 +732,26 @@ func assistantSkillConvert(ctx *gin.Context, assistantSkillInfos []*assistant_se
 		}
 	}
 
+	// 批量获取 acquired skill 源发布信息用于权限校验
+	var acquiredAppInfoMap map[string][]*app_service.AppInfo
+	if len(acquiredSkillMap) > 0 {
+		sourceSkillIds := make([]string, 0, len(acquiredSkillMap))
+		for _, acquired := range acquiredSkillMap {
+			if acquired == nil {
+				continue
+			}
+			if sourceSkillId := acquired.GetSkill().GetSkill().GetSkillId(); sourceSkillId != "" {
+				sourceSkillIds = append(sourceSkillIds, sourceSkillId)
+			}
+		}
+		var err error
+		acquiredAppInfoMap, err = getSourceSkillAppInfoMap(ctx, sourceSkillIds)
+		if err != nil {
+			log.Warnf("获取我添加的 skill 源发布信息失败，err: %v", err)
+			acquiredAppInfoMap = make(map[string][]*app_service.AppInfo)
+		}
+	}
+
 	var retSkillInfos []*response.AssistantSkillInfo
 	for _, info := range assistantSkillInfos {
 		var exists bool
@@ -755,6 +775,10 @@ func assistantSkillConvert(ctx *gin.Context, assistantSkillInfos []*assistant_se
 			}
 		case constant.SkillTypeAcquired:
 			if item, ok := acquiredSkillMap[info.SkillId]; ok {
+				// 过滤无权限访问的 acquired skill
+				if !isAcquiredSkillAccessible(ctx, item, acquiredAppInfoMap) {
+					continue
+				}
 				customSkill := customSkillFromPublish(item.GetSkill())
 				if customSkill != nil {
 					exists = true

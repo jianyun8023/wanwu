@@ -52,7 +52,7 @@ func GetBuiltinSkillList(ctx *gin.Context, name string) (*response.ListResult, e
 func GetBuiltinSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.BuiltinSkillDetail, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_builtin_not_found", "skill not found in builtin skills")
 	}
 
 	detail := &response.BuiltinSkillDetail{
@@ -75,7 +75,7 @@ func GetBuiltinSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*re
 func DownloadBuiltinSkill(ctx *gin.Context, skillId string) ([]byte, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_builtin_not_found", "skill not found in builtin skills")
 	}
 	return skillsCfg.AgentSkillZipToBytes(skillId)
 }
