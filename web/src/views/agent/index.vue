@@ -254,7 +254,10 @@ export default {
         this.editForm.name = data.name;
         this.editForm.desc = data.desc;
         this.editForm.prologue = data.prologue;
-        this.setMaxPicNum(data.visionConfig.picNum);
+        this.setMaxPicNum(1);
+        // 待服务端支持后放开，目前限制1⬆️
+        // this.setMaxPicNum(data.visionConfig.picNum);
+
         this.editForm.recommendQuestion = data.recommendQuestion.map(item => ({
           value: item,
         }));
