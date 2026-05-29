@@ -58,5 +58,6 @@ func registerAssistant(apiV1 *gin.RouterGroup) {
 	mid.Sub("app.agent").Reg(apiV1, "/mcp/select", http.MethodGet, v1.GetMCPSelect, "智能体mcp下拉列表")
 	mid.Sub("app.agent").Reg(apiV1, "/agent/skill/select", http.MethodGet, v1.GetSkillSelect, "智能体skills下拉列表")
 	mid.Sub("app.agent").Reg(apiV1, "/tool/select", http.MethodGet, v1.GetToolSelect, "智能体工具下拉列表（自定义与内置）")
+	mid.Sub("app.agent").Reg(apiV1, "/workflow/select", http.MethodGet, v1.GetWorkflowSelect, "智能体工作流下拉列表接口")
 
 }
