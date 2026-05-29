@@ -33,7 +33,7 @@
             :src="file.fileUrl"
             :preview-src-list="[file.imgUrl]"
           ></el-image>
-          <i class="el-icon-close echo-close" @click="clearFile"></i>
+          <i class="el-icon-close echo-close" @click.stop="removeFile(i)"></i>
           <span
             class="el-icon-loading loading-icon-img"
             v-if="fileLoading"
@@ -131,6 +131,7 @@
           v-for="n in randomReminderList"
           :key="n.id"
           :style="`background-color:${colorArr[n.random]}`"
+          @click="setRandomReminder(n)"
         >
           <el-popover
             placement="top-start"
@@ -142,11 +143,7 @@
               n.prompt && n.prompt.replaceAll('{', '').replaceAll('}', '')
             "
           >
-            <span
-              style="font-size: 15px"
-              slot="reference"
-              @click="setRandomReminder(n)"
-            >
+            <span style="font-size: 15px" slot="reference">
               {{ n.title || n.name }}
             </span>
           </el-popover>
@@ -389,6 +386,20 @@ export default {
       this.fileType = '';
       this.fileUrl = '';
       this.hasFile = false;
+    },
+    removeFile(index) {
+      this.fileList.splice(index, 1);
+      this.fileIdList.splice(index, 1);
+
+      if (this.fileList.length === 0) {
+        this.clearFile();
+        return;
+      }
+
+      const lastFileId = this.fileIdList[this.fileIdList.length - 1];
+      const lastFile = this.fileList[this.fileList.length - 1];
+      this.fileUrl = (lastFileId && lastFileId.fileUrl) || lastFile.fileUrl;
+      this.hasFile = true;
     },
     setFileId(fileIdList) {
       this.fileIdList = fileIdList;

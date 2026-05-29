@@ -1,12 +1,20 @@
-﻿<template>
+<template>
   <div class="general-agent-page">
-    <!-- 左侧会话列表 - 可折叠 -->
-    <div :class="['sidebar', { collapsed: sidebarCollapsed }]">
-      <div class="sidebar-content">
+    <!-- 主内容区 -->
+    <div
+      :class="{
+        'has-sidebar': !sidebarCollapsed,
+        'has-workspace': panelVisible && activeWorkspace,
+        'has-preview': previewVisible || shouldShowSkillTabs,
+      }"
+      class="agent-main-content"
+    >
+      <!-- 左侧会话列表 - 固定宽度，可折叠 -->
+      <div :class="['sidebar', { collapsed: sidebarCollapsed }]">
         <div class="sidebar-header">
           <el-button
-            type="primary"
             class="new-chat-btn"
+            type="primary"
             @click="initNewConversation"
           >
             <i class="el-icon-plus"></i>
@@ -24,7 +32,7 @@
               'conversation-item',
               { active: currentThreadId === item.threadId },
             ]"
-            @click="selectConversation(item.threadId)"
+            @click="selectConversation(item.threadId, item)"
           >
             <i class="el-icon-chat-dot-round"></i>
             <span class="conversation-title">{{ item.title }}</span>
@@ -35,18 +43,22 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 主内容区 -->
-    <div
-      class="agent-main-content"
-      :class="{ 'has-workspace': panelVisible && activeWorkspace }"
-    >
-      <!-- 主消息区域 -->
-      <div class="main-content-body">
+      <!-- 中间区域：主消息区域（自适应）或 40% 宽度 -->
+      <div class="center-panel">
         <!-- 顶部标题栏 -->
         <div class="header">
           <div class="header-left">
+            <button
+              v-if="mode === 'skill'"
+              class="header-icon-btn"
+              :title="$t('menu.back')"
+              :aria-label="$t('menu.back')"
+              @click="$router.back()"
+            >
+              <i class="el-icon-arrow-left"></i>
+            </button>
+
             <div v-if="mode !== 'skill'" class="header-btns">
               <button class="header-icon-btn" @click="toggleSidebar">
                 <i
@@ -65,11 +77,11 @@
 
           <div v-if="isSkillType" class="header-right">
             <button
-              v-if="isSkillType && !workspacePanelVisible"
+              v-if="isSkillType && !panelVisible"
               class="header-icon-btn workspace-entry-btn"
               @click="handleViewSkillWorkspace"
             >
-              <span class="btn-text">
+              <span>
                 {{ $t('generalAgent.header.workspace') }}
               </span>
             </button>
@@ -78,11 +90,11 @@
 
         <!-- 消息区域 - 独立滚动 -->
         <div
+          ref="messageArea"
           :class="[
             'message-area',
             { empty: isEmptyConversation && !isLoadingHistory },
           ]"
-          ref="messageArea"
           @scroll="handleMessageAreaScroll"
         >
           <!-- 加载历史记录中 -->
@@ -99,8 +111,8 @@
             <message-item
               v-for="(msg, index) in messageList"
               :key="msg.id || index"
-              :message="msg"
               :is-last-message="index === messageList.length - 1"
+              :message="msg"
               :thread-id="currentThreadId"
               @regenerate="handleRegenerate"
               @view-workspace="handleViewWorkspace"
@@ -113,28 +125,6 @@
           <div ref="scrollAnchor"></div>
         </div>
 
-        <!-- 滚动到底部按钮 -->
-        <transition name="scroll-btn-fade">
-          <button
-            v-if="showScrollToBottom"
-            class="scroll-to-bottom-btn"
-            @click="handleScrollToBottomClick"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="6,9 12,15 18,9"></polyline>
-            </svg>
-          </button>
-        </transition>
-
         <!-- 底部输入区 -->
         <div
           :class="[
@@ -142,6 +132,27 @@
             { 'is-centered': isEmptyConversation && !isLoadingHistory },
           ]"
         >
+          <!-- 滚动到底部按钮 -->
+          <transition name="scroll-btn-fade">
+            <button
+              v-if="showScrollToBottom"
+              class="scroll-to-bottom-btn"
+              @click="handleScrollToBottomClick"
+            >
+              <svg
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+              >
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </button>
+          </transition>
           <!-- 欢迎词 - 仅居中时显示 -->
           <div
             v-if="isEmptyConversation && !isLoadingHistory"
@@ -164,12 +175,12 @@
             <div style="margin-bottom: 12px">
               <ModelSelect
                 v-model="selectedModel"
+                :filterable="true"
+                :loading="modelLoading"
                 :options="modelList"
                 :placeholder="$t('common.model.select')"
-                :loading="modelLoading"
-                :filterable="true"
-                @change="handleModelChange"
                 class="model-select-inline"
+                @change="handleModelChange"
               />
             </div>
 
@@ -179,44 +190,39 @@
               <div
                 v-for="(file, index) in uploadedFiles"
                 :key="index"
-                class="echo-img-box"
-                :class="{ 'is-uploading': file.uploading }"
+                :class="['echo-img-box', { 'is-uploading': file.uploading }]"
               >
-                <div class="echo-img-item">
-                  <!-- 图片类型 -->
-                  <el-image
-                    v-if="file.type && file.type.startsWith('image/')"
-                    class="echo-img"
-                    :src="file.displayUrl"
-                    :preview-src-list="[file.displayUrl]"
-                  ></el-image>
-                  <!-- 文档类型 -->
-                  <div v-else class="echo-doc-box">
-                    <img
-                      :src="require('@/assets/imgs/fileicon.png')"
-                      class="docIcon"
-                    />
-                    <div class="docInfo">
-                      <p class="docInfo_name">
-                        {{ $t('knowledgeManage.fileName') }}：{{
-                          file.fileName
-                        }}
-                      </p>
-                      <p class="docInfo_size">
-                        {{ $t('knowledgeManage.fileSize') }}：{{
-                          file.size > 1024
-                            ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
-                            : (file.size || 0) + ' bytes'
-                        }}
-                      </p>
-                    </div>
+                <!-- 图片类型 -->
+                <el-image
+                  v-if="file.type && file.type.startsWith('image/')"
+                  :preview-src-list="[file.displayUrl]"
+                  :src="file.displayUrl"
+                  class="echo-img"
+                ></el-image>
+                <!-- 文档类型 -->
+                <div v-else class="echo-doc-box">
+                  <img
+                    :src="require('@/assets/imgs/fileicon.png')"
+                    class="docIcon"
+                  />
+                  <div class="docInfo">
+                    <p class="docInfo_name">
+                      {{ $t('knowledgeManage.fileName') }}：{{ file.fileName }}
+                    </p>
+                    <p class="docInfo_size">
+                      {{ $t('knowledgeManage.fileSize') }}：{{
+                        file.size > 1024
+                          ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+                          : (file.size || 0) + ' bytes'
+                      }}
+                    </p>
                   </div>
-                  <!-- 删除按钮 -->
-                  <i
-                    class="el-icon-close echo-close"
-                    @click="removeFile(index)"
-                  ></i>
                 </div>
+                <!-- 删除按钮 -->
+                <i
+                  class="el-icon-close echo-close"
+                  @click="removeFile(index)"
+                ></i>
               </div>
             </div>
 
@@ -225,22 +231,27 @@
               <MentionInput
                 ref="mentionInput"
                 v-model="inputMessage"
+                :disabled="isStreaming || previewIsStreaming"
+                :isDIP="selectedMode?.value === 'DIP Agent'"
                 :placeholder="inputPlaceholder"
                 @keydown-enter="handleKeyDown"
-                :disabled="isStreaming || previewIsStreaming"
               />
             </div>
 
             <!-- 底部工具栏：配置按钮 + 发送按钮 -->
             <div class="input-toolbar">
               <div class="toolbar-left">
-                <div class="config-btn" @click="showConfigDialog = true">
+                <div
+                  v-show="selectedMode?.value !== 'DIP Agent'"
+                  class="config-btn"
+                  @click="showConfigDialog = true"
+                >
                   <i class="el-icon-setting"></i>
                   <span>{{ $t('generalAgent.header.config') }}</span>
                 </div>
                 <!-- 导入Skill按钮 -->
                 <div
-                  v-if="isSkillType && !currentThreadId"
+                  v-show="isSkillType && !currentThreadId"
                   class="config-btn"
                   @click="openImportSkillDialog"
                 >
@@ -248,24 +259,27 @@
                   <span>{{ $t('generalAgent.header.importSkill') }}</span>
                 </div>
                 <!-- 已选模式标签 -->
-                <div v-if="selectedMode" class="mode-btn mode-btn-selected">
+                <div v-show="selectedMode" class="mode-btn mode-btn-selected">
                   <img
-                    v-if="selectedMode.avatar"
-                    :src="selectedMode.avatar"
+                    v-if="selectedMode?.avatar"
+                    :src="selectedMode?.avatar"
                     alt=""
                     class="mode-avatar"
                   />
-                  <i v-else :class="selectedMode.icon"></i>
-                  <span>{{ selectedMode.label }}</span>
+                  <i v-else :class="selectedMode?.icon"></i>
+                  <span>{{ selectedMode?.label }}</span>
                   <i
-                    v-if="!isSkillType || (isSkillType && !currentThreadId)"
+                    v-show="
+                      mode !== 'skill' &&
+                      (!isSkillType || (isSkillType && !currentThreadId))
+                    "
                     class="el-icon-close"
                     @click="removeMode(selectedMode.value)"
                   ></i>
                 </div>
               </div>
               <div class="toolbar-right">
-                <StreamUploadField
+                <GAFileUpload
                   :fileTypeArr="['doc/*', 'md', 'image/*']"
                   type="wga"
                   @setFileId="handleSetFileId"
@@ -281,39 +295,39 @@
                       ></i>
                     </el-tooltip>
                   </template>
-                </StreamUploadField>
+                </GAFileUpload>
                 <el-button
                   v-show="isStreaming"
-                  class="send-btn stop-btn"
                   circle
+                  class="send-btn stop-btn"
                   @click="handleStopClick"
                 >
                   <svg
                     class="stop-icon"
+                    height="16"
                     viewBox="0 0 24 24"
                     width="16"
-                    height="16"
                   >
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                    <rect height="12" rx="2" width="12" x="6" y="6" />
                   </svg>
                 </el-button>
                 <el-button
                   v-show="!isStreaming"
-                  type="primary"
-                  class="send-btn"
-                  circle
                   :disabled="!canSend"
+                  circle
+                  class="send-btn"
+                  type="primary"
                   @click="sendMessage"
                 >
                   <svg
                     class="send-icon"
+                    height="18"
                     viewBox="0 0 24 24"
                     width="18"
-                    height="18"
                   >
                     <path
-                      fill="currentColor"
                       d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
+                      fill="currentColor"
                     />
                   </svg>
                 </el-button>
@@ -336,13 +350,13 @@
               @click="addMode(mode.value)"
             >
               <img
-                v-if="mode.avatar"
-                :src="mode.avatar"
-                class="mode-avatar"
+                v-if="mode?.avatar"
+                :src="mode?.avatar"
                 alt=""
+                class="mode-avatar"
               />
-              <i v-else :class="mode.icon"></i>
-              <span>{{ mode.label }}</span>
+              <i v-else :class="mode?.icon"></i>
+              <span>{{ mode?.label }}</span>
             </div>
           </div>
           <div class="input-footer">
@@ -351,47 +365,56 @@
         </div>
       </div>
 
-      <!-- Workspace 面板 -->
-      <transition name="workspace-slide">
-        <workspace-panel
-          v-if="panelVisible && activeWorkspace"
-          ref="workspacePanel"
-          :thread-id="activeWorkspace.threadId"
-          :run-id="activeWorkspace.runId"
-          :initial-data="currentWorkspaceTree"
-          @close="hidePanel"
-          @preview-file="handlePreviewFile"
-        />
-      </transition>
+      <!-- 右侧区域：工作空间 + 预览（固定宽度或 60%） -->
+      <div class="right-area">
+        <!-- Workspace 面板 -->
+        <transition
+          :name="
+            shouldShowSkillTabs || previewVisible
+              ? 'workspace-slide-inner'
+              : 'workspace-slide'
+          "
+        >
+          <workspace-panel
+            v-if="panelVisible && activeWorkspace"
+            ref="workspacePanel"
+            :initial-data="currentWorkspaceTree"
+            :run-id="activeWorkspace.runId"
+            :thread-id="activeWorkspace.threadId"
+            @close="hidePanel"
+            @preview-file="handlePreviewFile"
+          />
+        </transition>
 
-      <!-- 文件预览抽屉 -->
-      <transition name="workspace-slide">
-        <file-preview-drawer
-          v-if="previewVisible"
-          :visible.sync="previewVisible"
-          :file="previewFile"
-          :file-path="previewFilePath"
-          :blob="previewBlob"
-          :loading="previewLoading"
-          @close="previewVisible = false"
-        />
-      </transition>
+        <!-- 预览面板：文件预览或 SkillTabs -->
+        <div v-if="previewVisible || shouldShowSkillTabs" class="preview-panel">
+          <!-- 文件预览抽屉 -->
+          <file-preview-drawer
+            v-if="previewVisible"
+            :blob="previewBlob"
+            :file="previewFile"
+            :file-path="previewFilePath"
+            :loading="previewLoading"
+            :visible.sync="previewVisible"
+            @close="previewVisible = false"
+          />
 
-      <!--
-        预览会话面板生命周期说明：
-        1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
-        2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
-      -->
-      <transition name="workspace-slide">
-        <SkillTabs
-          v-if="shouldMountSkillTabs"
-          v-show="shouldShowSkillTabs"
-          :key="skillTabsKey"
-          :skillPreviewParams="skillPreviewParams"
-          class="preview-chat-panel"
-          @view-workspace="handleViewWorkspace"
-        />
-      </transition>
+          <!--
+              预览会话面板生命周期说明：
+              1. 切换会话或 previewId 变化时，skillTabsKey 会变化，组件会卸载重建，用于重置上一轮预览会话及 SSE 状态。
+              2. 打开文件预览抽屉时，仅通过 v-show 隐藏面板，不卸载组件，避免中断正在进行的预览 SSE。
+              3. SkillTabs 和文件预览抽屉互斥显示，占用相同空间
+            -->
+          <SkillTabs
+            v-if="shouldMountSkillTabs"
+            v-show="shouldShowSkillTabs"
+            :key="skillTabsKey"
+            :skillPreviewParams="skillPreviewParams"
+            @view-workspace="handleViewWorkspace"
+            @refresh-workspace="loadWorkspaceFiles"
+          />
+        </div>
+      </div>
 
       <!-- 配置弹窗 -->
       <configDialog
@@ -418,7 +441,7 @@ import MentionInput from './components/MentionInput.vue';
 import SkillTabs from './components/skills/SkillTabs.vue';
 import SkillDialog from './components/skills/SkillDialog.vue';
 import ModelSelect from '@/components/modelSelect.vue';
-import StreamUploadField from '@/components/stream/streamUploadField.vue';
+import GAFileUpload from './components/GAFileUpload.vue';
 import {
   chatGeneralAgentConversation,
   chatGeneralAgentSkillConversation,
@@ -439,7 +462,7 @@ import {
 import { getCustomSkillInfo } from '@/api/templateSquare';
 import { selectModelList } from '@/api/modelAccess';
 import { avatarSrc, resDownloadFile } from '@/utils/util';
-import { mapActions, mapGetters, mapState } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { SSEEventParser } from './utils/sse-parser';
 // 引入工具函数
 import { aggregateEventsToMessages } from './utils/message-aggregator';
@@ -464,7 +487,7 @@ export default {
     MentionInput,
     SkillTabs,
     ModelSelect,
-    StreamUploadField,
+    GAFileUpload,
     SkillDialog, // skill导入弹框
   },
   mixins: [
@@ -501,9 +524,9 @@ export default {
       currentStage: '',
 
       // Workspace 相关
-      workspacePanelVisible: false,
-      workspaceLoading: false,
-      workspaceInfo: null,
+      activeWorkspace: null,
+      workspaceTrees: {},
+      panelVisible: false,
 
       // 文件预览
       previewVisible: false,
@@ -522,12 +545,16 @@ export default {
     };
   },
   computed: {
-    ...mapState('workspace', ['activeWorkspace', 'panelVisible']),
-    ...mapGetters('workspace', ['hasWorkspace', 'currentWorkspaceTree']),
     ...mapGetters('user', ['commonInfo']),
 
     assistantAvatar() {
       return avatarSrc(this.commonInfo?.data?.tab?.logo?.path);
+    },
+
+    currentWorkspaceTree() {
+      if (!this.activeWorkspace) return null;
+      const key = `${this.activeWorkspace.threadId}-${this.activeWorkspace.runId}`;
+      return this.workspaceTrees[key] || null;
     },
 
     currentTitle() {
@@ -604,7 +631,6 @@ export default {
   },
   watch: {
     panelVisible(val) {
-      this.workspacePanelVisible = val;
       if (val && this.activeWorkspace) {
         this.loadWorkspaceFiles();
         this.$nextTick(() => this.updateWorkspaceRect());
@@ -615,7 +641,13 @@ export default {
     },
     previewVisible(val) {
       if (val) {
+        this.sidebarCollapsed = true;
         this.$nextTick(() => this.updateWorkspaceRect());
+      }
+    },
+    shouldShowSkillTabs(val) {
+      if (val) {
+        this.sidebarCollapsed = true;
       }
     },
   },
@@ -632,23 +664,52 @@ export default {
     });
   },
   beforeDestroy() {
-    this.reset();
+    this.resetWorkspace();
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
   },
   methods: {
-    ...mapActions('workspace', [
-      'handleWorkspaceActivity',
-      'showPanel',
-      'hidePanel',
-      'setWorkspaceTree',
-      'setActiveWorkspace',
-      'clearWorkspace',
-      'reset',
-    ]),
     ...mapActions('user', ['getPermissionInfo', 'getCommonInfo']),
+
+    // Workspace 面板控制
+    handleWorkspaceActivity(content) {
+      if (!content) return;
+      const { runId, threadId, fileCount, totalSize, timestamp } = content;
+      this.activeWorkspace = {
+        runId,
+        threadId,
+        fileCount: fileCount || 0,
+        totalSize: totalSize || 0,
+        timestamp: timestamp || Date.now(),
+      };
+    },
+    setActiveWorkspace(payload) {
+      this.activeWorkspace = payload;
+    },
+    showPanel() {
+      this.panelVisible = true;
+    },
+    hidePanel() {
+      this.panelVisible = false;
+    },
+    setWorkspaceTree({ threadId, runId, data }) {
+      const key = `${threadId}-${runId}`;
+      this.$set(this.workspaceTrees, key, {
+        files: data.files || [],
+        fileCount: data.fileCount || 0,
+        totalSize: data.totalSize || 0,
+        isDisplay: data.isDisplay || false,
+        loaded: true,
+        loading: false,
+      });
+    },
+    resetWorkspace() {
+      this.activeWorkspace = null;
+      this.workspaceTrees = {};
+      this.panelVisible = false;
+    },
 
     async initUserInfo() {
       if (localStorage.getItem('access_cert')) {
@@ -657,11 +718,74 @@ export default {
       }
     },
 
+    replaceRouteQuery(query) {
+      const currentQuery = this.$route.query || {};
+      const currentKeys = Object.keys(currentQuery);
+      const nextKeys = Object.keys(query);
+      const isSameQuery =
+        currentKeys.length === nextKeys.length &&
+        nextKeys.every(key => currentQuery[key] === query[key]);
+
+      if (isSameQuery) return;
+
+      this.$router
+        .replace({
+          path: this.$route.path,
+          query,
+        })
+        .catch(() => {});
+    },
+
+    syncConversationRoute(threadId = '', conversation = null) {
+      const query = { ...this.$route.query };
+      const isSkillConversation = conversation
+        ? !!conversation.isSkillConversation
+        : this.isSkillType;
+
+      delete query.chatMode;
+
+      if (threadId) {
+        query.threadId = threadId;
+
+        if (isSkillConversation) {
+          const skillId = conversation?.skillId || this.customSkillId;
+          query.chatType = 'skill';
+          if (skillId) {
+            query.customSkillId = skillId;
+          } else {
+            delete query.customSkillId;
+          }
+        } else {
+          delete query.chatType;
+          delete query.customSkillId;
+        }
+      } else {
+        delete query.threadId;
+
+        if (isSkillConversation) {
+          query.chatType = 'skill';
+          if (this.customSkillId) {
+            query.customSkillId = this.customSkillId;
+          } else {
+            delete query.customSkillId;
+          }
+        } else {
+          delete query.chatType;
+          delete query.customSkillId;
+        }
+      }
+
+      this.replaceRouteQuery(query);
+    },
+
+    shouldPreserveSkillContext() {
+      return this.mode === 'skill';
+    },
+
     initFromRoute() {
       const { chatType, customSkillId, chatMode, threadId } =
         this.$route.query || {};
 
-      let isNewChatMode = false;
       let initialChatMode = '';
 
       if (chatType) {
@@ -671,7 +795,6 @@ export default {
         this.customSkillId = customSkillId;
       }
       if (chatMode) {
-        isNewChatMode = true;
         initialChatMode = chatMode;
         this.skillChatMode = 'normal';
 
@@ -733,6 +856,13 @@ export default {
         });
       }
 
+      this.syncConversationRoute(
+        this.currentThreadId,
+        this.currentConversation || {
+          isSkillConversation: true,
+          skillId: this.customSkillId,
+        },
+      );
       this.ensureMessageList(this.currentThreadId);
       this.addUserMessage(this.currentThreadId, content);
       this.$nextTick(() => this.scrollToBottom());
@@ -760,7 +890,7 @@ export default {
           if (previewId) this.previewId = previewId;
 
           // 优先级：接口活跃记录 > 路由穿透带入
-          let targetThreadId = threadId;
+          let targetThreadId = threadId || routeThreadId;
           let isNewRefresh = false;
 
           // 若目标对话不存在（如刚转换完还没有任何会话），主动刷新获取新会话
@@ -783,13 +913,13 @@ export default {
               this.$nextTick(() => {
                 this.startSkillPresetConversation(initialChatMode);
               });
-            } else if (!isNewRefresh) {
-              // 非新创建会话，则走正常加载逻辑
-              this.selectConversation(targetThreadId);
-            } else {
+            } else if (isNewRefresh) {
               // 刚刷新后的新会话且无 initialChatMode，激活模式并加载配置即可
               this.addMode(MAIN_CHAT_MODES.SKILL_MODE);
               this.loadConfig();
+            } else {
+              // 非新创建会话，则走正常加载逻辑
+              this.selectConversation(targetThreadId);
             }
           }
         } else {
@@ -841,16 +971,17 @@ export default {
           await this.syncModelConfigAfterRefresh(threadId);
 
           // 将新会话加入左侧会话列表
-          this.conversationList.unshift({
+          const newConversation = {
             threadId,
             title: this.$t('generalAgent.index.newConversation'),
             createdAt: new Date().toISOString(),
             isSkillConversation: true,
             skillId: this.customSkillId,
             previewId: this.previewId,
-          });
+          };
+          this.conversationList.unshift(newConversation);
+          this.syncConversationRoute(threadId, newConversation);
 
-          // 注意：此处不再静默更新路由保持极简
           return threadId;
         } else {
           this.$message.error(res.msg || '刷新 Skill 对话失败');
@@ -962,12 +1093,24 @@ export default {
     },
 
     initNewConversation() {
+      const shouldPreserveSkillContext = this.shouldPreserveSkillContext();
       this.currentThreadId = '';
+      if (shouldPreserveSkillContext) {
+        this.chatType = 'skill';
+      } else {
+        this.chatType = '';
+        this.customSkillId = '';
+        this.previewId = '';
+      }
+      this.syncConversationRoute();
       this.clearMessages('');
       // 重置滚动状态
       this.resetScrollState();
       // 重置模式选择
       this.clearModes();
+      if (shouldPreserveSkillContext) {
+        this.chatType = 'skill';
+      }
       // 关闭工作区面板
       this.hidePanel();
       this.$nextTick(() => {
@@ -1023,7 +1166,7 @@ export default {
           this.$delete(this.messagesMap, '');
 
           this.selectedModel = modelConfig.modelId;
-          this.conversationList.unshift({
+          const newConversation = {
             threadId,
             title: title || this.$t('generalAgent.index.newConversation'),
             createdAt: new Date().toISOString(),
@@ -1034,7 +1177,9 @@ export default {
                   previewId: this.previewId,
                 }
               : {}),
-          });
+          };
+          this.conversationList.unshift(newConversation);
+          this.syncConversationRoute(threadId, newConversation);
           return threadId;
         } else {
           this.$message.error(this.$t('generalAgent.error.createFailed'));
@@ -1047,8 +1192,27 @@ export default {
       return null;
     },
 
-    selectConversation(threadId) {
-      if (this.currentThreadId === threadId) return;
+    selectConversation(threadId, conversation = null) {
+      if (!threadId) return;
+
+      const targetConversation =
+        conversation ||
+        this.conversationList.find(item => item.threadId === threadId) ||
+        null;
+
+      this.syncConversationRoute(threadId, targetConversation);
+
+      if (this.currentThreadId === threadId) {
+        if (targetConversation?.isSkillConversation) {
+          this.chatType = 'skill';
+          this.setSkillParamsByConversation(targetConversation);
+        } else if (targetConversation) {
+          this.chatType = '';
+          this.customSkillId = '';
+          this.previewId = '';
+        }
+        return;
+      }
       // 切换会话时，只切换 currentThreadId，不中止 SSE 流
       // SSE 流会继续在后台运行，切换回来时能继续显示
       this.currentThreadId = threadId;
@@ -1057,9 +1221,16 @@ export default {
       // 重置模式选择
       this.clearModes();
       // 检查当前会话是否是 skill 会话
-      if (this.currentConversation?.isSkillConversation) {
+      const currentConversation =
+        targetConversation || this.currentConversation;
+      if (currentConversation?.isSkillConversation) {
+        this.chatType = 'skill';
         this.addMode(MAIN_CHAT_MODES.SKILL_MODE);
-        this.setSkillParamsByConversation(this.currentConversation);
+        this.setSkillParamsByConversation(currentConversation);
+      } else if (currentConversation) {
+        this.chatType = '';
+        this.customSkillId = '';
+        this.previewId = '';
       }
       this.hidePanel();
       this.fetchHistory();
@@ -1144,7 +1315,7 @@ export default {
         return;
       }
       const selectedModelConfig = this.modelList.find(m => m.modelId === value);
-      const res = updateGeneralAgentConversationConfig({
+      updateGeneralAgentConversationConfig({
         threadId: this.currentThreadId,
         modelConfig: {
           modelId: value,
@@ -1155,9 +1326,6 @@ export default {
           config: selectedModelConfig?.config || {},
         },
       });
-      if (res.code === 0) {
-        this.$message.success(this.$t('generalAgent.config.saveSuccess'));
-      }
     },
 
     async sendMessage() {
@@ -1344,7 +1512,6 @@ export default {
     async loadWorkspaceFiles() {
       if (!this.activeWorkspace || !this.currentThreadId) return;
 
-      this.workspaceLoading = true;
       try {
         const res = await getGeneralAgentWorkspace({
           threadId: this.currentThreadId,
@@ -1357,8 +1524,8 @@ export default {
             data: res.data,
           });
         }
-      } finally {
-        this.workspaceLoading = false;
+      } catch (error) {
+        console.error('loadWorkspaceFiles error:', error);
       }
     },
 
@@ -1473,8 +1640,12 @@ export default {
       if (res.code === 0) {
         this.$message.success(this.$t('common.info.delete'));
         if (this.currentThreadId === item.threadId) {
+          this.clearMessages(this.currentThreadId);
           this.currentThreadId = '';
-          this.messageList = [];
+          this.chatType = '';
+          this.customSkillId = '';
+          this.previewId = '';
+          this.syncConversationRoute();
           this.hidePanel();
         }
         this.fetchConversationList();
@@ -1551,16 +1722,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$claude-primary: #10a37f;
-$claude-primary-light: #1ab38b;
-$claude-primary-dark: #0d8a6a;
-$claude-bg: #ffffff;
-$claude-bg-secondary: #f7f7f8;
-$claude-border: #e5e5e5;
-$claude-text: #1a1a1a;
-$claude-text-secondary: #666666;
-$claude-text-muted: #999999;
-$message-max-width: 900px;
+@import './styles/variables';
 
 .general-agent-page {
   display: flex;
@@ -1575,33 +1737,67 @@ $message-max-width: 900px;
   box-sizing: border-box;
 }
 
-.sidebar {
+.agent-main-content {
+  flex: 1;
   display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  width: 240px;
-  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition:
-    width 0.3s ease,
-    margin-right 0.3s ease;
-  margin-right: 16px;
+
+  // 没有工作空间且没有预览时，right-area 宽度为 0
+  &:not(.has-workspace):not(.has-preview) {
+    .right-area {
+      width: 0;
+      overflow: hidden;
+    }
+  }
+
+  // 有工作空间时，左侧自适应，右侧工作空间宽度
+  &.has-workspace:not(.has-preview) {
+    .right-area {
+      width: 400px;
+    }
+  }
+
+  // 有预览时，左侧 40%，右侧 60%
+  &.has-preview {
+    .center-panel {
+      width: 40%;
+    }
+
+    .right-area {
+      width: 60%;
+    }
+  }
+
+  // 有工作空间 + 预览时，右侧同时包含两者
+  &.has-workspace.has-preview {
+    .right-area {
+      width: 60%;
+    }
+  }
+}
+
+// 左侧会话列表 - 固定宽度
+.sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  height: 100%;
+  flex-shrink: 0;
+  background: #f9fafb;
+  border-right: 1px solid #f0f0f0;
+  transition: width 0.3s ease;
+  overflow: hidden;
 
   &.collapsed {
     width: 0;
-    margin-right: 0;
-    box-shadow: none;
-  }
-
-  .sidebar-content {
-    display: flex;
-    flex-direction: column;
-    width: 240px;
-    height: 100%;
-    flex-shrink: 0;
+    border-right: none;
   }
 
   .sidebar-header {
@@ -1615,13 +1811,13 @@ $message-max-width: 900px;
     .new-chat-btn {
       width: 100%;
       border-radius: 12px;
-      background: $claude-primary;
-      border-color: $claude-primary;
+      background: $wga-primary;
+      border-color: $wga-primary;
       font-weight: 500;
 
       &:hover {
-        background: $claude-primary-dark;
-        border-color: $claude-primary-dark;
+        background: $wga-primary-dark;
+        border-color: $wga-primary-dark;
       }
     }
   }
@@ -1662,7 +1858,7 @@ $message-max-width: 900px;
     transition: background-color 0.2s;
 
     &:hover {
-      background: rgba($claude-primary, 0.08);
+      background: rgba($wga-primary, 0.08);
 
       .conversation-delete {
         opacity: 1;
@@ -1670,7 +1866,7 @@ $message-max-width: 900px;
     }
 
     &.active {
-      background: rgba($claude-primary, 0.12);
+      background: rgba($wga-primary, 0.12);
 
       .conversation-title {
         font-weight: 500;
@@ -1679,14 +1875,14 @@ $message-max-width: 900px;
 
     i:first-child {
       margin-right: 10px;
-      color: $claude-text-muted;
+      color: $wga-text-muted;
       font-size: 16px;
     }
 
     .conversation-title {
       flex: 1;
       font-size: 14px;
-      color: $claude-text;
+      color: $wga-text;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -1694,7 +1890,7 @@ $message-max-width: 900px;
 
     .conversation-delete {
       opacity: 0;
-      color: $claude-text-muted;
+      color: $wga-text-muted;
       padding: 4px;
       font-size: 16px;
       transition: all 0.2s;
@@ -1707,26 +1903,8 @@ $message-max-width: 900px;
   }
 }
 
-.agent-main-content {
-  flex: 1;
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-
-  &.has-workspace {
-    .main-content-body {
-      flex: 1;
-      min-width: 25vw;
-    }
-  }
-}
-
-.main-content-body {
+// 中间区域：主对话（自适应或 40%）
+.center-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1734,11 +1912,39 @@ $message-max-width: 900px;
   min-height: 0;
   position: relative;
   overflow: hidden;
+  background: #fff;
+  transition: width 0.3s ease;
+}
+
+// 右侧区域：工作空间 + 预览（固定宽度或 60%）
+.right-area {
+  flex: none;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.3s ease;
+
+  // Workspace 面板：固定宽度
+  ::v-deep .workspace-panel {
+    border-left: 1px solid #f0f0f0;
+  }
+
+  // 预览面板：占据剩余空间
+  .preview-panel {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #f0f0f0;
+  }
 }
 
 .header {
   flex: none;
-  height: 56px;
+  height: $header-height;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1765,9 +1971,12 @@ $message-max-width: 900px;
   }
 
   .header-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     font-size: 16px;
     font-weight: 600;
-    color: $claude-text;
+    color: $wga-text;
   }
 
   .header-icon-btn {
@@ -1776,17 +1985,17 @@ $message-max-width: 900px;
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     background: #fff;
     border-radius: 8px;
     cursor: pointer;
-    color: $claude-text-muted;
+    color: $wga-text-muted;
     transition: all 0.2s;
 
     &:hover {
-      border-color: $claude-primary;
-      color: $claude-primary;
-      background: rgba($claude-primary, 0.05);
+      border-color: $wga-primary;
+      color: $wga-primary;
+      background: rgba($wga-primary, 0.05);
     }
 
     i {
@@ -1794,16 +2003,16 @@ $message-max-width: 900px;
     }
 
     &.workspace-entry-btn {
-      width: auto;
+      min-width: 80px;
       padding: 0 12px;
       gap: 6px;
       font-size: 13px;
       font-weight: 500;
 
       &:hover {
-        background: $claude-primary;
+        background: $wga-primary;
         color: #fff;
-        border-color: $claude-primary;
+        border-color: $wga-primary;
       }
     }
   }
@@ -1856,7 +2065,7 @@ $message-max-width: 900px;
 
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 120px;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   width: 36px;
@@ -1898,6 +2107,7 @@ $message-max-width: 900px;
 }
 
 .input-area {
+  position: relative;
   flex: none;
   background: #fff;
   padding: 16px 24px 24px;
@@ -1950,7 +2160,7 @@ $message-max-width: 900px;
 
       .welcome-title {
         font-size: 28px;
-        color: $claude-text;
+        color: $wga-text;
         font-weight: 600;
       }
     }
@@ -1973,7 +2183,7 @@ $message-max-width: 900px;
       box-shadow 0.2s;
 
     &:focus-within {
-      border-color: $claude-primary;
+      border-color: $wga-primary;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     }
   }
@@ -1986,151 +2196,83 @@ $message-max-width: 900px;
 
     .echo-img-box {
       position: relative;
+      display: inline-block;
 
-      .echo-img-item {
-        position: relative;
-        display: inline-block;
+      // 图片样式
+      .echo-img {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
 
-        // 图片样式
-        .echo-img {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px;
-          cursor: pointer;
+      // 文档样式
+      .echo-doc-box {
+        background: #fff;
+        min-width: 200px;
+        max-width: 300px;
+        border: 1px solid #dcdfe6;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 50px 10px 5px;
+
+        .docIcon {
+          width: 30px;
+          height: 30px;
+          flex-shrink: 0;
         }
 
-        // 文档样式
-        .echo-doc-box {
-          background: #fff;
-          min-width: 200px;
-          max-width: 300px;
-          border: 1px solid #dcdfe6;
-          border-radius: 5px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 50px 10px 5px;
+        .docInfo {
+          flex: 1;
+          margin-left: 8px;
+          overflow: hidden;
 
-          .docIcon {
-            width: 30px;
-            height: 30px;
-            flex-shrink: 0;
-          }
-
-          .docInfo {
-            flex: 1;
-            margin-left: 8px;
+          .docInfo_name {
+            color: #333;
+            font-size: 13px;
+            margin: 0;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-            .docInfo_name {
-              color: #333;
-              font-size: 13px;
-              margin: 0;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-
-            .docInfo_size {
-              color: #bbbbbb;
-              font-size: 12px;
-              margin: 4px 0 0 0;
-            }
+          .docInfo_size {
+            color: #bbbbbb;
+            font-size: 12px;
+            margin: 4px 0 0 0;
           }
         }
+      }
 
-        // 关闭按钮
-        .echo-close {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          width: 18px;
-          height: 18px;
-          background: #ef4444;
-          color: #fff;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          font-size: 12px;
-          transition: transform 0.2s;
-          z-index: 10;
+      // 关闭按钮
+      .echo-close {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        transition: transform 0.2s;
+        z-index: 10;
 
-          &:hover {
-            transform: scale(1.1);
-          }
+        &:hover {
+          transform: scale(1.1);
         }
+      }
+    }
 
-        // 加载图标
-        .loading-icon {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          font-size: 20px;
-          color: #409eff;
-          z-index: 5;
-        }
-
-        // 上传遮罩层
-        .upload-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 5;
-
-          .upload-progress-bar {
-            width: 36px;
-            height: 36px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            svg {
-              position: absolute;
-              top: 0;
-              left: 0;
-              transform: rotate(-90deg);
-
-              circle {
-                fill: none;
-                stroke-width: 3;
-              }
-
-              .progress-bg {
-                stroke: rgba(255, 255, 255, 0.3);
-              }
-
-              .progress-fill {
-                stroke: #fff;
-                stroke-linecap: round;
-                transition: stroke-dashoffset 0.3s ease;
-              }
-            }
-
-            .progress-text {
-              color: #fff;
-              font-size: 9px;
-              font-weight: 600;
-              z-index: 1;
-            }
-          }
-        }
-
-        &.is-uploading {
-          .echo-close {
-            display: none;
-          }
-        }
+    &.is-uploading {
+      .echo-close {
+        display: none;
       }
     }
   }
@@ -2144,7 +2286,7 @@ $message-max-width: 900px;
         resize: none;
         font-size: 16px;
         line-height: 1.6;
-        color: $claude-text;
+        color: $wga-text;
 
         &::placeholder {
           color: #9ca3af;
@@ -2174,7 +2316,7 @@ $message-max-width: 900px;
           border: none;
           padding-left: 32px;
           font-size: 13px;
-          color: $claude-text;
+          color: $wga-text;
         }
 
         ::v-deep .el-input__prefix {
@@ -2190,15 +2332,15 @@ $message-max-width: 900px;
 
       .action-icon {
         font-size: 18px;
-        color: $claude-text-muted;
+        color: $wga-text-muted;
         cursor: pointer;
         padding: 8px;
         border-radius: 8px;
         transition: all 0.2s;
 
         &:hover {
-          color: $claude-primary;
-          background: rgba($claude-primary, 0.08);
+          color: $wga-primary;
+          background: rgba($wga-primary, 0.08);
         }
       }
 
@@ -2251,21 +2393,15 @@ $message-max-width: 900px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
-    color: $claude-text-secondary;
+    color: $wga-text-secondary;
     background: transparent;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     transition: all 0.2s;
 
     &:hover {
-      background: rgba($claude-primary, 0.08);
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
-    }
-
-    &.has-selection {
-      color: $claude-primary;
-      border-color: rgba($claude-primary, 0.3);
-      background: rgba($claude-primary, 0.05);
+      background: rgba($wga-primary, 0.08);
+      color: $wga-primary;
+      border-color: rgba($wga-primary, 0.3);
     }
 
     i {
@@ -2284,9 +2420,9 @@ $message-max-width: 900px;
     gap: 6px;
     padding: 6px 14px;
     border-radius: 20px;
-    border: 1px solid $claude-border;
+    border: 1px solid $wga-border;
     background: #fff;
-    color: $claude-text-secondary;
+    color: $wga-text-secondary;
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2304,9 +2440,9 @@ $message-max-width: 900px;
     }
 
     &:hover {
-      background: rgba($claude-primary, 0.06);
-      border-color: rgba($claude-primary, 0.3);
-      color: $claude-primary;
+      background: rgba($wga-primary, 0.06);
+      border-color: rgba($wga-primary, 0.3);
+      color: $wga-primary;
     }
 
     .el-icon--right {
@@ -2317,14 +2453,14 @@ $message-max-width: 900px;
 
   // 已选模式样式
   .mode-btn-selected {
-    background: rgba($claude-primary, 0.08);
-    border-color: rgba($claude-primary, 0.3);
-    color: $claude-primary;
+    background: rgba($wga-primary, 0.08);
+    border-color: rgba($wga-primary, 0.3);
+    color: $wga-primary;
     cursor: default;
 
     &:hover {
-      background: rgba($claude-primary, 0.12);
-      border-color: rgba($claude-primary, 0.4);
+      background: rgba($wga-primary, 0.12);
+      border-color: rgba($wga-primary, 0.4);
     }
 
     .el-icon-close {
@@ -2336,39 +2472,15 @@ $message-max-width: 900px;
       margin-left: 4px;
 
       &:hover {
-        background: rgba($claude-primary, 0.2);
+        background: rgba($wga-primary, 0.2);
       }
-    }
-  }
-
-  .model-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-
-    .model-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .model-provider {
-      flex-shrink: 0;
-      margin-left: 8px;
-      padding: 2px 6px;
-      font-size: 11px;
-      color: #666;
-      background: #f5f5f5;
-      border-radius: 4px;
     }
   }
 
   .input-footer {
     text-align: center;
     font-size: 12px;
-    color: $claude-text-muted;
+    color: $wga-text-muted;
     margin-top: 12px;
   }
 
@@ -2383,7 +2495,7 @@ $message-max-width: 900px;
   }
 }
 
-// Workspace 面板过渡动画
+// Workspace 面板过渡动画 — 无预览时从页面右侧滑入
 .workspace-slide-enter-active,
 .workspace-slide-leave-active {
   transition: all 0.3s ease;
@@ -2395,9 +2507,19 @@ $message-max-width: 900px;
   opacity: 0;
 }
 
-// Workspace 面板容器（需要添加）
-.workspace-panel {
-  width: 320px;
-  flex-shrink: 0;
+// Workspace 面板过渡动画 — 有预览时从 right-area 左侧滑入
+.workspace-slide-inner-enter-active,
+.workspace-slide-inner-leave-active {
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.workspace-slide-inner-enter,
+.workspace-slide-inner-leave-to {
+  width: 0 !important;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>

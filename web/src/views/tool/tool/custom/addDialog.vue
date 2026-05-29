@@ -33,7 +33,9 @@
                 <el-input
                   class="name-input"
                   v-model="form.name"
-                  :placeholder="$t('common.hint.modelName')"
+                  :placeholder="$t('common.hint.text')"
+                  maxlength="50"
+                  show-word-limit
                 />
               </el-form-item>
             </div>
@@ -46,6 +48,8 @@
                 <el-input
                   class="name-input"
                   v-model="form.description"
+                  show-word-limit
+                  maxlength="200"
                   :placeholder="
                     $t('common.input.placeholder') + $t('tool.custom.desc')
                   "
@@ -359,14 +363,14 @@ export default {
         ],
         name: [
           {
-            pattern: /^(?!_)[a-zA-Z0-9-_.\u4e00-\u9fa5]+$/,
-            message: this.$t('common.hint.modelName'),
+            pattern: this.$config.commonTextReg,
+            message: this.$t('common.hint.text'),
             trigger: 'blur',
           },
           {
             min: 2,
             max: 50,
-            message: this.$t('common.hint.modelNameLimit'),
+            message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
           },
           {

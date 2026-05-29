@@ -10,7 +10,7 @@
     >
       <div class="config-popover-content" @mousedown.prevent>
         <!-- Tab 切换 -->
-        <div class="popover-tabs">
+        <div v-if="!isDIP" class="popover-tabs">
           <div
             v-for="tab in tabs"
             :key="tab.key"
@@ -86,6 +86,10 @@ export default {
       default: '',
     },
     disabled: {
+      type: Boolean,
+      default: false,
+    },
+    isDIP: {
       type: Boolean,
       default: false,
     },
@@ -176,6 +180,24 @@ export default {
         this.initTabs();
       }
     },
+    isDIP(newVal) {
+      if (newVal) {
+        this.resourceList = {
+          dip: [
+            { id: '1', name: '员工A', desc: '测试员工A' },
+            { id: '2', name: '员工B', desc: '测试员工B' },
+            { id: '3', name: '员工C', desc: '测试员工C' },
+          ],
+        };
+        this.sender.showTip({
+          text: '@' + this.resourceList.dip?.[0].name,
+          dialogText: '',
+        });
+      } else {
+        this.sender.closeTip();
+        this.fetchConfigData();
+      }
+    },
   },
   methods: {
     avatarSrc,
@@ -235,6 +257,15 @@ export default {
       this.sender = new XSender(this.$refs.senderRef, {
         placeholder: this.placeholder,
         autoFocus: false,
+        tipConfig: {
+          tipTemplate: `<div class="custom-tip-template">{{text}}</div>`,
+          dialogTemplate: '',
+          closeNames: [],
+          backspace: false,
+        },
+        chatStyle: {
+          maxHeight: '300px',
+        },
       });
 
       const { EVENT_COMMON_CHANGE } = XSender.EventSet;
@@ -384,6 +415,15 @@ export default {
     selectConfigItem(item) {
       this.sender.backspace(-(this.mentionSearchText.length + 1));
 
+      if (this.isDIP) {
+        this.sender.closeTip();
+        this.sender.showTip({
+          text: '@' + item.name,
+          dialogText: '',
+        });
+        return;
+      }
+
       this.sender.setMention({
         id: item.id,
         name: item.name + ' ', // @Amap-高德地图 帮我查询一下西安钟楼到大雁塔的骑行路线
@@ -437,6 +477,11 @@ export default {
   }
 }
 
+// 和@样式保持一致
+.custom-tip-template {
+  color: var(--chat-primary);
+}
+
 .config-popover {
   padding: 0 !important;
   width: 500px;
@@ -469,7 +514,6 @@ export default {
       display: flex;
       border-bottom: 1px solid #e8e8e8;
       padding: 0 8px;
-      margin-bottom: 8px;
       background: #fff;
       flex-shrink: 0;
 
@@ -498,7 +542,7 @@ export default {
       flex: 1;
       overflow-y: auto;
       min-height: 0;
-      padding: 0 8px 8px 8px;
+      padding: 8px;
 
       .popover-category {
         margin-bottom: 12px;

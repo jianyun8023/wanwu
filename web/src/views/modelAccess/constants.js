@@ -158,6 +158,9 @@ export const TYPE_OBJ = {
   },
 };
 
+export const DEFAULT_CONTENT_SIZE = 32768;
+export const DEFAULT_MAX_TOKEN = 16384;
+
 export const SHOW_VISION_LIST = [
   YUAN_JING,
   QWEN,

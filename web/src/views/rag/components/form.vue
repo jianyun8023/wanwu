@@ -175,6 +175,34 @@
               />
             </div>
           </div>
+          <!-- 推荐问题 -->
+          <div class="recommend-box">
+            <p class="block-title recommend-title">
+              <span>{{ $t('agent.form.recommendQuestion') }}</span>
+              <span class="common-add" @click="addRecommend">
+                <span class="el-icon-plus"></span>
+                <span class="handleBtn">{{ $t('agent.add') }}</span>
+              </span>
+            </p>
+            <div
+              v-for="(n, i) in editForm.recommendQuestion"
+              :key="`${i}rml`"
+              class="recommend-item"
+            >
+              <el-input
+                :key="`${i}rml`"
+                v-model.lazy="n.value"
+                class="recommend--input"
+                maxlength="50"
+              >
+                <span
+                  slot="suffix"
+                  class="el-icon-delete recommend-del"
+                  @click="clearRecommend(n, i)"
+                ></span>
+              </el-input>
+            </div>
+          </div>
         </div>
         <!-- 问答库配置 -->
         <div class="block">
@@ -216,14 +244,14 @@
                 <span class="el-icon-question question-tips"></span>
               </el-tooltip>
             </span>
-            <span class="common-add" @click="showSafety">
+            <span class="common-add">
               <el-tooltip
                 class="item"
                 effect="dark"
                 :content="$t('agent.form.safetyConfigTips')"
                 placement="top-start"
               >
-                <span class="el-icon-s-operation operation">
+                <span class="el-icon-s-operation operation" @click="showSafety">
                   <span class="handleBtn">{{ $t('agent.form.config') }}</span>
                 </span>
               </el-tooltip>
@@ -451,6 +479,11 @@ export default {
           enable: false,
           tables: [],
         },
+        recommendQuestion: [
+          {
+            value: '',
+          },
+        ],
       },
       initialEditForm: null,
       apiURL: '',
@@ -480,6 +513,7 @@ export default {
             'safetyConfig',
             'qaKnowledgeBaseConfig',
             'visionConfig',
+            'recommendQuestion',
           ];
           const changed = props.some(prop => {
             return (
@@ -532,7 +566,7 @@ export default {
     },
   },
   mounted() {
-    this.initialEditForm = JSON.parse(JSON.stringify(this.editForm));
+    this.initialEditForm = structuredClone(this.editForm);
   },
   created() {
     this.getModelData(); //获取模型列表
@@ -572,8 +606,6 @@ export default {
     knowledgeRecallSet(data, type) {
       if (data) {
         this.editForm[type]['config'] = data;
-      } else {
-        this.editForm[type]['config'] = this.editForm[type]['config'];
       }
     },
     chiSwitchChange(value) {
@@ -623,33 +655,42 @@ export default {
             this.setMaxPicNum(this.editForm.visionConfig.picNum);
             this.setModelInfo(res.data.modelConfig.modelId);
 
-            if (
-              res.data.qaKnowledgeBaseConfig &&
-              res.data.qaKnowledgeBaseConfig !== null
-            ) {
+            if (res.data.qaKnowledgeBaseConfig) {
               this.editForm.qaKnowledgeBaseConfig.knowledgebases =
                 res.data.qaKnowledgeBaseConfig.knowledgebases;
-              this.editForm.qaKnowledgeBaseConfig.config =
-                res.data.qaKnowledgeBaseConfig.config !== null
-                  ? res.data.qaKnowledgeBaseConfig.config
-                  : this.editForm.qaKnowledgeBaseConfig.config;
+              if (res.data.qaKnowledgeBaseConfig.config !== null) {
+                this.editForm.qaKnowledgeBaseConfig.config =
+                  res.data.qaKnowledgeBaseConfig.config;
+              }
             }
 
-            if (
-              res.data.knowledgeBaseConfig &&
-              res.data.knowledgeBaseConfig !== null
-            ) {
+            if (res.data.knowledgeBaseConfig) {
               this.editForm.knowledgeBaseConfig.knowledgebases =
                 res.data.knowledgeBaseConfig.knowledgebases;
-              this.editForm.knowledgeBaseConfig.config =
-                res.data.knowledgeBaseConfig.config !== null
-                  ? res.data.knowledgeBaseConfig.config
-                  : this.editForm.knowledgeBaseConfig.config;
+              if (res.data.knowledgeBaseConfig.config !== null) {
+                this.editForm.knowledgeBaseConfig.config =
+                  res.data.knowledgeBaseConfig.config;
+              }
             }
 
-            if (res.data.safetyConfig && res.data.safetyConfig !== null) {
+            if (res.data.safetyConfig) {
               this.editForm.safetyConfig = res.data.safetyConfig;
             }
+
+            // 处理推荐问题
+            this.editForm.recommendQuestion =
+              res.data.recommendQuestion &&
+              res.data.recommendQuestion.length > 0
+                ? res.data.recommendQuestion.map((n, index) => {
+                    return {
+                      value: n,
+                    };
+                  })
+                : [
+                    {
+                      value: '',
+                    },
+                  ];
 
             if (res.data.modelConfig.config !== null) {
               this.editForm.modelConfig = res.data.modelConfig.config;
@@ -661,6 +702,8 @@ export default {
               res.data.qaRerankConfig.modelId;
 
             this.$nextTick(() => {
+              // 更新基准数据，避免 watch 误判
+              this.initialEditForm = structuredClone(this.editForm);
               this.isSettingFromDetail = false;
             });
           } else {
@@ -779,6 +822,19 @@ export default {
     editAgent() {
       this.$refs.createTxtQues.openDialog();
     },
+    //推荐问题
+    addRecommend() {
+      if (this.editForm.recommendQuestion.length > 3) {
+        return;
+      }
+      this.editForm.recommendQuestion.push({
+        value: '',
+      });
+    },
+    clearRecommend(n, index) {
+      if (this.editForm.recommendQuestion.length === 1) return;
+      this.editForm.recommendQuestion.splice(index, 1);
+    },
     visibleChange(val) {
       if (val) {
         this.getModelData();
@@ -842,10 +898,19 @@ export default {
             : this.editForm.knowledgeBaseConfig.config,
         };
 
+        // 处理推荐问题
+        const recommendQuestion = this.editForm.recommendQuestion.map(
+          item => item.value,
+        );
+
         let fromParams = {
           ragId: this.editForm.appId,
           knowledgeBaseConfig: _knowledgeBaseConfig,
           qaKnowledgeBaseConfig: this.editForm.qaKnowledgeBaseConfig,
+          recommendQuestion:
+            recommendQuestion.length > 0 && recommendQuestion[0] !== ''
+              ? recommendQuestion
+              : [],
           modelConfig: {
             config: this.editForm.modelConfig,
             displayName: modeInfo ? modeInfo.displayName : '',
@@ -879,11 +944,8 @@ export default {
           },
         };
         const res = await updateRagConfig(fromParams);
-
-        // 更新成功后，更新 initialEditForm 避免重复触发
         if (res.code === 0) {
-          this.initialEditForm = JSON.parse(JSON.stringify(this.editForm));
-          this.getDetail(); //获取详情
+          this.getDetail();
         }
       } catch (error) {
         console.error(error);
@@ -903,5 +965,39 @@ export default {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/*推荐问题*/
+.recommend-box {
+  .recommend-title {
+    display: flex;
+    justify-content: space-between;
+
+    span {
+      font-size: 15px;
+    }
+  }
+
+  .recommend-item {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+
+    .recommend--input {
+      ::v-deep {
+        .el-input__inner {
+          padding-right: 30px;
+        }
+      }
+    }
+
+    .recommend-del {
+      width: 25px;
+      line-height: 32px;
+      color: #595959;
+      cursor: pointer;
+    }
+  }
 }
 </style>

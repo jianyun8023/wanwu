@@ -245,7 +245,7 @@ export default {
             parsed.activityType === ActivityType.WORKSPACE &&
             activityContent.runId
           ) {
-            this.handleWorkspaceActivity({
+            this.handleWorkspaceActivity?.({
               runId: activityContent.runId,
               threadId: activityContent.threadId || this.currentThreadId,
               fileCount: activityContent.fileCount || 0,
@@ -267,7 +267,7 @@ export default {
                 message: `生成了 ${activityContent.fileCount || 0} 个文件`,
                 duration: 3000,
                 onClick: () => {
-                  this.showPanel();
+                  this.showPanel?.();
                 },
               });
             }
@@ -419,7 +419,7 @@ export default {
           streamState.currentFragment = null;
           break;
 
-        case 'TOOL_CALL_RESULT':
+        case 'TOOL_CALL_RESULT': {
           if (streamState.toolCallMap.has(parsed.toolCallId)) {
             const toolCall = streamState.toolCallMap.get(parsed.toolCallId);
             toolCall.result = parsed.content;
@@ -455,6 +455,7 @@ export default {
             }
           }
           break;
+        }
 
         case 'RUN_FINISHED':
           while (streamState.activityStack.length > 0) {

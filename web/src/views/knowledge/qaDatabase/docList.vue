@@ -101,7 +101,7 @@
                 <el-table-column
                   type="selection"
                   reserve-selection
-                  :key="'selection-' + hasManagePerm"
+                  key="selection"
                   v-if="hasManagePerm"
                   width="55"
                 ></el-table-column>
@@ -152,6 +152,7 @@
                   prop="metaDataList"
                   :label="$t('knowledgeManage.qaDatabase.metaData')"
                   v-if="hasManagePerm"
+                  key="metaDataList"
                 >
                   <template slot-scope="scope">
                     <span>
@@ -171,6 +172,7 @@
                   prop="switch"
                   :label="$t('user.table.status')"
                   v-if="hasManagePerm"
+                  key="switch"
                 >
                   <template slot-scope="scope">
                     <el-switch
@@ -194,13 +196,7 @@
                   </template>
                   <template slot-scope="scope">
                     <span>
-                      {{
-                        qaImportStatus &&
-                        scope.row &&
-                        scope.row.status !== undefined
-                          ? qaImportStatus[Number(scope.row.status)]
-                          : '--'
-                      }}
+                      {{ qaImportStatus?.[Number(scope.row.status)] ?? '--' }}
                     </span>
                   </template>
                 </el-table-column>
@@ -213,30 +209,27 @@
                   :label="$t('knowledgeManage.operate')"
                   width="200"
                   v-if="hasManagePerm"
+                  key="operate"
                 >
                   <template slot-scope="scope">
                     <el-button
                       size="mini"
                       round
-                      :type="
-                        scope.row &&
-                        scope.row.status &&
+                      :disabled="
                         [
-                          QA_STATUS_PENDING,
-                          QA_STATUS_PROCESSING,
-                          QA_STATUS_FAILED,
+                          STATUS_PENDING,
+                          STATUS_PROCESSING,
+                          STATUS_FAILED,
+                        ].includes(Number(scope.row.status))
+                      "
+                      :type="
+                        [
+                          STATUS_PENDING,
+                          STATUS_PROCESSING,
+                          STATUS_FAILED,
                         ].includes(Number(scope.row.status))
                           ? 'info'
                           : ''
-                      "
-                      :disabled="
-                        scope.row &&
-                        scope.row.status &&
-                        [
-                          QA_STATUS_PENDING,
-                          QA_STATUS_PROCESSING,
-                          QA_STATUS_FAILED,
-                        ].includes(Number(scope.row.status))
                       "
                       @click="handleEdit(scope.row)"
                     >
@@ -247,21 +240,17 @@
                       round
                       @click="handleDel(scope.row)"
                       :disabled="
-                        scope.row &&
-                        scope.row.status &&
                         [
-                          QA_STATUS_PENDING,
-                          QA_STATUS_PROCESSING,
-                          QA_STATUS_FAILED,
+                          STATUS_PENDING,
+                          STATUS_PROCESSING,
+                          STATUS_FAILED,
                         ].includes(Number(scope.row.status))
                       "
                       :type="
-                        scope.row &&
-                        scope.row.status &&
                         [
-                          QA_STATUS_PENDING,
-                          QA_STATUS_PROCESSING,
-                          QA_STATUS_FAILED,
+                          STATUS_PENDING,
+                          STATUS_PROCESSING,
+                          STATUS_FAILED,
                         ].includes(Number(scope.row.status))
                           ? 'info'
                           : ''
@@ -377,10 +366,10 @@ import {
   POWER_TYPE_EDIT,
   POWER_TYPE_SYSTEM_ADMIN,
   ALL,
-  QA_STATUS_FAILED,
-  QA_STATUS_FINISHED,
-  QA_STATUS_PENDING,
-  QA_STATUS_PROCESSING,
+  STATUS_FAILED,
+  STATUS_FINISHED,
+  STATUS_PENDING,
+  STATUS_PROCESSING,
 } from '@/views/knowledge/constants';
 import CopyIcon from '@/components/copyIcon.vue';
 
@@ -427,10 +416,10 @@ export default {
       selectedDocIds: [],
       qaImportStatus: COMMUNITY_IMPORT_STATUS,
       dropdownGroups: DROPDOWN_GROUPS.slice(0, 2),
-      QA_STATUS_FAILED,
-      QA_STATUS_FINISHED,
-      QA_STATUS_PENDING,
-      QA_STATUS_PROCESSING,
+      STATUS_FAILED,
+      STATUS_FINISHED,
+      STATUS_PENDING,
+      STATUS_PROCESSING,
     };
   },
   watch: {
@@ -497,10 +486,10 @@ export default {
       this.$refs.exportRecord.showDialog(this.docQuery.knowledgeId);
     },
     updateData(type = '') {
-      if (type !== '') {
-        this.startTimer();
-      } else {
+      if (type === '') {
         this.getTableData(this.docQuery);
+      } else {
+        this.startTimer();
       }
     },
     exportData() {
@@ -976,6 +965,7 @@ export default {
 
       .el-icon-success {
         display: block;
+        color: #67c23a;
       }
 
       .el-icon-error {
@@ -1008,10 +998,6 @@ export default {
             display: none;
           }
         }
-      }
-
-      .el-icon-success {
-        color: #67c23a;
       }
 
       .result_icon {

@@ -1,9 +1,13 @@
 <template>
-  <div class="preview-chat">
+  <div
+    class="preview-chat"
+    :class="{
+      'preview-chat__empty': messageList.length === 0 && !isStreaming,
+    }"
+  >
     <div
       ref="messageArea"
       class="preview-message-area"
-      :class="{ empty: isEmptyConversation }"
       @scroll="handleMessageAreaScroll"
     >
       <div v-if="messageList.length > 0 || isStreaming" class="message-list">
@@ -20,23 +24,22 @@
       </div>
       <div v-else class="preview-empty">
         <div class="empty-avatar">
-          <i class="el-icon-cpu"></i>
+          <i class="el-icon-cpu empty-avatar-icon"></i>
         </div>
         <div class="empty-title">预览会话</div>
       </div>
     </div>
 
-    <transition name="scroll-btn-fade">
-      <button
-        v-if="showScrollToBottom"
-        class="scroll-to-bottom-btn"
-        @click="handleScrollToBottomClick"
-      >
-        <i class="el-icon-arrow-down"></i>
-      </button>
-    </transition>
-
     <div class="preview-input-area">
+      <transition name="scroll-btn-fade">
+        <button
+          v-if="showScrollToBottom"
+          class="scroll-to-bottom-btn"
+          @click="handleScrollToBottomClick"
+        >
+          <i class="el-icon-arrow-down"></i>
+        </button>
+      </transition>
       <div v-if="uploadedFiles.length > 0" class="file-preview">
         <div
           v-for="(file, index) in uploadedFiles"
@@ -76,7 +79,7 @@
           ref="input"
           v-model="inputMessage"
           type="textarea"
-          :autosize="{ minRows: 1, maxRows: 6 }"
+          :autosize="{ minRows: 4, maxRows: 6 }"
           :placeholder="inputPlaceholder"
           :disabled="isStreaming || mainIsStreaming"
           resize="none"
@@ -86,7 +89,7 @@
         <div class="input-toolbar">
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
-            <StreamUploadField
+            <GAFileUpload
               :fileTypeArr="['doc/*', 'md', 'image/*']"
               type="wga"
               @setFileId="handleSetFileId"
@@ -102,7 +105,7 @@
                   ></i>
                 </el-tooltip>
               </template>
-            </StreamUploadField>
+            </GAFileUpload>
             <el-button
               v-show="isStreaming"
               class="send-btn stop-btn"
@@ -138,7 +141,7 @@
 <script>
 import MessageItem from '../MessageItem.vue';
 
-import StreamUploadField from '@/components/stream/streamUploadField.vue';
+import GAFileUpload from '../GAFileUpload.vue';
 import {
   chatGeneralAgentSkillConversation,
   getGeneralAgentSkillPreviewConversationDetail,
@@ -156,7 +159,7 @@ export default {
   name: 'PreviewChat',
   components: {
     MessageItem,
-    StreamUploadField,
+    GAFileUpload,
   },
   mixins: [
     skillManager,
@@ -195,6 +198,10 @@ export default {
   },
   mounted() {
     this.initConversationFromProps();
+    this.setupInputResizeObserver();
+  },
+  activated() {
+    this.$nextTick(() => this.recalcTextarea());
   },
   watch: {
     'skillPreviewParams.previewId': {
@@ -207,6 +214,7 @@ export default {
   },
   beforeDestroy() {
     this.cleanupAllStreams();
+    this.teardownInputResizeObserver();
   },
   methods: {
     async initConversationFromProps() {
@@ -375,14 +383,35 @@ export default {
       this.stopStreaming(this.currentThreadId);
     },
 
-    handleWorkspaceActivity() {},
+    setupInputResizeObserver() {
+      if (typeof ResizeObserver === 'undefined') return;
+      const container = this.$el?.querySelector('.input-container');
+      if (!container) return;
+      this._inputResizeObserver = new ResizeObserver(() => {
+        this.recalcTextarea();
+      });
+      this._inputResizeObserver.observe(container);
+    },
 
-    showPanel() {},
+    teardownInputResizeObserver() {
+      if (this._inputResizeObserver) {
+        this._inputResizeObserver.disconnect();
+        this._inputResizeObserver = null;
+      }
+    },
+
+    recalcTextarea() {
+      const input = this.$refs.input;
+      if (input && input.resizeTextarea) {
+        input.resizeTextarea();
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
+@import '../../styles/variables';
 $primary: #10a37f;
 $text: #1a1a1a;
 $text-secondary: #666;
@@ -397,6 +426,16 @@ $border: #e5e7eb;
   min-height: 0;
   background: #fff;
   position: relative;
+  justify-content: center;
+  &__empty {
+    .preview-message-area {
+      flex: none;
+      margin-bottom: 32px;
+    }
+    .preview-input-area {
+      padding-bottom: 29px;
+    }
+  }
 }
 
 .preview-message-area {
@@ -405,52 +444,60 @@ $border: #e5e7eb;
   overflow-y: auto;
   overflow-x: hidden;
   background: #fff;
+  margin-bottom: 16px;
 
   .message-list {
-    padding: 18px 14px;
+    max-width: $message-max-width;
+    margin: 0 auto;
+    padding: 18px 14px 24px;
     min-height: 100%;
   }
 }
 
 .preview-empty {
-  height: 100%;
-  min-height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   color: $text-muted;
 }
 
 .empty-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7f7f8;
-  color: $primary;
-  font-size: 26px;
+  margin-bottom: 20px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  color: #10a37f;
+  &-icon {
+    font-size: 58px;
+  }
 }
 
 .empty-title {
-  color: $text;
-  font-size: 18px;
+  font-size: 28px;
+  color: $wga-text;
   font-weight: 600;
 }
 
 .preview-input-area {
+  position: relative;
   flex: none;
-  padding: 12px 14px 16px;
+  padding: 0px 14px 53px;
   background: #fff;
 }
 
 .input-container {
+  max-width: $message-max-width;
+  margin: 0 auto;
   border: 1px solid $border;
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 16px;
   background: #fff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   transition:
@@ -483,7 +530,7 @@ $border: #e5e7eb;
   align-items: center;
   justify-content: space-between;
   margin-top: 10px;
-  padding-top: 10px;
+  padding-top: 12px;
   border-top: 1px solid #f3f4f6;
 }
 
@@ -540,6 +587,8 @@ $border: #e5e7eb;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  max-width: $message-max-width;
+  margin: 0 auto;
 }
 
 .echo-img-item {
@@ -613,7 +662,7 @@ $border: #e5e7eb;
 
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 120px;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   width: 34px;
@@ -639,7 +688,7 @@ $border: #e5e7eb;
 .scroll-btn-fade-enter,
 .scroll-btn-fade-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateX(-50%) translateY(20px);
 }
 
 ::v-deep .message-item {

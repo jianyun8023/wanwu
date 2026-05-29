@@ -30,7 +30,14 @@
               </div>
             </div>
             <div v-else class="empty">
-              <el-empty description="即将上线，敬请期待"></el-empty>
+              <el-empty>
+                <template #description>
+                  <div>
+                    <p>{{ $t('common.noData') }}</p>
+                    <p>{{ $t('tempSquare.skills.noAcquired') }}</p>
+                  </div>
+                </template>
+              </el-empty>
             </div>
           </div>
         </div>
@@ -40,11 +47,12 @@
 </template>
 <script>
 import SkillCard from './card.vue';
-import { directDownload } from '@/utils/util';
+import { directDownload, resDownloadFile } from '@/utils/util';
 import SearchInput from '@/components/searchInput.vue';
 import {
   getAcquiredSkillList,
   deleteAcquiredSkill,
+  downloadAcquiredSkill,
 } from '@/api/skillResource/added';
 
 export default {
@@ -79,9 +87,9 @@ export default {
         .catch(() => (this.loading = false));
     },
     handleDownload(info) {
-      if (info.downloadUrl) {
-        directDownload(info.downloadUrl);
-      }
+      downloadAcquiredSkill({ skillId: info.skillId }).then(res => {
+        resDownloadFile(res, `${info.name}.zip`);
+      });
     },
     async handleDelete(info) {
       try {

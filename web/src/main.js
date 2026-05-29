@@ -10,10 +10,6 @@ import '@/assets/icons/iconfont.js';
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 
-// Vue 2 需要安装 composition-api 插件以支持 vue-office 组件
-import VueCompositionAPI from '@vue/composition-api';
-Vue.use(VueCompositionAPI);
-
 // gxd-file-preview 文件预览插件
 import vueFilePreview from 'gxd-file-preview';
 Vue.use(vueFilePreview, {

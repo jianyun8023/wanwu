@@ -149,9 +149,8 @@
           <div
             v-else-if="previewType === 'markdown'"
             class="preview-markdown-wrapper"
-            ref="markdownRef"
           >
-            <div class="markdown-body" v-html="renderedMarkdown"></div>
+            <stream-markdown :content="previewContent" />
           </div>
 
           <!-- Word 预览 -->
@@ -163,12 +162,8 @@
           </div>
 
           <!-- 文本/代码预览 -->
-          <div
-            v-else-if="previewType === 'text'"
-            class="preview-text-wrapper"
-            ref="codeRef"
-          >
-            <div class="markdown-body" v-html="renderedCode"></div>
+          <div v-else-if="previewType === 'text'" class="preview-text-wrapper">
+            <stream-markdown :content="fencedCode" />
           </div>
 
           <!-- 不支持的格式 -->
@@ -187,7 +182,7 @@
 
 <script>
 import PptPreview from './PptPreview.vue';
-import { md, highlightCode } from '../utils/markdown';
+import StreamMarkdown from './StreamMarkdown.vue';
 import VueOfficeDocx from '@vue-office/docx';
 import '@vue-office/docx/lib/index.css';
 import { resDownloadFile, getFileType } from '@/utils/util';
@@ -197,6 +192,7 @@ export default {
   name: 'FilePreviewDrawer',
   components: {
     PptPreview,
+    StreamMarkdown,
     VueOfficeDocx,
   },
   props: {
@@ -228,7 +224,6 @@ export default {
   },
   data() {
     return {
-      copyClickHandlers: [],
       isResizing: false,
       panelWidth: null,
       activeSheetIndex: 0,
@@ -245,13 +240,9 @@ export default {
       if (!this.file || !this.file.name) return '';
       return this.file.name.split('.').pop().toLowerCase();
     },
-    renderedMarkdown() {
+    fencedCode() {
       if (!this.previewContent) return '';
-      return md.render(this.previewContent);
-    },
-    renderedCode() {
-      if (!this.previewContent) return '';
-      return highlightCode(this.previewContent, this.fileExt);
+      return '```' + this.fileExt + '\n' + this.previewContent + '\n```';
     },
     mergedPanelStyle() {
       const style = { ...this.panelStyle };
@@ -278,16 +269,7 @@ export default {
       }
     },
   },
-  mounted() {
-    if (this.visible) {
-      this.$nextTick(() => {
-        this.bindCopyButtons();
-        this.bindCodeCopyButtons();
-      });
-    }
-  },
   beforeDestroy() {
-    this.unbindCopyButtons();
     this.stopResize();
   },
   methods: {
@@ -311,8 +293,16 @@ export default {
         if (
           ['image', 'video', 'audio', 'pdf', 'html'].includes(this.previewType)
         ) {
-          // 对于图片、视频、音频、PDF、HTML，创建 Object URL
-          this.previewBlobUrl = URL.createObjectURL(this.blob);
+          // SVG 需要正确的 MIME 类型才能在 <img> 中渲染，
+          // API 返回的 Blob 通常是 application/octet-stream，浏览器无法据此识别 SVG
+          if (this.previewType === 'image' && this.fileExt === 'svg') {
+            const svgBlob = new Blob([this.blob], {
+              type: 'image/svg+xml',
+            });
+            this.previewBlobUrl = URL.createObjectURL(svgBlob);
+          } else {
+            this.previewBlobUrl = URL.createObjectURL(this.blob);
+          }
           this.previewUrl = this.previewBlobUrl;
         } else if (['markdown', 'text'].includes(this.previewType)) {
           this.previewContent = await this.blob.text();
@@ -349,11 +339,6 @@ export default {
         console.error('处理文件失败:', error);
         this.$message.error(this.$t('generalAgent.filePreview.processFailed'));
         this.previewType = 'unsupported';
-      } finally {
-        this.$nextTick(() => {
-          this.bindCopyButtons();
-          this.bindCodeCopyButtons();
-        });
       }
     },
 
@@ -363,7 +348,6 @@ export default {
         URL.revokeObjectURL(this.previewBlobUrl);
         this.previewBlobUrl = '';
       }
-      this.unbindCopyButtons();
       this.stopResize();
     },
 
@@ -466,92 +450,6 @@ export default {
       }
     },
 
-    bindCopyButtons() {
-      if (!this.$refs.markdownRef) return;
-
-      this.unbindCopyButtons();
-
-      const copyButtons =
-        this.$refs.markdownRef.querySelectorAll('.code-copy-btn');
-      copyButtons.forEach(btn => {
-        const handler = e => {
-          e.preventDefault();
-          e.stopPropagation();
-          const codeBlock = e.target.closest('pre.code-block');
-          const lines = codeBlock?.querySelectorAll('.code-line-content');
-
-          let text = '';
-          if (lines && lines.length > 0) {
-            lines.forEach((line, i) => {
-              text += line.textContent + (i < lines.length - 1 ? '\n' : '');
-            });
-          }
-
-          if (text) {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                const originalText = e.target.innerText;
-                e.target.innerText = this.$t('common.copy.copySuccess');
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                }, 1500);
-              })
-              .catch(() => {
-                this.$message.error(this.$t('tempSquare.copyFailed'));
-              });
-          }
-        };
-        btn.addEventListener('click', handler);
-        this.copyClickHandlers.push({ btn, handler });
-      });
-    },
-
-    bindCodeCopyButtons() {
-      if (!this.$refs.codeRef) return;
-
-      const copyButtons = this.$refs.codeRef.querySelectorAll('.code-copy-btn');
-      copyButtons.forEach(btn => {
-        const handler = e => {
-          e.preventDefault();
-          e.stopPropagation();
-          const codeBlock = e.target.closest('pre.code-block');
-          const lines = codeBlock?.querySelectorAll('.code-line-content');
-
-          let text = '';
-          if (lines && lines.length > 0) {
-            lines.forEach((line, i) => {
-              text += line.textContent + (i < lines.length - 1 ? '\n' : '');
-            });
-          }
-
-          if (text) {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                const originalText = e.target.innerText;
-                e.target.innerText = this.$t('common.copy.copySuccess');
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                }, 1500);
-              })
-              .catch(() => {
-                this.$message.error(this.$t('tempSquare.copyFailed'));
-              });
-          }
-        };
-        btn.addEventListener('click', handler);
-        this.copyClickHandlers.push({ btn, handler });
-      });
-    },
-
-    unbindCopyButtons() {
-      this.copyClickHandlers.forEach(({ btn, handler }) => {
-        btn.removeEventListener('click', handler);
-      });
-      this.copyClickHandlers = [];
-    },
-
     handleWordError(error) {
       console.error('Word 文档渲染失败:', error);
       this.$message.error(
@@ -566,7 +464,7 @@ export default {
 .preview-panel {
   position: relative;
   height: 100%;
-  min-width: 500px;
+  width: 100%;
   background: #fff;
   border-left: 1px solid #e4e7ed;
   display: flex;
@@ -661,8 +559,8 @@ export default {
 }
 
 /* 覆盖 markdown.scss 中影响布局的伪元素样式 */
-.preview-body .markdown-body::before,
-.preview-body .markdown-body::after {
+.preview-body ::v-deep .markdown-body::before,
+.preview-body ::v-deep .markdown-body::after {
   display: none !important;
 }
 
@@ -718,6 +616,9 @@ export default {
 .preview-image-wrapper {
   background: #f5f7fa;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-image {
@@ -729,6 +630,9 @@ export default {
 .preview-video-wrapper {
   background: #000;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-video {
@@ -738,6 +642,9 @@ export default {
 
 .preview-audio-wrapper {
   gap: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview-excel-wrapper {
@@ -840,6 +747,7 @@ export default {
 .preview-ppt-wrapper,
 .preview-html-wrapper {
   overflow: hidden;
+  width: 100%;
 }
 
 .preview-pdf,
@@ -861,6 +769,25 @@ export default {
   min-height: 0;
   overflow: auto;
   background: #fff;
+  width: 100%;
+
+  ::v-deep .vue-office-docx {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  ::v-deep .docx-wrapper {
+    background: #fff;
+    padding: 0;
+  }
+
+  ::v-deep .docx-wrapper > section.docx {
+    box-shadow: none;
+    margin-bottom: 0;
+    width: auto !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 .preview-unsupported {
@@ -896,9 +823,6 @@ export default {
 </style>
 
 <style lang="scss" scoped>
-@import '@/assets/showDocs/showdoc.scss';
-@import '../styles/_markdown-common.scss';
-
 // 代码文件预览样式
 .preview-text-wrapper {
   background: #0d0d0d;
@@ -907,19 +831,25 @@ export default {
   display: flex;
   flex-direction: column;
 
-  .markdown-body {
+  ::v-deep .stream-markdown-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::v-deep .markdown-body {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
 
-    // 覆盖 markdown.scss 中的 display: table，避免影响 flex 布局
     &::before,
     &::after {
       display: none !important;
     }
 
-    ::v-deep pre.code-block {
+    pre.code-block {
       flex: 1;
       min-height: 0;
       margin: 0;
@@ -942,10 +872,9 @@ export default {
   }
 }
 
-.markdown-body {
-  ::v-deep {
-    @include markdown-content-base;
-    @include complete-code-block-fullscreen;
+.preview-markdown-wrapper {
+  ::v-deep .stream-markdown-container {
+    height: 100%;
   }
 }
 </style>

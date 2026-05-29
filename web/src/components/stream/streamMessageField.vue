@@ -295,6 +295,7 @@
                       v-if="item.errMsg || item.errResponse"
                       :title="item.errResponse || item.response"
                       :desc="item.errMsg"
+                      :class="{ 'agent-error-card': chatType === 'agent' }"
                     />
                   </div>
                 </template>
@@ -600,6 +601,7 @@
                 v-if="n.error && n.errResponse"
                 :title="n.errResponse || n.response"
                 :desc="n.errorDetail"
+                :class="{ 'agent-error-card': chatType === 'agent' }"
               />
             </div>
           </div>
@@ -2154,7 +2156,10 @@ export default {
   .answer-content {
     width: 100%;
     img {
-      width: 80% !important;
+      max-width: 100%;
+      max-height: 400px;
+      height: auto;
+      object-fit: contain;
       cursor: zoom-in;
     }
     section li,
@@ -2603,6 +2608,33 @@ export default {
       border-radius: 0 10px 10px 10px;
       padding: 20px;
       line-height: 1.6;
+
+      ::v-deep table {
+        border-collapse: collapse;
+        margin: 12px 0;
+        width: 100%;
+        font-size: 13px;
+
+        th,
+        td {
+          border: 1px solid #e5e7eb;
+          padding: 7px 12px;
+          text-align: left;
+        }
+
+        tr {
+          background: rgba(99, 102, 241, 0.06);
+          &:nth-child(2n) {
+            background: rgba(99, 102, 241, 0.12);
+          }
+        }
+
+        th {
+          background: rgba(99, 102, 241, 0.06);
+          color: #1f2937;
+          font-weight: 600;
+        }
+      }
     }
   }
 }
@@ -2937,24 +2969,6 @@ img.failed::after {
       border-radius: 0 6px 6px 0;
     }
 
-    table {
-      border-collapse: collapse;
-      margin: 12px 0;
-      width: 100%;
-      font-size: 13px;
-      th,
-      td {
-        border: 1px solid #e5e7eb;
-        padding: 7px 12px;
-        text-align: left;
-      }
-      th {
-        background: rgba(99, 102, 241, 0.06);
-        color: #1f2937;
-        font-weight: 600;
-      }
-    }
-
     a {
       color: #4f46e5;
       text-decoration: none;
@@ -3166,5 +3180,16 @@ img.failed::after {
 
 .gap-10px {
   gap: 10px;
+}
+
+::v-deep .agent-error-card {
+  .session-error-toggle {
+    .el-icon-arrow-down {
+      transform: rotate(90deg);
+      &.is-expanded {
+        transform: rotate(0deg);
+      }
+    }
+  }
 }
 </style>

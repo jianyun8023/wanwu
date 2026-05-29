@@ -99,8 +99,10 @@
         >
           <el-input
             v-model="createForm.displayName"
-            :placeholder="$t('common.hint.modelName')"
+            :placeholder="$t('common.hint.text')"
             :disabled="!allowEdit"
+            maxlength="50"
+            show-word-limit
           ></el-input>
         </el-form-item>
         <el-form-item :label="$t('modelAccess.table.picPath')" prop="avatar">
@@ -137,6 +139,8 @@
             v-model="createForm.modelDesc"
             :placeholder="$t('common.input.placeholder')"
             :disabled="!allowEdit"
+            show-word-limit
+            maxlength="200"
           ></el-input>
         </el-form-item>
         <el-form-item
@@ -458,6 +462,8 @@ import {
   IMAGE,
   VIDEO,
   SCOPE_TYPE_LIST,
+  DEFAULT_CONTENT_SIZE,
+  DEFAULT_MAX_TOKEN,
   PRIVATE,
   ORG,
   ALL,
@@ -467,16 +473,6 @@ import LinkIcon from '@/components/linkIcon.vue';
 export default {
   components: { LinkIcon },
   data() {
-    const validateUrls = (rule, value, callback) => {
-      const reg =
-        /^(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?$/;
-
-      if (!reg.test(value)) {
-        callback(new Error(this.$t('modelAccess.hint.urlError')));
-      } else {
-        return callback();
-      }
-    };
     return {
       isSystem: this.$store.state.user.permission.isSystem || false,
       allowEdit: true,
@@ -519,8 +515,8 @@ export default {
         accessKey: '',
         modelType: LLM,
         modelDesc: '',
-        contextSize: 8000,
-        maxTokens: 4096,
+        contextSize: DEFAULT_CONTENT_SIZE,
+        maxTokens: DEFAULT_MAX_TOKEN,
         maxAsrFileSize: 10,
         maxImageSize: 3,
         /*maxVideoClipSize: 10,
@@ -542,8 +538,8 @@ export default {
             message: this.$t('common.input.placeholder'),
             trigger: 'blur',
           },
-          // { min: 2, max: 50, message: this.$t('common.hint.modelNameLimit'), trigger: 'blur'},
-          // { pattern: /^(?!_)[a-zA-Z0-9-_.\u4e00-\u9fa5]+$/, message: this.$t('common.hint.modelName'), trigger: "blur"}
+          // { pattern: this.$config.commonTextReg, message: this.$t('common.hint.text'), trigger: "blur"}
+          // { min: 2, max: 50, message: this.$t('common.hint.textLimit'), trigger: 'blur'},
         ],
         appKey: [
           {
@@ -575,14 +571,14 @@ export default {
         ],
         displayName: [
           {
-            pattern: /^(?!_)[a-zA-Z0-9-_.\u4e00-\u9fa5]+$/,
-            message: this.$t('common.hint.modelName'),
+            pattern: this.$config.commonTextReg,
+            message: this.$t('common.hint.text'),
             trigger: 'blur',
           },
           {
             min: 2,
             max: 50,
-            message: this.$t('common.hint.modelNameLimit'),
+            message: this.$t('common.hint.textLimit'),
             trigger: 'blur',
           },
           {
@@ -604,7 +600,12 @@ export default {
             message: this.$t('common.input.placeholder'),
             trigger: 'blur',
           },
-          { validator: validateUrls, trigger: 'blur' },
+          {
+            pattern:
+              /^(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?$/,
+            message: this.$t('modelAccess.hint.urlError'),
+            trigger: 'blur',
+          },
         ],
         scopeType: [
           {
@@ -819,8 +820,8 @@ export default {
         visionSupport: NO_SUPPORT,
         thinkingSupport: NO_SUPPORT,
         scopeType: PRIVATE,
-        contextSize: 8000,
-        maxTokens: 4096,
+        contextSize: DEFAULT_CONTENT_SIZE,
+        maxTokens: DEFAULT_MAX_TOKEN,
         maxAsrFileSize: 10,
         maxImageSize: 3,
         /*maxVideoClipSize: 10,
