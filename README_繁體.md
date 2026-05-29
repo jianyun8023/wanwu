@@ -43,7 +43,9 @@
 
 #### 1️⃣ RAG / 知識庫智慧體：搞定分散文件，讓 AI 有可靠記憶
 
-![image-20260520120033925](assets/image-20260520120033925.png)
+<p align="center">
+  <img width="900" alt="rag" src="https://github.com/user-attachments/assets/7bbc16b2-e7d0-49cb-89e3-5c395416c028" />
+</p>
 
 針對企業海量分散的文件與制度，提供全流程知識管理能力，建構高精準度、具備記憶的知識大腦，讓 AI 不再胡說八道。
 
@@ -53,7 +55,9 @@
 
 #### 2️⃣ 本體智慧體：搞定結構化資料，實現多步推理與決策
 
-![image-20260520120151847](assets/image-20260520120151847.png)
+<p align="center">
+  <img width="900" alt="ontology" src="https://github.com/user-attachments/assets/7a582447-9edc-4cce-ace4-29291b5ad2ac" />
+</p>
 
 打破大模型僅懂文字的侷限，應對複雜的結構化商業資料。
 
@@ -61,7 +65,9 @@
 
 #### 3️⃣ 工作流智慧體：搞定複雜流程，讓 AI 照規矩辦事
 
-![image-20260520120309946](assets/image-20260520120309946.png)
+<p align="center">
+  <img width="900" alt="workflow" src="https://github.com/user-attachments/assets/8064a56a-63b2-493c-9dea-e0987c3cc64d" />
+</p>
 
 針對合約審核、報銷審批等複雜業務，透過低程式碼方式規範 AI 的執行路徑，確保交付穩定可靠。
 
@@ -70,7 +76,9 @@
 
 #### 4️⃣ GUI 智慧體：搞定各類應用系統，無 API 也能直接操作
 
-![image-20260520124423864](assets/image-20260520124423864.png)
+<p align="center">
+  <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
+</p>
 
 面對舊系統或無 API 場景，賦予 AI「看」與「點」的能力，徹底消除系統整合壁壘。
 
@@ -79,7 +87,9 @@
 
 #### 5️⃣通用智慧體 + Skill 開發：搞定互動系統，一句話串起所有能力
 
-![image-20260520124423864](assets/image-20260520124423864.png)
+<p align="center">
+  <img width="900" alt="wga" src="https://github.com/user-attachments/assets/340c131c-11ed-4547-a395-250f40770160" />
+</p>
 
 業界首創「通用智慧體 + 垂直場景 Skills」雙引擎，打造既「博學」又「專業」的超級智慧體，一站式滿足複雜互動需求。
 

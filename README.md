@@ -45,7 +45,9 @@ To address complex enterprise scenarios, Wanwu provides 5 core agent capabilitie
 
 #### 1️⃣ RAG/Knowledge Base Agent
 
-![image-20260520120033925](assets/image-20260520120033925.png)
+<p align="center">
+  <img width="900" alt="rag" src="https://github.com/user-attachments/assets/7bbc16b2-e7d0-49cb-89e3-5c395416c028" />
+</p>
 
 Solves scattered documents and gives AI reliable memory. Provides end‑to‑end knowledge management for massive enterprise documents and policies, building a high‑precision, memory‑enabled knowledge brain to prevent AI hallucinations.
 
@@ -55,7 +57,9 @@ Solves scattered documents and gives AI reliable memory. Provides end‑to‑end
 
 #### 2️⃣ Ontology Agent
 
-![image-20260520120151847](assets/image-20260520120151847.png)
+<p align="center">
+  <img width="900" alt="ontology" src="https://github.com/user-attachments/assets/7a582447-9edc-4cce-ace4-29291b5ad2ac" />
+</p>
 
 Handles structured data and enables multi‑step reasoning and decision‑making. Breaks the limitation that LLMs only understand text, adapting to complex structured business data.
 
@@ -63,7 +67,9 @@ Handles structured data and enables multi‑step reasoning and decision‑making
 
 #### 3️⃣ Workflow Agent
 
-![image-20260520120309946](assets/image-20260520120309946.png)
+<p align="center">
+  <img width="900" alt="workflow" src="https://github.com/user-attachments/assets/8064a56a-63b2-493c-9dea-e0987c3cc64d" />
+</p>
 
 Manages complex processes and ensures AI follows business rules.
 
@@ -74,7 +80,9 @@ For contract review, expense approval, and other complex workflows, standardizes
 
 #### 4️⃣ GUI Agent
 
-![image-20260520124423864](assets/image-20260520124423864.png)
+<p align="center">
+  <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
+</p>
 
 Operates various applications without APIs. Eliminates integration barriers for legacy or non‑API systems by giving AI vision and click capabilities.
 
@@ -83,7 +91,9 @@ Operates various applications without APIs. Eliminates integration barriers for 
 
 #### 5️⃣ General Agent + Skill Development
 
-![image-20260520120505258](assets/image-20260520120505258.png)
+<p align="center">
+  <img width="900" alt="wga" src="https://github.com/user-attachments/assets/340c131c-11ed-4547-a395-250f40770160" />
+</p>
 
 Unifies all capabilities with natural language. Industry‑first dual engine of General Agent + Vertical‑scene Skills, building a super agent that is both knowledgeable and professional for complex interactive needs.
 

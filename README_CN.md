@@ -45,7 +45,9 @@
 
 #### 1️⃣ RAG/知识库智能体：搞定分散文档，让AI有靠谱记忆
 
-![image-20260520120033925](assets/image-20260520120033925.png)
+<p align="center">
+  <img width="900" alt="rag" src="https://github.com/user-attachments/assets/7bbc16b2-e7d0-49cb-89e3-5c395416c028" />
+</p>
 
 针对企业海量分散的文档与制度，提供全流程知识管理能力，构建高精准度、带记忆的知识大脑，让AI不再胡说八道。
 - **高精度解析与检索**：支持12种文件格式及URL抓取；支持OCR与MinerU模型私有化解析；集成多模态检索、级联/自适应切分与智能精排，支持图文并茂生成与出处引用。
@@ -53,27 +55,35 @@
 - **[外部知识库兼容](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E7%9F%A5%E8%AF%86%E5%BA%93/%E8%BF%9E%E6%8E%A5%E5%A4%96%E6%8E%A5%E7%9F%A5%E8%AF%86%E5%BA%93.md)**: 支持API导入Dify内创建的知识库，并在智能体、文本问答、工作流中进行检索召回
 #### 2️⃣ 本体智能体：搞定结构化数据，实现多步推理与决策
 
-![image-20260520120151847](assets/image-20260520120151847.png)
+<p align="center">
+  <img width="900" alt="ontology" src="https://github.com/user-attachments/assets/7a582447-9edc-4cce-ace4-29291b5ad2ac" />
+</p>
 
 打破大模型仅懂文本的局限，应对复杂的结构化业务数据。
 - **深度推理与决策**：基于企业数据与文档自动构建业务知识网络，赋予AI深度推理与闭环行动能力，让大模型真正懂业务、会决策，从“知识问答”跃升为“业务分析大脑”。
 #### 3️⃣ 工作流智能体：搞定复杂流程，让AI按规矩办事
 
-![image-20260520120309946](assets/image-20260520120309946.png)
+<p align="center">
+  <img width="900" alt="workflow" src="https://github.com/user-attachments/assets/8064a56a-63b2-493c-9dea-e0987c3cc64d" />
+</p>
 
 针对合同审核、报销审批等复杂业务，通过低代码方式规范AI的执行路径，确保交付稳定可靠。
 - **可视化编排**：低代码拖拽画布，内置条件分支、API、大模型、知识库、代码、MCP等丰富节点，支持端到端流程调试与性能分析，让AI严格按照业务规矩办事。
 - **零代码编排闭环**：行业内首个支持在智能体开发中零代码调用Skill，从“意图识别”到“技能执行”完美闭环；灵活调用内置工具、MCP、工作流等，秒读百页文档，统一工作区展示成果。
 #### 4️⃣ GUI智能体：搞定各类应用系统，无API也能直接操作
 
-![image-20260520124423864](assets/image-20260520124423864.png)
+<p align="center">
+  <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
+</p>
 
 面对老旧系统或无API场景，赋予AI“看”与“点”的能力，彻底消除系统集成壁垒。
 - **界面级交互**：无需对接底层API，AI直接操作应用界面完成任务。
 - **[沙箱支持](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/8.%E9%80%9A%E7%94%A8%E6%99%BA%E8%83%BD%E4%BD%93%2F%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8A%A9%E6%89%8B-OPENCLAW%2F%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%87%E6%82%9F%E4%B8%AD%E6%8E%A5%E5%85%A5OpenClaw%E6%9C%BA%E5%99%A8%E4%BA%BA.md)**：为每一个“机器人”提供独立Docker容器部署选项，安全执行界面操作。
 #### 5️⃣ 通用智能体+Skill开发：搞定交互系统，一句话串起所有能力
 
-![image-20260520120505258](assets/image-20260520120505258.png)
+<p align="center">
+  <img width="900" alt="wga" src="https://github.com/user-attachments/assets/340c131c-11ed-4547-a395-250f40770160" />
+</p>
 
 行业首创“通用智能体+垂直场景Skills”双引擎，打造既“博学”又“专业”的超级智能体，一站式满足复杂交互需求。
 - **[全能大脑与极简构建](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/2.%E8%B5%84%E6%BA%90%E5%BA%93%2FSkills.md)**：具备专业分析师级别的多步推理能力；支持“一句话创建Skill”，用自然语言即可将业务经验沉淀为专属“工具箱”。也支持将平台内的应用一键转换为Skill。
