@@ -587,6 +587,8 @@ $border: #e5e7eb;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  max-width: $message-max-width;
+  margin: 0 auto;
 }
 
 .echo-img-item {
