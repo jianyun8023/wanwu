@@ -569,7 +569,8 @@
             </div>
           </template>
         </div>
-        <div class="block" v-if="editForm.visionsupport === 'support'">
+        <!-- 临时隐藏视觉配置 -->
+        <!-- <div class="block" v-if="editForm.visionsupport === 'support'">
           <p class="block-title common-set">
             <span class="common-set-label">
               {{ $t('agent.form.vision') }}
@@ -595,7 +596,7 @@
               </el-tooltip>
             </span>
           </p>
-        </div>
+        </div> -->
       </div>
       <div class="block drawer-test">
         <Chat

@@ -330,9 +330,11 @@ export default {
       }
 
       if (this.fileType === 'image/*') {
-        // 图片类型可累加至6个
-        if (fileList.length > 6) {
-          this.$message.warning(this.$t('app.uploadImgTips', { num: 6 }));
+        // 图片类型可累加至maxPicNum个
+        if (fileList.length > this.maxPicNum) {
+          this.$message.warning(
+            this.$t('app.uploadImgTips', { num: this.maxPicNum }),
+          );
           return;
         }
         if (prevFileType && prevFileType !== this.fileType) {
