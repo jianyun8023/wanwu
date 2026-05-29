@@ -2546,7 +2546,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.AppBriefConfig"
+                            "$ref": "#/definitions/request.CreateChatflowReq"
                         }
                     }
                 ],
@@ -2914,7 +2914,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.RagBrief"
+                            "$ref": "#/definitions/request.RagUpdateReq"
                         }
                     }
                 ],
@@ -3239,7 +3239,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.AppBriefConfig"
+                            "$ref": "#/definitions/request.CreateWorkflowReq"
                         }
                     }
                 ],
@@ -3660,7 +3660,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.AssistantBrief"
+                            "$ref": "#/definitions/request.AssistantUpdateReq"
                         }
                     }
                 ],
@@ -16168,69 +16168,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/square/skill/list": {
-            "get": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "获取探索广场中的skill列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "exploration.skill"
-                ],
-                "summary": "获取广场skill列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "skill名称",
-                        "name": "name",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "allOf": [
-                                                {
-                                                    "$ref": "#/definitions/response.ListResult"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "list": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "$ref": "#/definitions/response.SquareSkillInfo"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/square/skill/share": {
             "post": {
                 "security": [
@@ -16625,7 +16562,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.ExportAPIKeyStatisticListReq"
+                            "$ref": "#/definitions/request.APIKeyStatisticReq"
                         }
                     }
                 ],
@@ -16730,7 +16667,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.ExportAPIKeyStatisticRecordReq"
+                            "$ref": "#/definitions/request.APIKeyStatisticReq"
                         }
                     }
                 ],
@@ -16808,13 +16745,13 @@ const docTemplate = `{
             }
         },
         "/statistic/api/select": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
                     }
                 ],
-                "description": "获取API Key列表（用于下拉列表展示apikey）",
+                "description": "组织→用户→API Key名称级联",
                 "consumes": [
                     "application/json"
                 ],
@@ -16824,7 +16761,18 @@ const docTemplate = `{
                 "tags": [
                     "app_observability.statistic"
                 ],
-                "summary": "获取API Key列表",
+                "summary": "获取API Key下拉列表",
+                "parameters": [
+                    {
+                        "description": "获取API Key下拉列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.StatisticAPIKeySelectReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -16863,7 +16811,7 @@ const docTemplate = `{
             }
         },
         "/statistic/app": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -16882,30 +16830,13 @@ const docTemplate = `{
                 "summary": "获取应用统计数据",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用ID列表",
-                        "name": "apps",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用类型（默认agent）",
-                        "name": "appType",
-                        "in": "query"
+                        "description": "获取应用统计数据请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AppStatisticReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -16931,7 +16862,7 @@ const docTemplate = `{
             }
         },
         "/statistic/app/export": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -16950,30 +16881,13 @@ const docTemplate = `{
                 "summary": "导出应用统计列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用ID列表",
-                        "name": "apps",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用类型（默认agent）",
-                        "name": "appType",
-                        "in": "query"
+                        "description": "导出应用统计列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AppStatisticReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -16987,7 +16901,7 @@ const docTemplate = `{
             }
         },
         "/statistic/app/list": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -17006,44 +16920,13 @@ const docTemplate = `{
                 "summary": "获取应用统计列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用ID列表",
-                        "name": "apps",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "应用类型（默认agent）",
-                        "name": "appType",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页面编号，从1开始",
-                        "name": "pageNo",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "单页数量",
-                        "name": "pageSize",
-                        "in": "query",
-                        "required": true
+                        "description": "获取应用统计列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AppStatisticListReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -17084,13 +16967,13 @@ const docTemplate = `{
             }
         },
         "/statistic/app/select": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
                     }
                 ],
-                "description": "获取当前用户在当前组织下发布的应用列表（包括私有发布、组织内发布、公开发布）",
+                "description": "组织→用户→应用级联；获取筛选范围内的已发布应用",
                 "consumes": [
                     "application/json"
                 ],
@@ -17100,13 +16983,16 @@ const docTemplate = `{
                 "tags": [
                     "app_observability.statistic"
                 ],
-                "summary": "获取当前用户在当前组织下发布的应用列表",
+                "summary": "获取应用统计下拉列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "应用类型",
-                        "name": "appType",
-                        "in": "query"
+                        "description": "获取应用统计下拉列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.StatisticAppSelectReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -17203,7 +17089,7 @@ const docTemplate = `{
             }
         },
         "/statistic/model": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -17222,31 +17108,13 @@ const docTemplate = `{
                 "summary": "获取模型统计数据",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型ID列表",
-                        "name": "models",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型类型",
-                        "name": "modelType",
-                        "in": "query",
-                        "required": true
+                        "description": "获取模型统计数据请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ModelStatisticReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -17272,7 +17140,7 @@ const docTemplate = `{
             }
         },
         "/statistic/model/export": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -17291,31 +17159,13 @@ const docTemplate = `{
                 "summary": "导出模型统计列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型ID列表",
-                        "name": "models",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型类型",
-                        "name": "modelType",
-                        "in": "query",
-                        "required": true
+                        "description": "导出模型统计列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ModelStatisticReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -17329,7 +17179,7 @@ const docTemplate = `{
             }
         },
         "/statistic/model/list": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JWT": []
@@ -17348,45 +17198,13 @@ const docTemplate = `{
                 "summary": "获取模型统计列表",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "开始时间（格式yyyy-mm-dd）",
-                        "name": "startDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "结束时间（格式yyyy-mm-dd）",
-                        "name": "endDate",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型ID列表",
-                        "name": "models",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "模型类型",
-                        "name": "modelType",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页面编号，从1开始",
-                        "name": "pageNo",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "单页数量",
-                        "name": "pageSize",
-                        "in": "query",
-                        "required": true
+                        "description": "获取模型统计列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ModelStatisticListReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -17412,6 +17230,182 @@ const docTemplate = `{
                                                             "type": "array",
                                                             "items": {
                                                                 "$ref": "#/definitions/response.ModelStatisticItem"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/statistic/model/select": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "组织→用户→模型级联；用于模型 Tab 筛选，非统计 list 接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "app_observability.statistic"
+                ],
+                "summary": "获取模型统计下拉列表",
+                "parameters": [
+                    {
+                        "description": "获取模型统计下拉列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.StatisticModelSelectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.ModelInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/statistic/orgs/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "系统组织管理员返回全部组织及下级；组织管理员返回当前组织及下级；普通用户仅当前组织",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "app_observability.statistic"
+                ],
+                "summary": "获取统计看板组织下拉列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.IDName"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/statistic/users/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "组织/系统管理员：以 JWT orgId 为根，返回该组织及全部下级组织下的用户（忽略 body.orgIds/userIds）；普通用户仅返回本人",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "app_observability.statistic"
+                ],
+                "summary": "获取统计看板用户下拉列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.StatisticUserName"
                                                             }
                                                         }
                                                     }
@@ -20594,6 +20588,12 @@ const docTemplate = `{
         },
         "request.APIKeyStatisticListReq": {
             "type": "object",
+            "required": [
+                "endDate",
+                "pageNo",
+                "pageSize",
+                "startDate"
+            ],
             "properties": {
                 "apiKeyIds": {
                     "description": "API Key 列表",
@@ -20613,22 +20613,40 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "pageNo": {
-                    "description": "页面编号，从1开始",
                     "type": "integer"
                 },
                 "pageSize": {
-                    "description": "单页数量",
                     "type": "integer"
                 },
                 "startDate": {
                     "description": "开始时间（格式yyyy-mm-dd）",
                     "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "request.APIKeyStatisticRecordReq": {
             "type": "object",
+            "required": [
+                "endDate",
+                "pageNo",
+                "pageSize",
+                "startDate"
+            ],
             "properties": {
                 "apiKeyIds": {
                     "description": "API Key 列表",
@@ -20643,27 +20661,43 @@ const docTemplate = `{
                 },
                 "methodPaths": {
                     "description": "OpenAPI方法+路径（例如：POST-/agent/chat）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "pageNo": {
-                    "description": "页面编号，从1开始",
                     "type": "integer"
                 },
                 "pageSize": {
-                    "description": "单页数量",
                     "type": "integer"
                 },
                 "startDate": {
                     "description": "开始时间（格式yyyy-mm-dd）",
                     "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "request.APIKeyStatisticReq": {
             "type": "object",
+            "required": [
+                "endDate",
+                "startDate"
+            ],
             "properties": {
                 "apiKeyIds": {
                     "description": "API Key 列表",
@@ -20683,9 +20717,23 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "startDate": {
                     "description": "开始时间（格式yyyy-mm-dd）",
                     "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -20704,30 +20752,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "request.AppBriefConfig": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "avatar": {
-                    "description": "图标",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "desc": {
-                    "description": "描述",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "名称",
-                    "type": "string"
                 }
             }
         },
@@ -20992,6 +21016,98 @@ const docTemplate = `{
                 }
             }
         },
+        "request.AppStatisticListReq": {
+            "type": "object",
+            "required": [
+                "endDate",
+                "pageNo",
+                "pageSize",
+                "startDate"
+            ],
+            "properties": {
+                "appType": {
+                    "description": "应用类型（默认agent）",
+                    "type": "string"
+                },
+                "apps": {
+                    "description": "应用ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "endDate": {
+                    "description": "结束时间（格式yyyy-mm-dd）",
+                    "type": "string"
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "pageNo": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "startDate": {
+                    "description": "开始时间（格式yyyy-mm-dd）",
+                    "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "request.AppStatisticReq": {
+            "type": "object",
+            "required": [
+                "endDate",
+                "startDate"
+            ],
+            "properties": {
+                "appType": {
+                    "description": "应用类型（默认agent）",
+                    "type": "string"
+                },
+                "apps": {
+                    "description": "应用ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "endDate": {
+                    "description": "结束时间（格式yyyy-mm-dd）",
+                    "type": "string"
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "startDate": {
+                    "description": "开始时间（格式yyyy-mm-dd）",
+                    "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "request.AppUrlCreateRequest": {
             "type": "object",
             "required": [
@@ -21117,34 +21233,6 @@ const docTemplate = `{
                 },
                 "urlId": {
                     "description": "UrlID",
-                    "type": "string"
-                }
-            }
-        },
-        "request.AssistantBrief": {
-            "type": "object",
-            "required": [
-                "assistantId",
-                "name"
-            ],
-            "properties": {
-                "assistantId": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "description": "图标",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "desc": {
-                    "description": "描述",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "名称",
                     "type": "string"
                 }
             }
@@ -21551,6 +21639,34 @@ const docTemplate = `{
                         "builtin",
                         "custom"
                     ]
+                }
+            }
+        },
+        "request.AssistantUpdateReq": {
+            "type": "object",
+            "required": [
+                "assistantId",
+                "name"
+            ],
+            "properties": {
+                "assistantId": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
                 }
             }
         },
@@ -21997,6 +22113,30 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CreateChatflowReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
+                }
+            }
+        },
         "request.CreateCustomSkillReq": {
             "type": "object",
             "required": [
@@ -22366,6 +22506,30 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "templateId": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.CreateWorkflowReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
                     "type": "string"
                 }
             }
@@ -23265,60 +23429,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "modelId": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.ExportAPIKeyStatisticListReq": {
-            "type": "object",
-            "properties": {
-                "apiKeyIds": {
-                    "description": "API Key 列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "endDate": {
-                    "description": "结束时间（格式yyyy-mm-dd）",
-                    "type": "string"
-                },
-                "methodPaths": {
-                    "description": "OpenAPI方法+路径（例如：POST-/agent/chat）",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "startDate": {
-                    "description": "开始时间（格式yyyy-mm-dd）",
-                    "type": "string"
-                }
-            }
-        },
-        "request.ExportAPIKeyStatisticRecordReq": {
-            "type": "object",
-            "properties": {
-                "apiKeyIds": {
-                    "description": "API Key 列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "endDate": {
-                    "description": "结束时间（格式yyyy-mm-dd）",
-                    "type": "string"
-                },
-                "methodPaths": {
-                    "description": "OpenAPI方法+路径（例如：POST-/agent/chat）",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "startDate": {
-                    "description": "开始时间（格式yyyy-mm-dd）",
                     "type": "string"
                 }
             }
@@ -24288,9 +24398,6 @@ const docTemplate = `{
         },
         "request.MCPToolListReq": {
             "type": "object",
-            "required": [
-                "apiAuth"
-            ],
             "properties": {
                 "apiAuth": {
                     "description": "api身份认证",
@@ -24312,7 +24419,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "serverUrl": {
-                    "description": "\"serverUrl,就是sseUrl/streamable(和mcpId传一个)\"",
+                    "description": "\"serverUrl,就是sseUrl/streamable(和mcpId、type 传一个)\"",
                     "type": "string"
                 },
                 "transport": {
@@ -24578,6 +24685,90 @@ const docTemplate = `{
                 }
             }
         },
+        "request.ModelStatisticListReq": {
+            "type": "object",
+            "required": [
+                "endDate",
+                "modelType",
+                "startDate"
+            ],
+            "properties": {
+                "endDate": {
+                    "type": "string"
+                },
+                "modelType": {
+                    "type": "string"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "pageNo": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "request.ModelStatisticReq": {
+            "type": "object",
+            "required": [
+                "endDate",
+                "modelType",
+                "startDate"
+            ],
+            "properties": {
+                "endDate": {
+                    "type": "string"
+                },
+                "modelType": {
+                    "type": "string"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "request.ModelStatusRequest": {
             "type": "object",
             "required": [
@@ -24835,34 +25026,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.RagBrief": {
-            "type": "object",
-            "required": [
-                "name",
-                "ragId"
-            ],
-            "properties": {
-                "avatar": {
-                    "description": "图标",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "desc": {
-                    "description": "描述",
-                    "type": "string"
-                },
-                "name": {
-                    "description": "名称",
-                    "type": "string"
-                },
-                "ragId": {
-                    "type": "string"
-                }
-            }
-        },
         "request.RagConfig": {
             "type": "object",
             "required": [
@@ -24976,6 +25139,34 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.RagUpdateReq": {
+            "type": "object",
+            "required": [
+                "name",
+                "ragId"
+            ],
+            "properties": {
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
+                },
+                "ragId": {
                     "type": "string"
                 }
             }
@@ -25304,6 +25495,71 @@ const docTemplate = `{
                 },
                 "variableValue": {
                     "type": "string"
+                }
+            }
+        },
+        "request.StatisticAPIKeySelectReq": {
+            "type": "object",
+            "properties": {
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "request.StatisticAppSelectReq": {
+            "type": "object",
+            "properties": {
+                "appType": {
+                    "description": "应用类型",
+                    "type": "string"
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "request.StatisticModelSelectReq": {
+            "type": "object",
+            "properties": {
+                "modelType": {
+                    "description": "模型类型",
+                    "type": "string"
+                },
+                "orgIds": {
+                    "description": "空=未扩大；[\"ALL\"]=可见全部组织；[\"id\",...]=指定组织",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userIds": {
+                    "description": "空=未扩大用户维度；[\"ALL\"]=已解析组织下全部用户；[\"id\",...]=指定用户",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -26180,8 +26436,14 @@ const docTemplate = `{
                 "nonStreamCount": {
                     "type": "integer"
                 },
+                "orgName": {
+                    "type": "string"
+                },
                 "streamCount": {
                     "type": "integer"
+                },
+                "userName": {
+                    "type": "string"
                 }
             }
         },
@@ -26226,6 +26488,9 @@ const docTemplate = `{
                 "nonStreamCosts": {
                     "type": "integer"
                 },
+                "orgName": {
+                    "type": "string"
+                },
                 "requestBody": {
                     "type": "string"
                 },
@@ -26237,6 +26502,9 @@ const docTemplate = `{
                 },
                 "streamCosts": {
                     "type": "integer"
+                },
+                "userName": {
+                    "type": "string"
                 }
             }
         },
@@ -26474,6 +26742,9 @@ const docTemplate = `{
                 },
                 "streamCount": {
                     "type": "integer"
+                },
+                "userName": {
+                    "type": "string"
                 }
             }
         },
@@ -30128,9 +30399,6 @@ const docTemplate = `{
         },
         "response.MCPDetail": {
             "type": "object",
-            "required": [
-                "apiAuth"
-            ],
             "properties": {
                 "apiAuth": {
                     "description": "api身份认证",
@@ -30219,9 +30487,6 @@ const docTemplate = `{
         },
         "response.MCPInfo": {
             "type": "object",
-            "required": [
-                "apiAuth"
-            ],
             "properties": {
                 "apiAuth": {
                     "description": "api身份认证",
@@ -30429,6 +30694,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.MCPServerToolInfo"
                     }
+                },
+                "transport": {
+                    "description": "sse/streamable",
+                    "type": "string"
                 }
             }
         },
@@ -30794,6 +31063,9 @@ const docTemplate = `{
                 },
                 "totalTokens": {
                     "type": "integer"
+                },
+                "userName": {
+                    "type": "string"
                 },
                 "uuid": {
                     "type": "string"
@@ -31756,29 +32028,6 @@ const docTemplate = `{
                 }
             }
         },
-        "response.SquareSkillInfo": {
-            "type": "object",
-            "properties": {
-                "author": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "$ref": "#/definitions/request.Avatar"
-                },
-                "desc": {
-                    "type": "string"
-                },
-                "isShared": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "skillId": {
-                    "type": "string"
-                }
-            }
-        },
         "response.StatisticChart": {
             "type": "object",
             "properties": {
@@ -31832,6 +32081,17 @@ const docTemplate = `{
                 "value": {
                     "description": "数量",
                     "type": "number"
+                }
+            }
+        },
+        "response.StatisticUserName": {
+            "type": "object",
+            "properties": {
+                "userId": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
@@ -32772,7 +33032,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/v1",
 	Schemes:          []string{},
 	Title:            "AI Agent Productivity Platform API",
-	Description:      "## HTTP Header\r\n| Header        | 说明      |\r\n| ------------- | --------- |\r\n| Authorization | JWT token |\r\n| X-Language    | 语言Code  |\r\n| X-Org-Id      | 组织ID    |\r\n| X-Client-Id   | 客户端标识|\r\n\r\n## HTTP Status\r\n| HTTP Status             | 说明                   |\r\n| ----------------------- | ---------------------- |\r\n| 200, StatusOK           | 请求返回成功           |\r\n| 400, StatusBadRequest   | 请求返回失败，用于业务 |\r\n| 401, StatusUnauthorized | JWT认证失败            |\r\n| 403, StatusForbidden    | 没有权限               |\r\n\r\n## 权限-菜单对应表\r\n| 一级权限        | 二级权限  | 三级权限 | 一级菜单 | 二级菜单 | 三级菜单 |\r\n|-------------|-------|------|------|------|------|\r\n| guest       |       |      | 【访客】 |      |      |\r\n| common      |       |      | 【通用】 |      |      |\r\n| permission  |       |      | 权限管理 |      |      |\r\n| permission  | user  |      | 权限管理 | 用户管理 |      |\r\n| permission  | org   |      | 权限管理 | 组织管理 |      |\r\n| permission  | role  |      | 权限管理 | 角色管理 |      |\r\n\r\n## `/v1/user/permission`返回用例\r\n```json\r\n{\r\n  \"code\": 0,\r\n  \"data\": {\r\n    \"orgPermission\": {\r\n      \"org\": {\"id\": \"test-org-id\", \"name\": \"test-org-name\"},\r\n      \"permissions\": [\r\n        {\"perm\": \"permission\"},\r\n        {\"perm\": \"permission.user\"},\r\n        {\"perm\": \"permission.org\"},\r\n        {\"perm\": \"permission.role\"}\r\n      ]\r\n    }\r\n  },\r\n  \"msg\": \"操作成功\"\r\n}\r\n```",
+	Description:      "## HTTP Header\n| Header        | 说明      |\n| ------------- | --------- |\n| Authorization | JWT token |\n| X-Language    | 语言Code  |\n| X-Org-Id      | 组织ID    |\n| X-Client-Id   | 客户端标识|\n\n## HTTP Status\n| HTTP Status             | 说明                   |\n| ----------------------- | ---------------------- |\n| 200, StatusOK           | 请求返回成功           |\n| 400, StatusBadRequest   | 请求返回失败，用于业务 |\n| 401, StatusUnauthorized | JWT认证失败            |\n| 403, StatusForbidden    | 没有权限               |\n\n## 权限-菜单对应表\n| 一级权限        | 二级权限  | 三级权限 | 一级菜单 | 二级菜单 | 三级菜单 |\n|-------------|-------|------|------|------|------|\n| guest       |       |      | 【访客】 |      |      |\n| common      |       |      | 【通用】 |      |      |\n| permission  |       |      | 权限管理 |      |      |\n| permission  | user  |      | 权限管理 | 用户管理 |      |\n| permission  | org   |      | 权限管理 | 组织管理 |      |\n| permission  | role  |      | 权限管理 | 角色管理 |      |\n\n## `/v1/user/permission`返回用例\n```json\n{\n  \"code\": 0,\n  \"data\": {\n    \"orgPermission\": {\n      \"org\": {\"id\": \"test-org-id\", \"name\": \"test-org-name\"},\n      \"permissions\": [\n        {\"perm\": \"permission\"},\n        {\"perm\": \"permission.user\"},\n        {\"perm\": \"permission.org\"},\n        {\"perm\": \"permission.role\"}\n      ]\n    }\n  },\n  \"msg\": \"操作成功\"\n}\n```",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
