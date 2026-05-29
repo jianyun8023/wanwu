@@ -1491,17 +1491,32 @@ def snippet_rescore(request_json=None):
             for kb_name in display_kb_names:
                 kb_id = kb_info_ops.get_uk_kb_id(user_id, kb_name)
                 kb_id_2_kb_name[kb_id] = kb_name
-            result = es_ops.rescore_bm25_score(index_name, query, search_by, temp_search_list)
-            temp_search_list = result["search_list"]
-            for item in temp_search_list:
-                item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
-                item["user_id"] = user_id
 
-            search_list.extend(temp_search_list)
-            bm25_scores.extend(result["scores"])
+            regular_list = [item for item in temp_search_list if item.get("chunk_type") != "graph"]
+            graph_list = [item for item in temp_search_list if item.get("chunk_type") == "graph"]
+
+            if regular_list:
+                result = es_ops.rescore_bm25_score(index_name, query, search_by, regular_list)
+                rescored = result["search_list"]
+                for item in rescored:
+                    item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
+                    item["user_id"] = user_id
+                search_list.extend(rescored)
+                bm25_scores.extend(result["scores"])
+
+            if graph_list:
+                graph_result = es_ops.rescore_bm25_score(index_name, query, "meta_data.reference_snippet", graph_list)
+                graph_rescored = graph_result["search_list"]
+                for item in graph_rescored:
+                    item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
+                    item["user_id"] = user_id
+                    item["snippet"] = item["meta_data"]["reference_snippet"]
+                search_list.extend(graph_rescored)
+                bm25_scores.extend(graph_result["scores"])
+
             contents = [item["snippet"] for item in search_list]
             cosine_scores.extend(emb_util.calculate_cosine(query, contents, embedding_model_id))
-            logger.info(f"uer_id: {user_id}, rescore bm25_scores: {bm25_scores}, cosine_scores: {cosine_scores}")
+            logger.info(f"user_id: {user_id}, rescore bm25_scores: {bm25_scores}, cosine_scores: {cosine_scores}")
 
         bm25_normalized = normalize_to_01(bm25_scores)
         cosine_normalized = normalize_to_01(cosine_scores)
