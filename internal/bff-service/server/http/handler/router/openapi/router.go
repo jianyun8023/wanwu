@@ -13,6 +13,7 @@ import (
 func Register(openAPI *gin.RouterGroup) {
 	// agent — 基础管理
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent", http.MethodPost, openapi.CreateAgent, "创建智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent", http.MethodPut, openapi.UpdateAgent, "更新智能体基本信息OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent", http.MethodDelete, openapi.DeleteAgent, "删除智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/list", http.MethodGet, openapi.ListAgents, "智能体列表OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/info", http.MethodGet, openapi.GetAgentInfo, "获取智能体详情OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))

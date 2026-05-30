@@ -66,6 +66,16 @@ func (req *OpenAPICreateAgentRequest) Check() error {
 	return util.ValidateBriefCreate(&req.Name, &req.Desc, util.SubjectAssistant)
 }
 
+// OpenAPIUpdateAgentRequest 更新智能体基本信息请求
+type OpenAPIUpdateAgentRequest struct {
+	AssistantUUID  string `json:"assistantUuid" validate:"required"` // 智能体UUID
+	AppBriefConfig        // 名称、描述、图标
+}
+
+func (req *OpenAPIUpdateAgentRequest) Check() error {
+	return nil
+}
+
 type OpenAPIWorkflowRunReq struct {
 	UUID       string         `json:"uuid" validate:"required"`
 	Parameters map[string]any `json:"parameters"`
