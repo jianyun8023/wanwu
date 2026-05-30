@@ -101,7 +101,7 @@ func RefreshGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string
 	}
 	skill := customSkillFromPublish(publish)
 	if skill == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "custom skill not found")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_custom_not_found", "custom skill not found")
 	}
 
 	log.Infof("[wga-skill-legacy] refresh skill %v start, objectPathExists=%v, currentThreadID=%s, currentPreviewID=%s", req.SkillID, strings.TrimSpace(skill.ObjectPath) != "", skill.WgaThreadId, skill.PreviewThreadId)

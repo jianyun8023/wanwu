@@ -49,6 +49,9 @@ func GetAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId string) (
 	if err != nil {
 		return nil, err
 	}
+	if err := ensureAcquiredSourceSkillScopeAccessible(ctx, skill); err != nil {
+		return nil, err
+	}
 	detail := toAcquiredSkillDetail(ctx, skill, true)
 	return detail, nil
 }
@@ -73,11 +76,31 @@ func GetCallbackAcquiredSkillListDetail(ctx *gin.Context, acquiredSkillIdList []
 		return nil, err
 	}
 
+	// 批量获取源 Skill 的发布信息用于权限校验
+	sourceSkillIds := make([]string, 0, len(skillByID))
+	for _, skill := range skillByID {
+		if skill == nil {
+			continue
+		}
+		if sourceSkillId := skill.GetSkill().GetSkill().GetSkillId(); sourceSkillId != "" {
+			sourceSkillIds = append(sourceSkillIds, sourceSkillId)
+		}
+	}
+	appInfoMap, err := getSourceSkillAppInfoMap(ctx, sourceSkillIds)
+	if err != nil {
+		return nil, err
+	}
+
 	skillDetailList := make([]*response.CallbackAcquiredSkillDetail, 0, len(filteredAcquiredSkillIdList))
 	for _, acquiredSkillId := range filteredAcquiredSkillIdList {
 		skill := skillByID[acquiredSkillId]
 		if skill == nil {
 			log.Warnf("callback acquired skill list ignored missing acquired skill, acquiredSkillId: %s", acquiredSkillId)
+			continue
+		}
+		// 过滤无权限访问的 acquired skill
+		if !isAcquiredSkillAccessible(ctx, skill, appInfoMap) {
+			log.Warnf("callback acquired skill list ignored inaccessible acquired skill, acquiredSkillId: %s", acquiredSkillId)
 			continue
 		}
 		detail, err := toCallbackAcquiredSkillDetail(ctx, skill)
@@ -96,6 +119,9 @@ func DownloadAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId stri
 	if err != nil {
 		return nil, err
 	}
+	if err := ensureAcquiredSourceSkillScopeAccessible(ctx, skill); err != nil {
+		return nil, err
+	}
 	if skill.GetSkill().GetObjectPath() == "" {
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "skill_publish_package_not_available", "acquired skill package objectPath is empty")
 	}
@@ -103,12 +129,16 @@ func DownloadAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId stri
 }
 
 func GetAcquiredSkillVersionList(ctx *gin.Context, userId, orgId, acquiredSkillId string) (*response.ListResult, error) {
-	if _, err := getOwnedAcquiredSkill(ctx, userId, orgId, acquiredSkillId); err != nil {
-		return nil, err
-	}
-	sourceSkillId, err := getAcquiredSourceCustomSkillID(ctx, acquiredSkillId)
+	skill, err := getOwnedAcquiredSkill(ctx, userId, orgId, acquiredSkillId)
 	if err != nil {
 		return nil, err
+	}
+	if err := ensureAcquiredSourceSkillScopeAccessible(ctx, skill); err != nil {
+		return nil, err
+	}
+	sourceSkillId := skill.GetSkill().GetSkill().GetSkillId()
+	if sourceSkillId == "" {
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_acquired_source_id_empty", "acquired skill source custom skill id is empty")
 	}
 	return GetSkillVersionList(ctx, sourceSkillId)
 }
@@ -135,31 +165,7 @@ func GetSkillVersionList(ctx *gin.Context, skillId string) (*response.ListResult
 	}, nil
 }
 
-func getAcquiredSourceCustomSkillID(ctx *gin.Context, acquiredSkillId string) (string, error) {
-	if acquiredSkillId == "" {
-		return "", grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, "skillId is required")
-	}
-	skill, err := getAcquiredSkillByID(ctx, acquiredSkillId)
-	if err != nil {
-		return "", err
-	}
-	sourceSkillId := skill.GetSkill().GetSkill().GetSkillId()
-	if sourceSkillId == "" {
-		return "", grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "skill_acquired_source_custom_id_not_available", "acquired skill source custom skill id is empty")
-	}
-	return sourceSkillId, nil
-}
-
 // --- internal ---
-
-func getAcquiredSkillByID(ctx *gin.Context, acquiredSkillId string) (*mcp_service.AcquiredSkill, error) {
-	if acquiredSkillId == "" {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, "skillId is required")
-	}
-	return mcp.AcquiredSkillGet(ctx.Request.Context(), &mcp_service.AcquiredSkillGetReq{
-		AcquiredSkillId: acquiredSkillId,
-	})
-}
 
 func getAcquiredSkillByIDMap(ctx *gin.Context, acquiredSkillIdList []string) (map[string]*mcp_service.AcquiredSkill, error) {
 	filteredAcquiredSkillIdList := make([]string, 0, len(acquiredSkillIdList))
@@ -220,7 +226,7 @@ func toAcquiredSkillDetail(ctx *gin.Context, skill *mcp_service.AcquiredSkill, i
 
 func toCallbackAcquiredSkillDetail(ctx *gin.Context, skill *mcp_service.AcquiredSkill) (*response.CallbackAcquiredSkillDetail, error) {
 	if skill == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_acquired_not_found", "acquired skill not found")
 	}
 	publish := skill.GetSkill()
 	customSkill := publish.GetSkill()

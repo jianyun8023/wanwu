@@ -69,7 +69,7 @@ func DeleteAcquiredSkillConfig(ctx *gin.Context, userId, orgId string, req reque
 
 func CreateBuiltinSkillConfig(ctx *gin.Context, userId, orgId string, req request.SkillConfigReq) error {
 	if _, exist := config.Cfg().AgentSkill(req.SkillId); !exist {
-		return grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
+		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_builtin_not_found", "skill not found in builtin skills")
 	}
 	_, err := mcp.CreateBuiltinSkillVar(ctx.Request.Context(), &mcp_service.CreateBuiltinSkillVarReq{
 		SkillId:  req.SkillId,
@@ -107,11 +107,11 @@ func getOwnedAcquiredSkill(ctx *gin.Context, userId, orgId, acquiredSkillId stri
 		return nil, err
 	}
 	if skill == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_acquired_not_found", "acquired skill not found")
 	}
 	// 验证归属
 	if skill.UserId != userId || skill.OrgId != orgId {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "acquired skill not found or not owned by current user")
+		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_not_owned", "acquired skill not found or not owned by current user")
 	}
 	return skill, nil
 }

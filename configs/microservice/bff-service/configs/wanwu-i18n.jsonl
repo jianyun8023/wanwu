@@ -45,6 +45,13 @@
 {"code":110000,"key":"bff_user_cannot_create_other","langs":{"en":"cannot create user","zh":"无法新增用户"}}
 {"code":110000,"key":"bff_user_cannot_change_status","langs":{"en":"cannot modify user status","zh":"无法修改用户状态"}}
 {"code":110000,"key":"bff_user_cannot_change_password","langs":{"en":"cannot modify user's password","zh":"无法修改密码"}}
+{"code":110000,"key":"bff_skill_acquired_no_permission","langs":{"en":"no permission to access this skill","zh":"当前无权限访问该技能"}}
+{"code":110000,"key":"bff_skill_acquired_source_inaccessible","langs":{"en":"source skill not found","zh":"源技能不存在"}}
+{"code":110000,"key":"bff_skill_acquired_source_id_empty","langs":{"en":"source skill id is empty","zh":"源技能ID为空"}}
+{"code":110000,"key":"bff_skill_builtin_not_found","langs":{"en":"builtin skill not found","zh":"内置技能不存在"}}
+{"code":110000,"key":"bff_skill_custom_not_found","langs":{"en":"custom skill not found","zh":"自定义技能不存在"}}
+{"code":110000,"key":"bff_skill_acquired_not_found","langs":{"en":"acquired skill not found","zh":"已添加技能不存在"}}
+{"code":110000,"key":"bff_skill_not_owned","langs":{"en":"skill not found or not owned by current user","zh":"技能不存在或不属于当前用户"}}
 {"code":110000,"key":"bff_user_batch_import_file","langs":{"zh":"批量创建用户失败: %v"}}
 {"code":0,"key":"------ file upload ------","langs":{}}
 {"code":110000,"key":"bff_file_upload_check","langs":{"en":"file verification failed, please try again later!","zh":"文件校验失败，请稍后重试！(%v)"}}
