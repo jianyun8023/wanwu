@@ -54,6 +54,35 @@ func DeleteAgent(ctx *gin.Context) {
 	gin_util.Response(ctx, nil, err)
 }
 
+// UpdateAgent
+//
+//	@Tags			openapi
+//	@Summary		更新智能体基本信息OpenAPI
+//	@Description	修改智能体的名称、描述、图标等基本信息（不涉及开场白、大模型等高级配置，后者请使用 /agent/config）。通过 assistantUuid 定位智能体。
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.OpenAPIUpdateAgentRequest	true	"请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/agent [put]
+func UpdateAgent(ctx *gin.Context) {
+	var req request.OpenAPIUpdateAgentRequest
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	userID := getUserID(ctx)
+	orgID := getOrgID(ctx)
+	assistantID, err := service.GetAssistantIdByUuid(ctx, req.AssistantUUID)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+		return
+	}
+	_, err = service.AssistantUpdate(ctx, userID, orgID, request.AssistantUpdateReq{
+		AssistantId:    assistantID,
+		AppBriefConfig: req.AppBriefConfig,
+	})
+	gin_util.Response(ctx, nil, err)
+}
+
 // --- 已发布智能体对话管理 ---
 
 // ListAgentConversations
