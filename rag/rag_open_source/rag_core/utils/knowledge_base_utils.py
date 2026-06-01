@@ -778,10 +778,10 @@ def get_knowledge_based_answer(knowledge_base_info, question, rate, top_k, chunk
             sorted_search_list = new_search_list[:top_k]
             sorted_scores = new_scores[:top_k]
 
+        replace_minio_ip(sorted_search_list)
         response_info = rerank_utils.assemble_search_result(question, sorted_scores, sorted_search_list, rate, return_meta,
                                                             prompt_template, default_answer, auto_citation)
 
-        response_info = replace_minio_ip(response_info)
         logger.info('重排结果：' + repr(response_info))
 
         if response_info['code'] != 0:
@@ -905,41 +905,59 @@ def is_valid_string(s):
     return re.match(pattern, s) is not None
 
 
-def replace_minio_ip(rerank_result):
-    if 'data' not in rerank_result:
-        return rerank_result
-    if 'prompt' in rerank_result['data']:
-        # prompt 中的 minio url 更新替换
-        text = rerank_result['data']['prompt']
-        # 正则表达式匹配 https://ip:port/minio/download/api/ 部分
-        pattern = r'http?://[^/]+/minio/download/api/'
-        # 替换文本中的URL
-        replaced_text = re.sub(pattern, REPLACE_MINIO_DOWNLOAD_URL, text)
-        rerank_result['data']['prompt'] = replaced_text
-    if 'searchList' not in rerank_result['data']:
-        return rerank_result
-    for i in range(len(rerank_result['data']['searchList'])):
-        # content中的 minio url 更新替换
-        text = rerank_result['data']['searchList'][i]['snippet']
-        # 正则表达式匹配 https://ip:port/minio/download/api/ 部分
-        pattern = r'http?://[^/]+/minio/download/api/'
-        # 替换文本中的URL
-        replaced_text = re.sub(pattern, REPLACE_MINIO_DOWNLOAD_URL, text)
-        rerank_result['data']['searchList'][i]['snippet'] = replaced_text
-
-        if 'meta_data' not in rerank_result['data']['searchList'][i]:
-            continue
-        if ('bucket_name' not in rerank_result['data']['searchList'][i]['meta_data'] or
-                'object_name' not in rerank_result['data']['searchList'][i]['meta_data']):
-            continue
-        # 获取原始的 bucket_name 和 object_name 去拿取预签名下载链接
-        bucket_name = rerank_result['data']['searchList'][i]['meta_data']['bucket_name']
-        object_name = rerank_result['data']['searchList'][i]['meta_data']['object_name']
-        new_url = minio_utils.craete_download_url(bucket_name, object_name, expire=timedelta(days=1))
-        rerank_result['data']['searchList'][i]['meta_data']['download_link'] = new_url
+def _parse_minio_url(url):
+    """从 MinIO 下载 URL 中解析出 (bucket_name, object_name)，失败返回 (None, None)。"""
+    prefix = REPLACE_MINIO_DOWNLOAD_URL.rstrip('/') + '/'
+    if url.startswith(prefix):
+        # lstrip('/') 处理 api// 双斜杠的情况
+        path = url[len(prefix):].lstrip('/').split('?')[0]
+        parts = path.split('/', 1)
+        if len(parts) == 2 and parts[0]:
+            return parts[0], parts[1]
+    # 兜底：匹配内网 IP 格式，/* 兼容双斜杠
+    m = re.match(r'https?://[^/]+/minio/download/api//*([^/]+)/(.+?)(?:\?.*)?$', url)
+    if m:
+        return m.group(1), m.group(2)
+    return None, None
 
 
-    return rerank_result
+def replace_minio_ip(search_list):
+    """将 search_list 中所有 MinIO URL 替换为预签名 URL（原地修改）。
+    相同的原始 URL 只调用一次 craete_download_url，其余复用缓存结果。
+    应在 assemble_search_result 之前调用，使 prompt 中的 URL 也随 snippet 一并处理。
+    """
+    # 匹配含 /minio/download/api/ 的 URL（内网 IP 或外网地址均可），/* 兼容双斜杠
+    minio_url_re = re.compile(r'https?://[^\s\)"\'>\]]+/minio/download/api//*[^\s\)"\'>\]]*')
+    url_presigned_cache = {}
+
+    def get_presigned(url):
+        if url in url_presigned_cache:
+            return url_presigned_cache[url]
+        bucket, obj = _parse_minio_url(url)
+        if not bucket:
+            url_presigned_cache[url] = url
+            return url
+        new_url = minio_utils.craete_download_url(bucket, obj, expire=timedelta(days=1))
+        result = new_url if new_url else url
+        url_presigned_cache[url] = result
+        return result
+
+    for item in search_list:
+        # snippet：替换文本内嵌的所有 MinIO URL 为预签名 URL
+        item['snippet'] = minio_url_re.sub(lambda m: get_presigned(m.group(0)), item['snippet'])
+
+        # rerank_info 里 type==image 的 file_url / type==text 的 content
+        for rerank_item in item.get('rerank_info', []):
+            if rerank_item.get('type') == 'image' and 'file_url' in rerank_item:
+                rerank_item['file_url'] = get_presigned(rerank_item['file_url'])
+            elif rerank_item.get('type') == 'text' and 'content' in rerank_item:
+                rerank_item['content'] = minio_url_re.sub(lambda m: get_presigned(m.group(0)), rerank_item['content'])
+
+        # meta_data download_link：用规范化 key 走同一缓存
+        meta = item.get('meta_data', {})
+        if 'bucket_name' in meta and 'object_name' in meta:
+            raw = f"{REPLACE_MINIO_DOWNLOAD_URL.rstrip('/')}/{meta['bucket_name']}/{meta['object_name']}"
+            meta['download_link'] = get_presigned(raw)
 
 
 def convert_office_file(file_path, target_dir, target_format):

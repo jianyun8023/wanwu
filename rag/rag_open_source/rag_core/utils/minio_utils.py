@@ -89,10 +89,13 @@ def craete_download_url(bucket_name, object_name, expire=timedelta(days=1)):
             secure=SECURE
         )
         presigned_url = minio_client.presigned_get_object(bucket_name, object_name, expires=expire)
-        # 正则表达式匹配 https://ip:port/minio/download/api/ 部分
-        pattern = r'http?://[^/]+/minio/download/api/'
-        # 替换文本中的URL
-        presigned_url = re.sub(pattern, REPLACE_MINIO_DOWNLOAD_URL, presigned_url)
+        # 将内网 MINIO_ADDRESS 替换为对外暴露的 REPLACE_MINIO_DOWNLOAD_URL
+        presigned_url = re.sub(
+            r'https?://' + re.escape(MINIO_ADDRESS),
+            REPLACE_MINIO_DOWNLOAD_URL.rstrip('/'),
+            presigned_url,
+            count=1
+        )
         logger.info(f"{bucket_name},{object_name},预签名下载链接: {presigned_url}")
         return presigned_url
     except Exception as e:
@@ -179,7 +182,7 @@ def check_files_size(file_urls: List[str], embedding_model_id: str) -> List[bool
     return result
 
 
-def replace_minio_url(context: str, version: str = "private", image_url_prefix: str = "") -> (str, list):
+def replace_minio_url(context: str, image_url_prefix: str = "") -> (str, list):
     """
     提取Markdown中的图片URL，下载到/tmp临时文件，并替换为本地路径
     只处理图片格式：jpg, jpeg, png, gif, bmp, webp, svg
@@ -197,7 +200,7 @@ def replace_minio_url(context: str, version: str = "private", image_url_prefix: 
 
     for match in reversed(matches):
         url = match.group(1)
-        if version != "private" and url.startswith(image_url_prefix):
+        if url.startswith(image_url_prefix):
             ext = Path(url.split('?')[0].lower()).suffix  # 获取文件扩展名
             if ext not in ALLOWED_EXTENSIONS:
                 continue
