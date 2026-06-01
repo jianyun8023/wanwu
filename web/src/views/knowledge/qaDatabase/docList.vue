@@ -15,13 +15,6 @@
     <div class="block table-wrap list-common wrap-fullheight">
       <el-container class="konw_container">
         <el-main class="noPadding">
-          <el-alert
-            :title="title_tips"
-            type="warning"
-            show-icon
-            style="margin-bottom: 10px"
-            v-if="showTips"
-          ></el-alert>
           <el-container>
             <el-header class="classifyTitle">
               <div class="searchInfo">
@@ -117,6 +110,72 @@
               </div>
             </el-header>
             <el-main class="noPadding" v-loading="tableLoading">
+              <el-alert
+                v-if="showTips"
+                :title="title_tips"
+                show-icon
+                style="margin-bottom: 10px"
+                type="warning"
+              ></el-alert>
+              <el-descriptions
+                :column="1"
+                border
+                style="margin-bottom: 10px"
+                title=""
+              >
+                <el-descriptions-item
+                  :label="$t('knowledgeManage.knowledgeName')"
+                  labelStyle="width: 120px"
+                >
+                  {{ knowledgeName }}
+                  <i
+                    v-if="[POWER_TYPE_SYSTEM_ADMIN].includes(permissionType)"
+                    class="el-icon-edit-outline"
+                    style="cursor: pointer"
+                    @click="showEdit"
+                  ></i>
+                </el-descriptions-item>
+                <el-descriptions-item
+                  :label="$t('knowledgeManage.desc')"
+                  labelStyle="width: 120px"
+                >
+                  <span>
+                    {{ description || $t('knowledgeManage.zeroData') }}
+                  </span>
+                  <i
+                    v-if="[POWER_TYPE_SYSTEM_ADMIN].includes(permissionType)"
+                    class="el-icon-edit-outline"
+                    style="cursor: pointer"
+                    @click="showEdit"
+                  ></i>
+                </el-descriptions-item>
+                <el-descriptions-item
+                  label="Embedding"
+                  labelStyle="width: 120px"
+                >
+                  <div class="keyword-tags">
+                    <template v-if="embeddingModel">
+                      {{ embeddingModel.displayName }}
+                      <template
+                        v-if="
+                          embeddingModel.tags && embeddingModel.tags.length > 0
+                        "
+                      >
+                        <el-tag
+                          v-for="(item, index) in embeddingModel.tags"
+                          :key="index"
+                          class="keyword-tag"
+                          color="#E6F0FF"
+                          size="small"
+                        >
+                          {{ item.text }}
+                        </el-tag>
+                      </template>
+                    </template>
+                    <span v-else>{{ $t('knowledgeManage.zeroData') }}</span>
+                  </div>
+                </el-descriptions-item>
+              </el-descriptions>
               <el-table
                 ref="dataTable"
                 :data="tableData"
@@ -359,6 +418,11 @@
     />
     <!-- 导出记录 -->
     <exportRecord ref="exportRecord" />
+    <createKnowledge
+      ref="createKnowledge"
+      :category="QA"
+      @reloadData="reload"
+    />
   </div>
 </template>
 
@@ -397,8 +461,10 @@ import {
   STATUS_FINISHED,
   STATUS_PENDING,
   STATUS_PROCESSING,
+  QA,
 } from '@/views/knowledge/constants';
 import CopyIcon from '@/components/copyIcon.vue';
+import createKnowledge from '@/views/knowledge/component/create.vue';
 
 export default {
   components: {
@@ -412,6 +478,7 @@ export default {
     createQa,
     fileUpload,
     exportRecord,
+    createKnowledge,
   },
   data() {
     return {
@@ -419,6 +486,9 @@ export default {
       showTips: false,
       batchMetaType: 'single',
       knowledgeName: '',
+      description: '',
+      avatar: '',
+      embeddingModel: {},
       loading: false,
       tableLoading: false,
       docQuery: {
@@ -447,6 +517,8 @@ export default {
       selectedDocIds: [],
       qaImportStatus: COMMUNITY_IMPORT_STATUS,
       dropdownGroups: DROPDOWN_GROUPS.slice(0, 2),
+      QA,
+      POWER_TYPE_SYSTEM_ADMIN,
       STATUS_FAILED,
       STATUS_FINISHED,
       STATUS_PENDING,
@@ -504,6 +576,15 @@ export default {
     this.clearTimer();
   },
   methods: {
+    showEdit() {
+      this.$refs.createKnowledge.showDialog({
+        knowledgeId: this.docQuery.knowledgeId,
+        avatar: this.avatar,
+        name: this.knowledgeName,
+        description: this.description,
+        embeddingModelInfo: this.embeddingModel,
+      });
+    },
     handleCommand(command) {
       const actions = {
         exportData: this.exportData,
@@ -791,6 +872,9 @@ export default {
       this.tableData = data;
       if (tableInfo && tableInfo.qaKnowledgeInfo) {
         this.knowledgeName = tableInfo.qaKnowledgeInfo.knowledgeName;
+        this.description = tableInfo.qaKnowledgeInfo.description;
+        this.avatar = tableInfo.qaKnowledgeInfo.avatar;
+        this.embeddingModel = tableInfo.qaKnowledgeInfo.embeddingModel;
       }
     },
     filterCurrentStatus(data) {
@@ -801,6 +885,21 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+.keyword-tags {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.keyword-tag {
+  margin-right: 4px;
+  margin-bottom: 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: $tag_color;
+}
+
 .mataData {
   max-height: 400px;
   overflow-y: auto;

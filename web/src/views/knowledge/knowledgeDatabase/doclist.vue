@@ -532,7 +532,11 @@
     />
     <!-- 导出记录 -->
     <exportRecord ref="exportRecord" />
-    <createKnowledge ref="createKnowledge" @reloadData="reload" :category="0" />
+    <createKnowledge
+      ref="createKnowledge"
+      :category="KNOWLEDGE"
+      @reloadData="reload"
+    />
   </div>
 </template>
 
@@ -573,6 +577,7 @@ import {
   KNOWLEDGE_STATUS_CHECK_FAIL,
   KNOWLEDGE_STATUS_FAIL,
   KNOWLEDGE_GRAPH_STATUS_INITIAL,
+  KNOWLEDGE,
 } from '@/views/knowledge/constants';
 import exportRecord from '@/views/knowledge/qaDatabase/exportRecord.vue';
 import CopyIcon from '@/components/copyIcon.vue';
@@ -636,6 +641,7 @@ export default {
       KNOWLEDGE_GRAPH_STATUS_OPTIONS,
       dropdownGroups: DROPDOWN_GROUPS.slice(0, 1),
       graphDropdownGroups: DROPDOWN_GROUPS.slice(2),
+      KNOWLEDGE,
       INITIAL,
       STATUS_FINISHED,
       STATUS_FAILED,
@@ -662,14 +668,9 @@ export default {
     },
     metaData: {
       handler(val) {
-        if (
-          val.some(item => !item.metaKey || !item.metaValueType) ||
-          !val.length
-        ) {
-          this.isDisabled = true;
-        } else {
-          this.isDisabled = false;
-        }
+        this.isDisabled = !!(
+          val.some(item => !item.metaKey || !item.metaValueType) || !val.length
+        );
       },
     },
   },
@@ -710,8 +711,6 @@ export default {
     this.clearTimer();
   },
   methods: {
-    // 莫删，保证createKnowledge弹窗的调用
-    clearIptValue() {},
     showEdit() {
       this.$refs.createKnowledge.showDialog({
         category: this.category,
