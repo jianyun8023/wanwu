@@ -237,13 +237,12 @@
               />
               <div
                 class="model-select-tips"
-                v-if="editForm.visionsupport === 'support'"
-              >
-                {{
+                v-if="
+                  editForm.visionsupport === 'support' &&
                   modelSelectedInfo.provider === 'YuanJing'
-                    ? $t('agent.form.visionModelTips_yuanJing')
-                    : $t('agent.form.visionModelTips')
-                }}
+                "
+              >
+                {{ $t('agent.form.visionModelTips_yuanJing') }}
               </div>
               <div
                 class="model-select-tips"

@@ -1823,8 +1823,6 @@ export default {
       modelSelect: '模型选择',
       modelSelectConfigTips: '模型参数配置',
       modelSearchPlaceholder: '可输入模型名称搜索',
-      visionModelTips:
-        '*您选择的是图文问答类模型，受模型能力限制，可能会导致工具调用效果欠佳',
       visionModelTips_yuanJing:
         '*您所选的模型暂时无法调用知识库、联网检索及工具',
       functionCallTips:
