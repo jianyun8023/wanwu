@@ -29,23 +29,40 @@ func checkWgaSkillConfig(ctx *gin.Context, userId, orgId string, skillList []*as
 	}
 
 	var customSkillIds []string
+	var acquiredSkillIds []string
 	for _, s := range skillList {
 		switch s.SkillType {
 		case constant.SkillTypeCustom:
 			customSkillIds = append(customSkillIds, s.SkillId)
+		case constant.SkillTypeAcquired:
+			acquiredSkillIds = append(acquiredSkillIds, s.SkillId)
 		default:
 			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("invalid skill type: %s", s.SkillType))
 		}
 	}
 
-	validIds, err := getValidSkillIds(ctx, customSkillIds)
+	// 校验 custom 技能
+	validCustomIds, err := getValidSkillIds(ctx, customSkillIds)
 	if err != nil {
-		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "skill not found")
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "custom skill not found")
+	}
+
+	// 校验 acquired 技能
+	acquiredSkillMap, err := getAcquiredSkillByIDMap(ctx, acquiredSkillIds)
+	if err != nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "acquired skill not found")
 	}
 
 	for _, s := range skillList {
-		if !validIds[s.SkillId] {
-			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("skill not found: %s", s.SkillId))
+		switch s.SkillType {
+		case constant.SkillTypeCustom:
+			if !validCustomIds[s.SkillId] {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("skill not found: %s", s.SkillId))
+			}
+		case constant.SkillTypeAcquired:
+			if _, exists := acquiredSkillMap[s.SkillId]; !exists {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("skill not found: %s", s.SkillId))
+			}
 		}
 	}
 	return nil
@@ -57,19 +74,46 @@ func buildWgaSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId strin
 	}
 
 	var customSkillIds []string
+	var acquiredSkillIds []string
 	for _, s := range skillList {
 		switch s.SkillType {
 		case constant.SkillTypeCustom:
 			customSkillIds = append(customSkillIds, s.SkillId)
+		case constant.SkillTypeAcquired:
+			acquiredSkillIds = append(acquiredSkillIds, s.SkillId)
 		default:
 			return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("invalid skill type: %s", s.SkillType))
 		}
 	}
 
-	resp, err := mcp.GetCustomSkillDetailByIdList(ctx.Request.Context(), &mcp_service.CustomSkillDetailByIdListReq{
-		SkillIds: customSkillIds,
-	})
+	var opts []wga_option.Option
 
+	// 处理 custom 技能
+	if len(customSkillIds) > 0 {
+		customOpts, err := buildCustomSkillOptions(ctx, userId, orgId, threadId, runId, customSkillIds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, customOpts...)
+	}
+
+	// 处理 acquired 技能
+	if len(acquiredSkillIds) > 0 {
+		acquiredOpts, err := buildAcquiredSkillOptions(ctx, userId, orgId, threadId, runId, acquiredSkillIds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, acquiredOpts...)
+	}
+
+	return opts, nil
+}
+
+// buildCustomSkillOptions 构建自定义技能选项
+func buildCustomSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId string, skillIds []string) ([]wga_option.Option, error) {
+	resp, err := mcp.GetCustomSkillDetailByIdList(ctx.Request.Context(), &mcp_service.CustomSkillDetailByIdListReq{
+		SkillIds: skillIds,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -80,24 +124,9 @@ func buildWgaSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId strin
 
 		if s.ObjectPath != "" {
 			// 已发布的 skill：从 minio 下载
-			skillUrl, _ := url.JoinPath("http://", config.Cfg().Minio.Endpoint, s.ObjectPath)
-			b, skillZipName, err := minio_util.DownloadFile(ctx.Request.Context(), skillUrl)
+			skillTempDir, err = downloadAndUnzipSkill(ctx, s.SkillId, s.ObjectPath, threadId, runId)
 			if err != nil {
-				return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to download skill file from %s: %v", skillUrl, err))
-			}
-			skillTempDir = filepath.Join(os.TempDir(), "wga", threadId, runId, "skills", s.SkillId)
-			if err := os.MkdirAll(skillTempDir, 0755); err != nil {
-				return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to create skill temp dir %s: %v", skillTempDir, err))
-			}
-			skillZipPath := filepath.Join(skillTempDir, skillZipName)
-			if err := os.WriteFile(skillZipPath, b, 0644); err != nil {
-				return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to write skill zip %s: %v", skillZipPath, err))
-			}
-			if _, err := util.UnzipDir(ctx.Request.Context(), skillZipPath, skillTempDir); err != nil {
-				return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to unzip skill %s: %v", skillZipPath, err))
-			}
-			if err := util.DeleteFile(skillZipPath); err != nil {
-				log.Warnf("failed to delete skill zip file %s: %v", skillZipPath, err)
+				return nil, err
 			}
 		} else {
 			// 未发布的 skill（草稿）：从 workspace 目录获取
@@ -108,7 +137,6 @@ func buildWgaSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId strin
 			if err := ensureNoSymlink(skillDir); err != nil {
 				return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("custom skill %s contains symlink: %v", s.SkillId, err))
 			}
-			// 直接使用 workspace 目录
 			skillTempDir = skillDir
 		}
 
@@ -120,6 +148,65 @@ func buildWgaSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId strin
 	}
 
 	return opts, nil
+}
+
+// buildAcquiredSkillOptions 构建已添加技能选项
+func buildAcquiredSkillOptions(ctx *gin.Context, userId, orgId, threadId, runId string, skillIds []string) ([]wga_option.Option, error) {
+	acquiredSkillMap, err := getAcquiredSkillByIDMap(ctx, skillIds)
+	if err != nil {
+		return nil, err
+	}
+
+	var opts []wga_option.Option
+	for _, acquiredSkillId := range skillIds {
+		skill, exists := acquiredSkillMap[acquiredSkillId]
+		if !exists {
+			return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("acquired skill not found: %s", acquiredSkillId))
+		}
+
+		publish := skill.GetSkill()
+		if publish == nil || publish.GetObjectPath() == "" {
+			return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("acquired skill has no published package: %s", acquiredSkillId))
+		}
+
+		// 从 minio 下载
+		skillTempDir, err := downloadAndUnzipSkill(ctx, acquiredSkillId, publish.GetObjectPath(), threadId, runId)
+		if err != nil {
+			return nil, err
+		}
+
+		variables, err := getAcquiredSkillVariables(ctx, acquiredSkillId)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, wga_option.WithSkill(wga_option.Skill{Dir: skillTempDir, Variables: getWgaSkillVariables(variables)}))
+	}
+
+	return opts, nil
+}
+
+// downloadAndUnzipSkill 从 minio 下载技能包并解压到临时目录
+func downloadAndUnzipSkill(ctx *gin.Context, skillId, objectPath, threadId, runId string) (string, error) {
+	skillUrl, _ := url.JoinPath("http://", config.Cfg().Minio.Endpoint, objectPath)
+	b, skillZipName, err := minio_util.DownloadFile(ctx.Request.Context(), skillUrl)
+	if err != nil {
+		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to download skill file from %s: %v", skillUrl, err))
+	}
+	skillTempDir := filepath.Join(os.TempDir(), "wga", threadId, runId, "skills", skillId)
+	if err := os.MkdirAll(skillTempDir, 0755); err != nil {
+		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to create skill temp dir %s: %v", skillTempDir, err))
+	}
+	skillZipPath := filepath.Join(skillTempDir, skillZipName)
+	if err := os.WriteFile(skillZipPath, b, 0644); err != nil {
+		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to write skill zip %s: %v", skillZipPath, err))
+	}
+	if _, err := util.UnzipDir(ctx.Request.Context(), skillZipPath, skillTempDir); err != nil {
+		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to unzip skill %s: %v", skillZipPath, err))
+	}
+	if err := util.DeleteFile(skillZipPath); err != nil {
+		log.Warnf("failed to delete skill zip file %s: %v", skillZipPath, err)
+	}
+	return skillTempDir, nil
 }
 
 // getValidSkillIds 批量获取有效的Skill ID映射

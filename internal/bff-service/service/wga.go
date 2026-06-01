@@ -108,7 +108,7 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	for _, item := range req.Skill {
 		skillList = append(skillList, &assistant_service.WgaConfigSkill{
 			SkillId:   item.ID,
-			SkillType: constant.SkillTypeCustom, // 默认自定义技能,
+			SkillType: item.Type,
 		})
 	}
 
@@ -279,18 +279,34 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 	}
 
 	// 过滤存在的 skill
-	var customSkillIds []string
+	var customSkillIds, acquiredSkillIds []string
 	for _, s := range resp.Config.SkillList {
-		customSkillIds = append(customSkillIds, s.SkillId)
+		switch s.SkillType {
+		case constant.SkillTypeCustom:
+			customSkillIds = append(customSkillIds, s.SkillId)
+		case constant.SkillTypeAcquired:
+			acquiredSkillIds = append(acquiredSkillIds, s.SkillId)
+		}
 	}
-	validSkillIds, _ := getValidSkillIds(ctx, customSkillIds)
+	validCustomSkillIds, _ := getValidSkillIds(ctx, customSkillIds)
+	validAcquiredSkillMap, _ := getAcquiredSkillByIDMap(ctx, acquiredSkillIds)
 	var skillItems []*response.GeneralAgentConfigItem
 	for _, s := range resp.Config.SkillList {
-		if validSkillIds[s.SkillId] {
-			skillItems = append(skillItems, &response.GeneralAgentConfigItem{
-				ID:   s.SkillId,
-				Type: s.SkillType,
-			})
+		switch s.SkillType {
+		case constant.SkillTypeCustom:
+			if validCustomSkillIds[s.SkillId] {
+				skillItems = append(skillItems, &response.GeneralAgentConfigItem{
+					ID:   s.SkillId,
+					Type: s.SkillType,
+				})
+			}
+		case constant.SkillTypeAcquired:
+			if _, exists := validAcquiredSkillMap[s.SkillId]; exists {
+				skillItems = append(skillItems, &response.GeneralAgentConfigItem{
+					ID:   s.SkillId,
+					Type: s.SkillType,
+				})
+			}
 		}
 	}
 	if len(skillItems) > 0 {

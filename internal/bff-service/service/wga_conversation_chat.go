@@ -440,12 +440,13 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	skillList := append([]*assistant_service.WgaConfigSkill{}, wgaConfig.SkillList...)
 	skillList = append(skillList, mentionResources.SkillList...)
 	if len(skillList) > 0 {
-		// 去重
+		// 去重（使用 skillId + skillType 作为唯一标识）
 		seen := make(map[string]bool)
 		dedupedList := make([]*assistant_service.WgaConfigSkill, 0, len(skillList))
 		for _, s := range skillList {
-			if !seen[s.SkillId] {
-				seen[s.SkillId] = true
+			key := s.SkillId + ":" + s.SkillType
+			if !seen[key] {
+				seen[key] = true
 				dedupedList = append(dedupedList, s)
 			}
 		}

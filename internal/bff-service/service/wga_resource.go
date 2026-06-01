@@ -350,7 +350,7 @@ func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNam
 		},
 		"skill": func(item *response.GeneralAgentResourceSelectItem) {
 			result.SkillList = append(result.SkillList, &assistant_service.WgaConfigSkill{
-				SkillId: item.ID, SkillType: constant.SkillTypeCustom,
+				SkillId: item.ID, SkillType: item.Type,
 			})
 			result.SkillItems = append(result.SkillItems, item)
 		},
