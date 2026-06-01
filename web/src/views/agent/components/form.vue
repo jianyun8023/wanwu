@@ -237,13 +237,12 @@
               />
               <div
                 class="model-select-tips"
-                v-if="editForm.visionsupport === 'support'"
+                v-if="
+                  editForm.visionsupport === 'support' &&
+                  modelSelectedInfo.model === 'YuanjingVL'
+                "
               >
-                {{
-                  modelSelectedInfo.provider === 'YuanJing'
-                    ? $t('agent.form.visionModelTips_yuanJing')
-                    : $t('agent.form.visionModelTips')
-                }}
+                {{ $t('agent.form.visionModelTips_yuanJing') }}
               </div>
               <div
                 class="model-select-tips"
@@ -1102,9 +1101,9 @@ export default {
       } else {
         this.$delete(this.editForm.modelConfig, 'thinkingEnable');
       }
-      this.setModelInfo(val);
+      this.setModelInfo(val, true);
     },
-    setModelInfo(val) {
+    setModelInfo(val, syncMaxTokens = false) {
       if (!val) return;
       const selectedModel = this.modelOptions.find(
         item => item.modelId === val,
@@ -1113,8 +1112,12 @@ export default {
         this.editForm.modelParams = val;
         this.editForm.visionsupport = selectedModel.config.visionSupport;
         this.editForm.functionCalling = selectedModel.config.functionCalling;
-        const maxTokens = selectedModel.config.maxTokens;
-        this.limitMaxTokens = maxTokens && maxTokens > 0 ? maxTokens : 4096;
+        const maxTokens = Number(selectedModel.config.maxTokens);
+        const limitMaxTokens = maxTokens > 0 ? maxTokens : 4096;
+        this.limitMaxTokens = limitMaxTokens;
+        if (syncMaxTokens) {
+          this.$set(this.editForm.modelConfig, 'maxTokens', limitMaxTokens);
+        }
       } else {
         this.editForm.modelParams = '';
         if (val) this.$message.warning(this.$t('agent.form.modelNotSupport'));
@@ -1557,7 +1560,9 @@ export default {
           })),
         ];
 
-        this.setMaxPicNum(this.editForm.visionConfig.picNum);
+        // 暂时隐藏picNum字段依赖
+        // this.setMaxPicNum(this.editForm.visionConfig.picNum);
+        this.setMaxPicNum(1);
 
         this.$nextTick(() => {
           this.isSettingFromDetail = false;
