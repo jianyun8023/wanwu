@@ -109,6 +109,7 @@ export default {
       selectedIndex: 0,
       sender: null,
       ontologyId: null, // ontology单选
+      tip: '',
     };
   },
   computed: {
@@ -195,15 +196,12 @@ export default {
           };
           const firstEmployee = this.resourceList.dip?.[0];
           if (firstEmployee) {
-            this.sender.showTip({
-              text: '@' + firstEmployee.name,
-              dialogText: '',
-            });
+            this.showTip(firstEmployee.name);
           }
         }
       } else {
         this.sender.closeTip();
-        this.fetchConfigData();
+        await this.fetchConfigData();
       }
     },
   },
@@ -278,7 +276,7 @@ export default {
 
       const { EVENT_COMMON_CHANGE } = XSender.EventSet;
       this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
-        this.inputValue = this.sender.getText();
+        this.inputValue = this.tip + this.sender.getText();
         if (this.showConfigPopover) {
           this.updateMentionPosition();
           this.$nextTick(() => {
@@ -424,11 +422,7 @@ export default {
       this.sender.backspace(-(this.mentionSearchText.length + 1));
 
       if (this.isDIP) {
-        this.sender.closeTip();
-        this.sender.showTip({
-          text: '@' + item.name,
-          dialogText: '',
-        });
+        this.showTip(item.name);
         return;
       }
 
@@ -449,6 +443,16 @@ export default {
         }
         this.ontologyId = item.id;
       }
+    },
+
+    showTip(name) {
+      this.sender.closeTip();
+      this.tip = '@' + name;
+      this.sender.showTip({
+        text: this.tip,
+        dialogText: '',
+      });
+      this.tip += ' ';
     },
 
     clear() {
