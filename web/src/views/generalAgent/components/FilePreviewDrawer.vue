@@ -1,13 +1,9 @@
 <template>
   <transition name="preview-slide">
-    <div v-if="visible" class="preview-panel" :style="mergedPanelStyle">
-      <!-- 左侧拖拽手柄 -->
-      <div class="resize-handle" @mousedown="startResize"></div>
-      <!-- 拖拽时的透明遮罩，防止 iframe 捕获鼠标事件 -->
-      <div v-if="isResizing" class="resize-overlay"></div>
+    <div v-if="visible" class="preview-panel">
       <div class="preview-header">
-        <div class="preview-title" :title="filePath || (file ? file.name : '')">
-          {{ filePath || (file ? file.name : '') }}
+        <div :title="fileName" class="preview-title">
+          {{ fileName }}
         </div>
         <div class="preview-actions">
           <el-button size="small" @click="handleDownload">
@@ -76,7 +72,7 @@
           <div v-else-if="previewType === 'ppt'" class="preview-ppt-wrapper">
             <ppt-preview
               :src="blob"
-              :file-name="file ? file.name : ''"
+              :file-name="fileName"
               @close="handleClose"
             />
           </div>
@@ -169,7 +165,7 @@
           <!-- 不支持的格式 -->
           <div v-else class="preview-unsupported">
             <i class="el-icon-document"></i>
-            <p class="file-name">{{ file ? file.name : '' }}</p>
+            <p class="file-name">{{ fileName }}</p>
             <p class="notice-text">
               {{ $t('generalAgent.filePreview.unsupportedType') }}
             </p>
@@ -200,11 +196,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    file: {
-      type: Object,
-      default: null,
-    },
-    filePath: {
+    // 文件名（用于显示标题、判断类型等）
+    fileName: {
       type: String,
       default: '',
     },
@@ -224,8 +217,6 @@ export default {
   },
   data() {
     return {
-      isResizing: false,
-      panelWidth: null,
       activeSheetIndex: 0,
       // 内部预览状态
       previewType: '',
@@ -237,19 +228,12 @@ export default {
   },
   computed: {
     fileExt() {
-      if (!this.file || !this.file.name) return '';
-      return this.file.name.split('.').pop().toLowerCase();
+      if (!this.fileName) return '';
+      return this.fileName.split('.').pop().toLowerCase();
     },
     fencedCode() {
       if (!this.previewContent) return '';
       return '```' + this.fileExt + '\n' + this.previewContent + '\n```';
-    },
-    mergedPanelStyle() {
-      const style = { ...this.panelStyle };
-      if (this.panelWidth) {
-        style.width = `${this.panelWidth}px`;
-      }
-      return style;
     },
   },
   watch: {
@@ -269,13 +253,10 @@ export default {
       }
     },
   },
-  beforeDestroy() {
-    this.stopResize();
-  },
   methods: {
     // 处理 blob 数据
     async processBlob() {
-      if (!this.blob || !this.file) {
+      if (!this.blob || !this.fileName) {
         return;
       }
 
@@ -288,7 +269,7 @@ export default {
       this.activeSheetIndex = 0;
 
       try {
-        this.previewType = getFileType(this.file.name);
+        this.previewType = getFileType(this.fileName);
 
         if (
           ['image', 'video', 'audio', 'pdf', 'html'].includes(this.previewType)
@@ -348,42 +329,11 @@ export default {
         URL.revokeObjectURL(this.previewBlobUrl);
         this.previewBlobUrl = '';
       }
-      this.stopResize();
     },
 
     handleClose() {
       this.$emit('update:visible', false);
       this.$emit('close');
-    },
-
-    startResize(e) {
-      e.preventDefault();
-      this.isResizing = true;
-      document.addEventListener('mousemove', this.doResize);
-      document.addEventListener('mouseup', this.stopResize);
-      document.body.style.cursor = 'ew-resize';
-      document.body.style.userSelect = 'none';
-    },
-
-    doResize(e) {
-      if (!this.isResizing) return;
-      const panelEl = this.$el;
-      if (!panelEl) return;
-      const rect = panelEl.getBoundingClientRect();
-      // 面板右边缘固定，宽度 = 右边缘 - 鼠标位置
-      const newWidth = rect.right - e.clientX;
-      const minWidth = 500;
-      // 最大宽度不超过视口减去边距
-      const maxWidth = window.innerWidth - 100;
-      this.panelWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-    },
-
-    stopResize() {
-      this.isResizing = false;
-      document.removeEventListener('mousemove', this.doResize);
-      document.removeEventListener('mouseup', this.stopResize);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     },
 
     handleError() {
@@ -435,12 +385,12 @@ export default {
 
     // 下载文件
     async handleDownload() {
-      if (!this.file || !this.blob) {
+      if (!this.fileName || !this.blob) {
         return;
       }
 
       try {
-        resDownloadFile(this.blob, this.file.name);
+        resDownloadFile(this.blob, this.fileName);
         this.$message.success(
           this.$t('generalAgent.workspace.downloadSuccess'),
         );
@@ -470,37 +420,6 @@ export default {
   display: flex;
   flex-direction: column;
   z-index: 10;
-}
-
-.resize-handle {
-  position: absolute;
-  left: -3px; /* 拖拽手柄稍微偏移，使其覆盖在边框上 */
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  cursor: ew-resize;
-  background: transparent;
-  border-radius: 12px 0 0 12px;
-  transition: background 0.2s;
-  z-index: 10;
-}
-
-.resize-handle:hover {
-  background: rgba(16, 163, 127, 0.3);
-}
-
-.resize-handle:active {
-  background: rgba(16, 163, 127, 0.5);
-}
-
-.resize-overlay {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
-  cursor: ew-resize;
 }
 
 .preview-header {
