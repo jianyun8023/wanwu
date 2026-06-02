@@ -40,7 +40,6 @@
 │  │   ├─ AgentTypeSequential → newSequentialAgent() → 组合智能体                  │ │
 │  │   ├─ AgentTypeLoop       → newLoopAgent()       → 组合智能体                  │ │
 │  │   ├─ AgentTypeParallel   → newParallelAgent()   → 组合智能体                  │ │
-│  │   ├─ AgentTypeDeep       → newDeepAgent()       → 深度思考智能体              │ │
 │  │   └─ AgentTypeSupervisor → newSupervisorAgent() → 监督者智能体                │ │
 │  └───────────────────────────────────────────────────────────────────────────────┘ │
 │                                       │                                             │
@@ -482,7 +481,6 @@ agent.yaml  ──────────────────▶   config.A
 | sequential | 顺序执行多个子智能体 |
 | loop | 循环执行子智能体 |
 | parallel | 并行执行多个子智能体 |
-| deep | 深度思考智能体，递归分解任务 |
 | supervisor | 监督者模式，由主智能体协调子智能体 |
 
 ## 使用

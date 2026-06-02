@@ -8,7 +8,6 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/config"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/option"
 	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/adk/prebuilt/deep"
 	"github.com/cloudwego/eino/adk/prebuilt/supervisor"
 	"github.com/cloudwego/eino/schema"
 )
@@ -30,8 +29,6 @@ func newAgent(ctx context.Context, cfg *config.Agent, options option.Options) (a
 		return newLoopAgent(ctx, cfg, options)
 	case config.AgentTypeParallel:
 		return newParallelAgent(ctx, cfg, options)
-	case config.AgentTypeDeep:
-		return newDeepAgent(ctx, cfg, options)
 	case config.AgentTypeSupervisor:
 		return newSupervisorAgent(ctx, cfg, options)
 	default:
@@ -136,40 +133,6 @@ func newParallelAgent(ctx context.Context, cfg *config.Agent, options option.Opt
 		Name:        cfg.ID,
 		Description: cfg.Description,
 		SubAgents:   subAgents,
-	})
-}
-
-func newDeepAgent(ctx context.Context, cfg *config.Agent, options option.Options) (adk.ResumableAgent, error) {
-	instruction, err := options.FormatInstruction(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	model, err := options.ToChatModel(ctx)
-	if err != nil {
-		return nil, err
-	}
-	tools, err := options.ToToolsConfig(cfg.ToolCategories)
-	if err != nil {
-		return nil, err
-	}
-	var subAgents []adk.Agent
-	for _, subCfg := range cfg.SubAgents {
-		subAgent, err := newAgent(ctx, subCfg, options)
-		if err != nil {
-			return nil, err
-		}
-		subAgents = append(subAgents, subAgent)
-	}
-	return deep.New(ctx, &deep.Config{
-		Name:        cfg.ID,
-		Description: cfg.Description,
-		Instruction: instruction,
-		ChatModel:   model,
-		ToolsConfig: tools,
-		SubAgents:   subAgents,
-
-		MaxIteration:      cfg.Configure.MaxIterations,
-		WithoutWriteTodos: true,
 	})
 }
 

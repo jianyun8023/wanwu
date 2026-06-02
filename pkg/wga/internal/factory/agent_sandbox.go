@@ -34,10 +34,7 @@ func (a *sandboxAgent) Description(_ context.Context) string {
 }
 
 func (a *sandboxAgent) Run(ctx context.Context, agentInput *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
-	messages := make([]adk.Message, 0, len(agentInput.Messages)+len(a.options.Messages))
-	messages = append(messages, a.options.Messages...)
-	messages = append(messages, agentInput.Messages...)
-	sandboxOpts, err := a.buildSandboxOpts(ctx, messages)
+	sandboxOpts, err := a.buildSandboxOpts(ctx, agentInput.Messages)
 	if err != nil {
 		return wga_sandbox_converter.ConvertToEinoIteratorWithError(ctx, wga_sandbox_option.RunnerTypeOpencode, err)
 	}
