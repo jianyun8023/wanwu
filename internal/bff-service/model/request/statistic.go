@@ -52,7 +52,7 @@ type ModelStatisticReq struct {
 	StartDate string   `json:"startDate" validate:"required"`
 	EndDate   string   `json:"endDate" validate:"required"`
 	Models    []string `json:"models"`
-	ModelType string   `json:"modelType" validate:"required"`
+	ModelType string   `json:"modelType"`
 }
 
 func (r *ModelStatisticReq) Check() error { return nil }

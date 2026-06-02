@@ -313,8 +313,8 @@ func getModelStatisticList(ctx context.Context, db *gorm.DB, orgIds, userIds []s
 	items := make([]ModelStatisticItem, 0, len(stats))
 	for _, stat := range stats {
 		failureRate := calculateFailureRate(stat.CallFailure, stat.CallCount)
-		avgCosts := calculateAvg(stat.Costs, calculateSuccessCount(stat.NonStreamCount, stat.NonStreamFailure))
-		avgFirstTokenLatency := calculateAvg(stat.FirstTokenLatency, calculateSuccessCount(stat.StreamCount, stat.StreamFailure))
+		avgCosts := calculateAvg(stat.Costs, int32(stat.NonStreamCount-stat.NonStreamFailure))
+		avgFirstTokenLatency := calculateAvg(stat.FirstTokenLatency, int32(stat.StreamCount-stat.StreamFailure))
 		items = append(items, ModelStatisticItem{
 			ModelId:              stat.ModelID,
 			Model:                stat.Model,
@@ -382,15 +382,17 @@ func modelStatsByDateRange(ctx context.Context, db *gorm.DB, orgIds, userIds []s
 			"SUM(call_count) as call_count, " +
 			"SUM(call_failure) as call_failure, " +
 			"SUM(stream_count) as stream_count, " +
+			"SUM(non_stream_failure) as non_stream_failure, " +
 			"SUM(non_stream_count) as non_stream_count, " +
+			"SUM(stream_failure) as stream_failure, " +
 			"SUM(first_token_latency) as first_token_latency, " +
 			"SUM(costs) as costs").
 		First(&stat).Error; err != nil {
 		return nil, fmt.Errorf("model stat [%v, %v] err: %v", startDate, endDate, err)
 	}
 
-	avgCosts := calculateAvg(stat.Costs, calculateSuccessCount(stat.NonStreamCount, stat.NonStreamFailure))
-	avgFirstTokenLatency := calculateAvg(stat.FirstTokenLatency, calculateSuccessCount(stat.StreamCount, stat.StreamFailure))
+	avgCosts := calculateAvg(stat.Costs, int32(stat.NonStreamCount-stat.NonStreamFailure))
+	avgFirstTokenLatency := calculateAvg(stat.FirstTokenLatency, int32(stat.StreamCount-stat.StreamFailure))
 
 	return &ModelStatisticOverview{
 		CallCount:            StatisticOverviewItem{Value: float32(stat.CallCount)},

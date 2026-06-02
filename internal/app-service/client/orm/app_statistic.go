@@ -327,8 +327,8 @@ func getAppStatisticList(ctx context.Context, db *gorm.DB, orgIds, userIds []str
 	items := make([]AppStatisticItem, 0, len(stats))
 	for _, stat := range stats {
 		failureRate := calculateFailureRate(stat.CallFailure, stat.CallCount)
-		avgStreamCosts := calculateAvg(stat.StreamCosts, calculateSuccessCount(stat.StreamCount, stat.StreamFailure))
-		avgNonStreamCosts := calculateAvg(stat.NonStreamCosts, calculateSuccessCount(stat.NonStreamCount, stat.NonStreamFailure))
+		avgStreamCosts := calculateAvg(stat.StreamCosts, int32(stat.StreamCount-stat.StreamFailure))
+		avgNonStreamCosts := calculateAvg(stat.NonStreamCosts, int32(stat.NonStreamCount-stat.NonStreamFailure))
 		items = append(items, AppStatisticItem{
 			AppId:             stat.AppID,
 			AppType:           stat.AppType,
@@ -398,8 +398,8 @@ func appStatsByDateRange(ctx context.Context, db *gorm.DB, orgIds, userIds []str
 		return nil, fmt.Errorf("app stat [%v, %v] err: %v", startDate, endDate, err)
 	}
 
-	avgStreamCosts := calculateAvg(stat.StreamCosts, calculateSuccessCount(stat.StreamCount, stat.StreamFailure))
-	avgNonStreamCosts := calculateAvg(stat.NonStreamCosts, calculateSuccessCount(stat.NonStreamCount, stat.NonStreamFailure))
+	avgStreamCosts := calculateAvg(stat.StreamCosts, int32(stat.StreamCount-stat.StreamFailure))
+	avgNonStreamCosts := calculateAvg(stat.NonStreamCosts, int32(stat.NonStreamCount-stat.NonStreamFailure))
 
 	return &AppStatisticOverview{
 		CallCount:         StatisticOverviewItem{Value: float32(stat.CallCount)},
