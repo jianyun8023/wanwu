@@ -21,7 +21,7 @@
             <i class="el-icon-link"></i>
             {{ $t('generalAgent.filePreview.newWindow') }}
           </el-button>
-          <button class="close-btn" @click="handleClose">
+          <button v-if="showClose" class="close-btn" @click="handleClose">
             <i class="el-icon-close"></i>
           </button>
         </div>
@@ -213,6 +213,11 @@ export default {
     panelStyle: {
       type: Object,
       default: () => ({}),
+    },
+    // 是否显示关闭按钮
+    showClose: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

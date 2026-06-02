@@ -13,10 +13,6 @@
       <el-button size="small" @click="loadPpt">
         {{ $t('common.button.retry') }}
       </el-button>
-      <el-button size="small" @click="handleDownload">
-        <i class="el-icon-download"></i>
-        {{ $t('generalAgent.pptPreview.downloadFile') }}
-      </el-button>
     </div>
 
     <!-- PPT 预览内容 -->
@@ -169,10 +165,6 @@
     <div v-else class="ppt-empty">
       <i class="el-icon-document"></i>
       <p>{{ $t('generalAgent.pptPreview.parseFailed') }}</p>
-      <el-button type="primary" @click="handleDownload">
-        <i class="el-icon-download"></i>
-        {{ $t('generalAgent.pptPreview.downloadFile') }}
-      </el-button>
     </div>
   </div>
 </template>
@@ -526,10 +518,6 @@ export default {
         return { backgroundColor: slide.fill.value };
       }
       return {};
-    },
-
-    handleDownload() {
-      this.$emit('download');
     },
 
     // 处理内容，修复字体等问题

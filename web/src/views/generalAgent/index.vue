@@ -392,8 +392,7 @@
           <file-preview-drawer
             v-if="previewVisible"
             :blob="previewBlob"
-            :file="previewFile"
-            :file-path="previewFilePath"
+            :file-name="previewFileName"
             :loading="previewLoading"
             :visible.sync="previewVisible"
             @close="previewVisible = false"
@@ -531,8 +530,7 @@ export default {
       // 文件预览
       previewVisible: false,
       previewLoading: false,
-      previewFile: null,
-      previewFilePath: '',
+      previewFileName: '',
       previewBlob: null, // 只存储 blob
       workspaceRect: null,
       resizeObserver: null,
@@ -1543,8 +1541,7 @@ export default {
     async handlePreviewFile(data) {
       const { file, filePath, threadId, runId } = data;
 
-      this.previewFile = file;
-      this.previewFilePath = filePath;
+      this.previewFileName = file.name;
       this.previewVisible = true;
       this.previewLoading = true;
       this.previewBlob = null;
