@@ -14,12 +14,6 @@ export default {
 </script>
 
 <style lang="scss">
-@font-face {
-  font-family: NotoSansSC;
-  src: url(@/assets/fonts/NotoSansSC_VariableFont.ttf) format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
 * {
   margin: 0;
   padding: 0;
@@ -34,7 +28,6 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: NotoSansSC;
 }
 
 /*优化弹窗出现表格左移问题*/
