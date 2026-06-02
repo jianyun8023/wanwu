@@ -39,14 +39,6 @@ func calculateAvg(totalCosts int64, successCount int32) float32 {
 	return float32(totalCosts) / float32(successCount)
 }
 
-func calculateSuccessCount(totalCount, failureCount int32) int32 {
-	result := totalCount - failureCount
-	if result < 0 {
-		return 0
-	}
-	return result
-}
-
 type ChartLineValueProvider[T any] func(item T) map[string]float32
 
 func buildChartLines[T any](stats []T, dates []string, getDate func(T) string, getValues ChartLineValueProvider[T], lineNames []string) []StatisticChartLine {

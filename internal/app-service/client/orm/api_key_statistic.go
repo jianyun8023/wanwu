@@ -381,14 +381,8 @@ func apiKeyStatsByDateRange(ctx context.Context, db *gorm.DB, orgIds, userIds []
 		return nil, fmt.Errorf("api key stat date range err: %v", err)
 	}
 	// Compute averages for the overview fields
-	var avgStreamCosts float32 = 0
-	var avgNonStreamCosts float32 = 0
-	if row.StreamCount > 0 {
-		avgStreamCosts = float32(row.StreamCosts) / float32(row.StreamCount)
-	}
-	if row.NonStreamCount > 0 {
-		avgNonStreamCosts = float32(row.NonStreamCosts) / float32(row.NonStreamCount)
-	}
+	avgStreamCosts := calculateAvg(row.StreamCosts, int32(row.StreamCount-row.StreamFailure))
+	avgNonStreamCosts := calculateAvg(row.NonStreamCosts, int32(row.NonStreamCount-row.NonStreamFailure))
 	overview := &APIKeyStatisticOverview{
 		CallCount:         APIKeyStatisticOverviewItem{Value: float32(row.CallCount)},
 		CallFailure:       APIKeyStatisticOverviewItem{Value: float32(row.CallFailure)},
@@ -475,14 +469,8 @@ func getAPIKeyStatisticList(ctx context.Context, db *gorm.DB, orgIds, userIds []
 	for _, s := range stats {
 		callCount := s.CallCount
 		callFailure := s.CallFailure
-		avgStreamCosts := float32(0)
-		avgNonStreamCosts := float32(0)
-		if s.StreamCount > 0 {
-			avgStreamCosts = float32(s.StreamCosts) / float32(s.StreamCount)
-		}
-		if s.NonStreamCount > 0 {
-			avgNonStreamCosts = float32(s.NonStreamCosts) / float32(s.NonStreamCount)
-		}
+		avgStreamCosts := calculateAvg(s.StreamCosts, int32(s.StreamCount-s.StreamFailure))
+		avgNonStreamCosts := calculateAvg(s.NonStreamCosts, int32(s.NonStreamCount-s.NonStreamFailure))
 		items = append(items, APIKeyStatisticItem{
 			APIKeyID:          s.APIKeyID,
 			MethodPath:        s.MethodPath,
