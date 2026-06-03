@@ -76,7 +76,7 @@ export default {
     templateSquare: '模板广场',
     apiKey: 'API Key 管理',
     mcpService: 'MCP服务',
-    tool: '工具',
+    tool: '插件工具',
     prompt: '提示词',
     mcp: 'MCP广场',
     safetyGuard: '安全护栏',
