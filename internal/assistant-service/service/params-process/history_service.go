@@ -30,7 +30,7 @@ func (k *HistoryProcess) Prepare(agent *AgentInfo, prepareParams *AgentPreparePa
 	if userQueryParams == nil || len(userQueryParams.ConversationId) == 0 {
 		return nil
 	}
-	maxHistory := buildMaxHistory(agent.Assistant)
+	maxHistory := BuildMaxHistory(agent.Assistant)
 	if maxHistory == 0 {
 		return nil
 	}
@@ -86,7 +86,7 @@ func buildConversationResp(response string, respList []*model.ConversationRespon
 	return retBuilder.String()
 }
 
-func buildMaxHistory(agent *model.Assistant) int {
+func BuildMaxHistory(agent *model.Assistant) int {
 	var maxHistory = config.DefaultMaxHistoryLength
 	memoryConfigStr := agent.MemoryConfig
 	if len(memoryConfigStr) > 0 {

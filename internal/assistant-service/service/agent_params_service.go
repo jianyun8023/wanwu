@@ -15,10 +15,6 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/util"
 )
 
-const (
-	maxHistory = 5
-)
-
 type AgentChatParamsBuilder struct {
 	postProcessList []params_process.ServiceType
 	agent           *params_process.AgentInfo
@@ -78,7 +74,7 @@ func (a *AgentChatParamsBuilder) ModelParams() *AgentChatParamsBuilder {
 		return a
 	}
 	params.ModelId = modelConfig.ModelId
-	params.MaxHistory = maxHistory
+	params.MaxHistory = int32(params_process.BuildMaxHistory(assistant.Assistant))
 	_, modelParams, _ := mp.ToModelParams(modelConfig.Provider, modelConfig.ModelType, modelConfig.Config)
 	buildModelParams(modelParams, params)
 

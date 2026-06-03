@@ -216,7 +216,7 @@ func (sa *DocUrlRespSafeArray) Len() int {
 
 // RagImportDoc 导入具体文档
 func RagImportDoc(ctx context.Context, ragImportDocParams *RagImportDocParams) error {
-	return mq.SendMessage(&RagOperationParams{
+	return mq.SendMessage(ctx, &RagOperationParams{
 		Operation: "add",
 		Type:      "doc",
 		Doc:       ragImportDocParams,
@@ -225,7 +225,7 @@ func RagImportDoc(ctx context.Context, ragImportDocParams *RagImportDocParams) e
 
 // RagBuildKnowledgeGraph 构建知识库图谱
 func RagBuildKnowledgeGraph(ctx context.Context, ragImportDocParams *RagImportDocParams) error {
-	return mq.SendMessage(&RagOperationParams{
+	return mq.SendMessage(ctx, &RagOperationParams{
 		Operation: "add",
 		Type:      "doc",
 		Doc:       ragImportDocParams,
