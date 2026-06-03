@@ -39,7 +39,7 @@ func (s *Server) Start(ctx context.Context) error {
 	// 使用 trace_util 创建 gRPC Server（自动集成追踪和 recovery）
 	s.serv = trace_util.NewGrpcTracerServer(
 		[]grpc.UnaryServerInterceptor{
-			loggingUnaryInterceptor(),
+			trace_util.LoggingUnaryGRPC(),
 		},
 		nil,
 	)
@@ -64,27 +64,6 @@ func (s *Server) Start(ctx context.Context) error {
 
 	log.Infof("start grpc server at: %s", s.cfg.Server.GrpcEndpoint)
 	return nil
-}
-
-// loggingUnaryInterceptor 日志拦截器，记录 TraceID
-func loggingUnaryInterceptor() grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		startTime := time.Now()
-		traceID := trace_util.GetTraceID(ctx)
-
-		log.Infof("[TraceID: %s] gRPC %s | Start", traceID, info.FullMethod)
-
-		resp, err := handler(ctx, req)
-
-		duration := time.Since(startTime)
-		if err != nil {
-			log.Errorf("[TraceID: %s] gRPC %s | Error: %v | Duration: %s", traceID, info.FullMethod, err, duration)
-		} else {
-			log.Infof("[TraceID: %s] gRPC %s | Duration: %s", traceID, info.FullMethod, duration)
-		}
-
-		return resp, err
-	}
 }
 
 func (s *Server) Stop(ctx context.Context) {

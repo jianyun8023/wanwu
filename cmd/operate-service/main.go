@@ -8,6 +8,9 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
+
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 
 	"github.com/UnicomAI/wanwu/internal/operate-service/client/orm"
 	"github.com/UnicomAI/wanwu/internal/operate-service/config"
@@ -53,6 +56,11 @@ func main() {
 		log.Fatalf("init log err: %v", err)
 	}
 
+	// init tracer
+	if err := trace_util.InitTracer("operate-service"); err != nil {
+		log.Fatalf("init tracer err: %v", err)
+	}
+
 	db, err := db.New(config.Cfg().DB)
 	if err != nil {
 		log.Fatalf("init db err: %v", err)
@@ -74,6 +82,12 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, os.Interrupt, syscall.SIGTERM)
 	<-sc
+
+	// flush trace spans
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	trace_util.ShutdownTracer(shutdownCtx)
+
 	s.Stop(ctx)
 }
 
