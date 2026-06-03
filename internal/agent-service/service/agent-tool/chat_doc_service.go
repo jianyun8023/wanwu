@@ -3,6 +3,7 @@ package agent_tool
 import (
 	"context"
 	"encoding/json"
+	tokenizer_service "github.com/UnicomAI/wanwu/internal/agent-service/service/tokenizer-service"
 	"time"
 
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/response"
@@ -13,10 +14,6 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
-)
-
-const (
-	limitTokenRate = 0.7
 )
 
 type ChatDocParams struct {
@@ -84,7 +81,7 @@ func buildChatDocToolInfo() *schema.ToolInfo {
 func buildChatDocParams(argumentsInJSON string, chatInfo *service_model.AgentChatInfo) *ChatDocParams {
 	var chatDocParams = &ChatDocParams{}
 	_ = json.Unmarshal([]byte(argumentsInJSON), chatDocParams)
-	chatDocParams.MaxToken = int(float64(chatInfo.ModelInfo.Config.ContextSize) * limitTokenRate)
+	chatDocParams.MaxToken = tokenizer_service.TokenLimit(chatInfo)
 	return chatDocParams
 }
 

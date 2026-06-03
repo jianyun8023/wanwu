@@ -2,10 +2,11 @@ package local_agent
 
 import (
 	"context"
-
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
 	agent_message_flow "github.com/UnicomAI/wanwu/internal/agent-service/service/agent-message-flow"
+	message_compact "github.com/UnicomAI/wanwu/internal/agent-service/service/agent-message-flow/message-compact"
 	service_model "github.com/UnicomAI/wanwu/internal/agent-service/service/service-model"
+	tokenizer_service "github.com/UnicomAI/wanwu/internal/agent-service/service/tokenizer-service"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/compose"
@@ -39,11 +40,14 @@ func (a *ChatAgent) BuildAgentInput(ctx context.Context, req *request.AgentChatP
 	if err != nil {
 		return nil, err
 	}
-	createMessages = append(createMessages, messages...)
-	//3.知识库信息记录
+	//createMessages = append(createMessages, messages...)
+	//3.压缩合并历史消息
+	createMessages = message_compact.Compact(createMessages, messages, tokenizer_service.TokenLimit(agentChatInfo))
+	//4.知识库信息记录
 	if a.ChatContext != nil {
 		a.ChatContext.KnowledgeHitData = agentChatContext.KnowledgeHitData
 	}
+
 	return &adk.AgentInput{
 		Messages:        createMessages,
 		EnableStreaming: agentInput.EnableStreaming,
