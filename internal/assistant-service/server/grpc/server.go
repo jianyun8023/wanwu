@@ -8,7 +8,6 @@ import (
 	"github.com/UnicomAI/wanwu/internal/assistant-service/client"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/config"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/server/grpc/assistant"
-	"github.com/UnicomAI/wanwu/internal/assistant-service/server/grpc/interceptor"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	"google.golang.org/grpc"
@@ -42,7 +41,7 @@ func (s *Server) Start() error {
 	log.Infof("init service success")
 
 	// init
-	s.serv = trace_util.NewGrpcTracerServer([]grpc.UnaryServerInterceptor{interceptor.LoggingUnaryGRPC()}, []grpc.StreamServerInterceptor{interceptor.LoggingStreamGRPC()})
+	s.serv = trace_util.NewGrpcTracerServer([]grpc.UnaryServerInterceptor{trace_util.LoggingUnaryGRPC()}, []grpc.StreamServerInterceptor{trace_util.LoggingStreamGRPC()})
 
 	healthcheck := health.NewServer()
 	healthpb.RegisterHealthServer(s.serv, healthcheck)

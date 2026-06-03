@@ -12,6 +12,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/mcp-service/config"
 	"github.com/UnicomAI/wanwu/internal/mcp-service/server/grpc/mcp"
 	"github.com/UnicomAI/wanwu/pkg/log"
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -38,6 +39,9 @@ func (s *Server) Start(ctx context.Context) error {
 	if s.serv != nil {
 		return nil
 	}
+
+	// init
+	s.serv = trace_util.NewGrpcTracerServer([]grpc.UnaryServerInterceptor{trace_util.LoggingUnaryGRPC()}, []grpc.StreamServerInterceptor{trace_util.LoggingStreamGRPC()})
 
 	// 初始化微服务
 	if err := mcp.StartService(); err != nil {
