@@ -810,7 +810,7 @@ export default {
           } else {
             this.createKnowledge();
           }
-          this.$parent.clearIptValue();
+          this.$parent?.clearIptValue();
         } else {
           return false;
         }

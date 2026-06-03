@@ -166,7 +166,7 @@
               />
             </div>
             <div class="welcome-title">
-              {{ $t('generalAgent.header.welcomeTitle') }}
+              {{ welcomeText || $t('generalAgent.header.welcomeTitle') }}
             </div>
           </div>
 
@@ -280,7 +280,7 @@
               </div>
               <div class="toolbar-right">
                 <GAFileUpload
-                  :fileTypeArr="['doc/*', 'md', 'image/*']"
+                  :fileTypeArr="['doc/*', 'image/*', 'audio/*']"
                   type="wga"
                   @setFileId="handleSetFileId"
                 >
@@ -392,8 +392,7 @@
           <file-preview-drawer
             v-if="previewVisible"
             :blob="previewBlob"
-            :file="previewFile"
-            :file-path="previewFilePath"
+            :file-name="previewFileName"
             :loading="previewLoading"
             :visible.sync="previewVisible"
             @close="previewVisible = false"
@@ -531,8 +530,7 @@ export default {
       // 文件预览
       previewVisible: false,
       previewLoading: false,
-      previewFile: null,
-      previewFilePath: '',
+      previewFileName: '',
       previewBlob: null, // 只存储 blob
       workspaceRect: null,
       resizeObserver: null,
@@ -548,7 +546,10 @@ export default {
     ...mapGetters('user', ['commonInfo']),
 
     assistantAvatar() {
-      return avatarSrc(this.commonInfo?.data?.tab?.logo?.path);
+      return avatarSrc(this.commonInfo?.data?.generalAgent?.logo?.path);
+    },
+    welcomeText() {
+      return this.commonInfo?.data?.generalAgent?.welcomeText;
     },
 
     currentWorkspaceTree() {
@@ -1543,8 +1544,7 @@ export default {
     async handlePreviewFile(data) {
       const { file, filePath, threadId, runId } = data;
 
-      this.previewFile = file;
-      this.previewFilePath = filePath;
+      this.previewFileName = file.name;
       this.previewVisible = true;
       this.previewLoading = true;
       this.previewBlob = null;
