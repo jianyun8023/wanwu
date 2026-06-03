@@ -27,7 +27,7 @@
     "@vue-office/docx": "^1.6.3",
     "@vue-office/excel": "^1.7.14",
     "@vue-office/pptx": "^1.0.1",
-    "axios": "^1.4.0",
+    "axios": "^1.16.1",
     "core-js": "^3.49.0",
     "crypto-js": "^4.2.0",
     "echarts": "^5.4.3",
