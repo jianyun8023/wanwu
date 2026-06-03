@@ -68,3 +68,23 @@ func UploadCustomHome(ctx *gin.Context) {
 	err := service.UploadCustomHome(ctx, getUserID(ctx), getOrgID(ctx), config.Cfg().CustomInfo.DefaultMode, &req)
 	gin_util.Response(ctx, nil, err)
 }
+
+// UploadCustomGeneralAgent
+//
+//	@Tags			setting
+//	@Summary		通用智能体自定义配置
+//	@Description	配置通用智能体图标
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.CustomGeneralAgentConfig	true	"通用智能体配置请求参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/custom/general-agent [post]
+func UploadCustomGeneralAgent(ctx *gin.Context) {
+	var req request.CustomGeneralAgentConfig
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.UploadCustomGeneralAgent(ctx, getUserID(ctx), getOrgID(ctx), config.Cfg().CustomInfo.DefaultMode, &req)
+	gin_util.Response(ctx, nil, err)
+}

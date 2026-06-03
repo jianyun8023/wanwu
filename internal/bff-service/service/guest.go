@@ -81,6 +81,10 @@ func GetLogoCustomInfo(ctx *gin.Context, mode string) (response.LogoCustomInfo, 
 				ModelIcon:    config.Cfg().DefaultIcon.ModelIcon,
 			},
 			UserPhoneRequired: config.Cfg().CustomInfo.UserPhoneRequired != 0,
+			GeneralAgent: response.CustomGeneralAgent{
+				Logo:        request.Avatar{Path: mode.GeneralAgent.LogoPath},
+				WelcomeText: gin_util.I18nKey(ctx, mode.GeneralAgent.WelcomeText),
+			},
 		}
 		break
 	}
@@ -114,6 +118,15 @@ func GetLogoCustomInfo(ctx *gin.Context, mode string) (response.LogoCustomInfo, 
 	}
 	if custom.Home.HomeBgColor != "" {
 		ret.Home.BackgroundColor = custom.Home.HomeBgColor
+	}
+	if custom.GeneralAgent != nil && custom.GeneralAgent.GeneralAgentIcon != "" {
+		ret.GeneralAgent.Logo = cacheCustomAvatar(custom.GeneralAgent.GeneralAgentIcon)
+	}
+	if custom.GeneralAgent != nil && custom.GeneralAgent.GeneralAgentWelcome != "" {
+		ret.GeneralAgent.WelcomeText = custom.GeneralAgent.GeneralAgentWelcome
+	}
+	if custom.GeneralAgent != nil && custom.GeneralAgent.GeneralAgentMenuName != "" {
+		ret.GeneralAgent.MenuName = custom.GeneralAgent.GeneralAgentMenuName
 	}
 	return ret, nil
 }

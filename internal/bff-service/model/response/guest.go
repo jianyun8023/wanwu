@@ -37,6 +37,7 @@ type LogoCustomInfo struct {
 	LoginEmail        CustomLoginEmail    `json:"loginEmail"`        // 邮箱登录信息
 	DefaultIcon       CustomDefaultIcon   `json:"defaultIcon"`       // 应用默认图片
 	UserPhoneRequired bool                `json:"userPhoneRequired"` // 是否需要手机号
+	GeneralAgent      CustomGeneralAgent  `json:"generalAgent"`      // 通用智能体配置
 }
 
 type CustomLogin struct {
@@ -83,6 +84,12 @@ type CustomDefaultIcon struct {
 	PromptIcon   string `json:"promptIcon"`
 	ChatflowIcon string `json:"chatflowIcon"`
 	ModelIcon    string `json:"modelIcon"`
+}
+
+type CustomGeneralAgent struct {
+	Logo        request.Avatar `json:"logo"`        // 通用智能体图标
+	WelcomeText string         `json:"welcomeText"` // 通用智能体欢迎语
+	MenuName    string         `json:"menuName"`    // 通用智能体菜单名称
 }
 
 type CustomEmail struct {
