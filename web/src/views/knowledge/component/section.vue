@@ -138,6 +138,7 @@
 
     <div v-if="obj.disable !== 'true'" class="btn">
       <search-input
+        style="visibility: hidden"
         ref="searchInput"
         :placeholder="$t('knowledgeManage.segmentPlaceholder')"
         @handleSearch="handleSearch"
@@ -209,7 +210,7 @@
         :class="{ 'full-width': !showPreviewPanel }"
         class="section-content-panel"
       >
-        <div ref="listScroll" class="card" @scroll="handleScroll">
+        <div class="card">
           <template v-if="res.contentList.length > 0 && obj.disable !== 'true'">
             <el-card
               v-for="(item, index) in res.contentList"
@@ -307,33 +308,23 @@
             v-else
             :description="$t('knowledgeManage.noData')"
           ></el-empty>
-          <div
-            v-if="res.contentList.length > 0 && obj.disable !== 'true'"
-            class="list-tip"
-          >
-            <span v-if="loadingMore">
-              {{ $t('knowledgeManage.loadingMore') }}
-            </span>
-            <span v-else-if="!hasMore">{{ $t('knowledgeManage.noMore') }}</span>
-          </div>
         </div>
 
         <div
           v-if="obj.disable !== 'true'"
           class="list-common"
-          style="
-            text-align: right;
-            flex-shrink: 0;
-            padding: 10px 0;
-            color: #999;
-            font-size: 13px;
-          "
+          style="text-align: right; flex-shrink: 0; padding: 10px 0"
         >
-          {{
-            $t('knowledgeManage.totalCount', {
-              count: res.contentList.length,
-            })
-          }}
+          <el-pagination
+            :current-page="page.pageNo"
+            :page-size="page.pageSize"
+            :page-sizes="page.pageSizeList"
+            :total="page.total"
+            background
+            layout="total, prev, pager, next, jumper"
+            @current-change="handleCurrentChange"
+            @size-change="handleSizeChange"
+          ></el-pagination>
         </div>
       </div>
     </div>
@@ -667,13 +658,13 @@ export default {
       timer: null,
       refreshCount: 0,
       // 分页相关
-      pageInfo: {
+      page: {
         pageNo: 1,
-        pageSize: 20,
+        pageSize: 10,
+        pageSizeList: [10, 15, 20, 50],
         total: 0,
       },
-      hasMore: true,
-      loadingMore: false,
+      keyword: '',
       // 文件预览相关
       previewLoading: false,
       previewFileName: '',
@@ -692,7 +683,7 @@ export default {
     },
     // 判断是否显示预览面板：非禁用状态且存在下载链接
     showPreviewPanel() {
-      return this.obj.disable !== 'true' && this.res.downloadUrl;
+      return this.obj.disable !== 'true' && this.res?.downloadUrl;
     },
   },
   created() {
@@ -725,7 +716,12 @@ export default {
   methods: {
     Md2Img,
     handleSearch(val) {
-      this.getList(val);
+      // keyword 变化时重置页码
+      if (this.keyword !== val) {
+        this.keyword = val;
+        this.page.pageNo = 1;
+        this.getList();
+      }
     },
     createChunk(isChildChunk) {
       this.$refs.createChunk.showDialog(
@@ -848,7 +844,7 @@ export default {
     },
     clearTimer() {
       if (this.timer) {
-        clearInterval(this.timer);
+        clearTimeout(this.timer);
         this.timer = null;
       }
     },
@@ -870,11 +866,10 @@ export default {
           if (res.code === 0) {
             this.$message.success('操作成功');
             this.dialogVisible = false;
-            this.submitLoading = false;
             this.getList();
           }
         })
-        .catch(() => {
+        .finally(() => {
           this.submitLoading = false;
         });
     },
@@ -964,30 +959,26 @@ export default {
     filterRule(rule) {
       return rule.map(item => `${item.metaKey}:${item.metaRule}`).join(', ');
     },
-    getList(keyword = '') {
+    getList() {
       this.loading.itemStatus = true;
-      this.previewLoading = true;
-      this.previewBlob = null;
-      this.pageInfo.pageNo = 1;
-      this.hasMore = true;
-      this.loadingMore = false;
+      // 预览文件只在 created 首次加载时下载一次，后续 getList 不再重复下载
+      this.previewLoading = !this.previewFileName;
+
       getSectionList({
-        keyword: keyword,
+        keyword: this.keyword,
         docId: this.obj.id,
-        pageNo: this.pageInfo.pageNo,
-        pageSize: this.pageInfo.pageSize,
+        pageNo: this.page.pageNo,
+        pageSize: this.page.pageSize,
       })
         .then(async res => {
-          this.loading.itemStatus = false;
           this.res = res.data;
+          this.page.total = res.data.segmentTotalNum || 0;
           this.metaRuleList = res.data.metaDataList.filter(
             item => item.metaRule,
           );
           this.metaDataList = res.data.metaDataList;
-          this.pageInfo.total =
-            res.data.segmentTotalNum || res.data.contentList.length;
-          this.hasMore = this.res.contentList.length < this.pageInfo.total;
-          if (res.data?.downloadUrl) {
+
+          if (this.previewLoading && res.data?.downloadUrl) {
             const fileName = this.obj.name;
             const hasExtension = fileName.includes('.');
             this.previewFileName = hasExtension ? fileName : `${fileName}.url`;
@@ -1000,56 +991,23 @@ export default {
               console.error('文件预览下载失败:', e);
             }
           }
-          this.previewLoading = false;
-          // 首屏数据不足一屏时自动加载下一页
-          this.$nextTick(() => this.tryAutoLoad());
         })
         .catch(() => {
+          this.$message.error('获取列表失败');
+        })
+        .finally(() => {
+          this.previewLoading = false;
           this.loading.itemStatus = false;
-          this.previewLoading = false;
         });
     },
-    loadMore() {
-      if (this.loadingMore || !this.hasMore) return;
-      this.loadingMore = true;
-      const nextPageNo = this.pageInfo.pageNo + 1;
-      getSectionList({
-        keyword: '',
-        docId: this.obj.id,
-        pageNo: nextPageNo,
-        pageSize: this.pageInfo.pageSize,
-      })
-        .then(res => {
-          this.loadingMore = false;
-          const list = res.data?.contentList || [];
-          if (list.length) {
-            this.res.contentList = this.res.contentList.concat(list);
-            this.pageInfo.pageNo = nextPageNo;
-          }
-          // 返回不足一页 或 已达总数，则视为没有更多
-          if (
-            list.length < this.pageInfo.pageSize ||
-            this.res.contentList.length >= this.pageInfo.total
-          ) {
-            this.hasMore = false;
-          }
-        })
-        .catch(() => {
-          this.loadingMore = false;
-        });
+    handleCurrentChange(val) {
+      this.page.pageNo = val;
+      this.getList();
     },
-    handleScroll() {
-      const el = this.$refs.listScroll;
-      if (!el || this.loadingMore || !this.hasMore) return;
-      const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-      if (remaining < el.clientHeight * 10) this.loadMore();
-    },
-    tryAutoLoad() {
-      const el = this.$refs.listScroll;
-      if (!el) return;
-      if (el.scrollHeight <= el.clientHeight && this.hasMore) {
-        this.loadMore();
-      }
+    handleSizeChange(val) {
+      this.page.pageSize = val;
+      this.page.pageNo = 1;
+      this.getList();
     },
     handleClick(item, index) {
       this.dialogVisible = true;
@@ -1118,13 +1076,12 @@ export default {
         all: true,
       })
         .then(res => {
-          this.loading.itemStatus = false;
           if (res.code === 0) {
             this.$message.success(this.$t('knowledgeManage.operateSuccess'));
             this.getList();
           }
         })
-        .catch(() => {
+        .finally(() => {
           this.loading.itemStatus = false;
         });
     },
@@ -1476,14 +1433,6 @@ export default {
         flex-direction: column;
         gap: 12px;
         padding: 0 2px;
-
-        .list-tip {
-          flex-shrink: 0;
-          padding: 8px 0;
-          text-align: center;
-          color: #999;
-          font-size: 13px;
-        }
 
         .text {
           font-size: 14px;
