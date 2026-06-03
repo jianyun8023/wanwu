@@ -209,7 +209,7 @@
         :class="{ 'full-width': !showPreviewPanel }"
         class="section-content-panel"
       >
-        <div class="card">
+        <div ref="listScroll" class="card" @scroll="handleScroll">
           <template v-if="res.contentList.length > 0 && obj.disable !== 'true'">
             <el-card
               v-for="(item, index) in res.contentList"
@@ -307,6 +307,15 @@
             v-else
             :description="$t('knowledgeManage.noData')"
           ></el-empty>
+          <div
+            v-if="res.contentList.length > 0 && obj.disable !== 'true'"
+            class="list-tip"
+          >
+            <span v-if="loadingMore">
+              {{ $t('knowledgeManage.loadingMore') }}
+            </span>
+            <span v-else-if="!hasMore">{{ $t('knowledgeManage.noMore') }}</span>
+          </div>
         </div>
 
         <div
@@ -320,7 +329,11 @@
             font-size: 13px;
           "
         >
-          共 {{ res.contentList.length }} 条分段
+          {{
+            $t('knowledgeManage.totalCount', {
+              count: res.contentList.length,
+            })
+          }}
         </div>
       </div>
     </div>
@@ -653,6 +666,14 @@ export default {
       contentId: '',
       timer: null,
       refreshCount: 0,
+      // 分页相关
+      pageInfo: {
+        pageNo: 1,
+        pageSize: 20,
+        total: 0,
+      },
+      hasMore: true,
+      loadingMore: false,
       // 文件预览相关
       previewLoading: false,
       previewFileName: '',
@@ -947,11 +968,14 @@ export default {
       this.loading.itemStatus = true;
       this.previewLoading = true;
       this.previewBlob = null;
+      this.pageInfo.pageNo = 1;
+      this.hasMore = true;
+      this.loadingMore = false;
       getSectionList({
         keyword: keyword,
         docId: this.obj.id,
-        pageNo: 1,
-        pageSize: 9999,
+        pageNo: this.pageInfo.pageNo,
+        pageSize: this.pageInfo.pageSize,
       })
         .then(async res => {
           this.loading.itemStatus = false;
@@ -960,6 +984,9 @@ export default {
             item => item.metaRule,
           );
           this.metaDataList = res.data.metaDataList;
+          this.pageInfo.total =
+            res.data.segmentTotalNum || res.data.contentList.length;
+          this.hasMore = this.res.contentList.length < this.pageInfo.total;
           if (res.data?.downloadUrl) {
             const fileName = this.obj.name;
             const hasExtension = fileName.includes('.');
@@ -974,11 +1001,55 @@ export default {
             }
           }
           this.previewLoading = false;
+          // 首屏数据不足一屏时自动加载下一页
+          this.$nextTick(() => this.tryAutoLoad());
         })
         .catch(() => {
           this.loading.itemStatus = false;
           this.previewLoading = false;
         });
+    },
+    loadMore() {
+      if (this.loadingMore || !this.hasMore) return;
+      this.loadingMore = true;
+      const nextPageNo = this.pageInfo.pageNo + 1;
+      getSectionList({
+        keyword: '',
+        docId: this.obj.id,
+        pageNo: nextPageNo,
+        pageSize: this.pageInfo.pageSize,
+      })
+        .then(res => {
+          this.loadingMore = false;
+          const list = res.data?.contentList || [];
+          if (list.length) {
+            this.res.contentList = this.res.contentList.concat(list);
+            this.pageInfo.pageNo = nextPageNo;
+          }
+          // 返回不足一页 或 已达总数，则视为没有更多
+          if (
+            list.length < this.pageInfo.pageSize ||
+            this.res.contentList.length >= this.pageInfo.total
+          ) {
+            this.hasMore = false;
+          }
+        })
+        .catch(() => {
+          this.loadingMore = false;
+        });
+    },
+    handleScroll() {
+      const el = this.$refs.listScroll;
+      if (!el || this.loadingMore || !this.hasMore) return;
+      const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (remaining < el.clientHeight * 10) this.loadMore();
+    },
+    tryAutoLoad() {
+      const el = this.$refs.listScroll;
+      if (!el) return;
+      if (el.scrollHeight <= el.clientHeight && this.hasMore) {
+        this.loadMore();
+      }
     },
     handleClick(item, index) {
       this.dialogVisible = true;
@@ -1405,6 +1476,14 @@ export default {
         flex-direction: column;
         gap: 12px;
         padding: 0 2px;
+
+        .list-tip {
+          flex-shrink: 0;
+          padding: 8px 0;
+          text-align: center;
+          color: #999;
+          font-size: 13px;
+        }
 
         .text {
           font-size: 14px;
