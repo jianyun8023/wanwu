@@ -17,11 +17,7 @@
                 style="max-height: 46px; max-width: 80%"
                 :src="avatarSrc(homeLogoPath)"
               />
-              <img
-                v-else
-                style="width: 50%; margin-top: 10px"
-                src="@/assets/imgs/wanwu.png"
-              />
+              <img v-else style="width: 50%" src="@/assets/imgs/yuanjing.png" />
             </div>
           </div>
           <!-- 组织切换 -->
@@ -50,108 +46,123 @@
             <div slot="reference">
               <div style="text-align: center; cursor: pointer">
                 <img
-                  style="width: 20px; margin-top: 24px"
+                  class="menu-org-popover-icon"
                   src="@/assets/imgs/org_user.svg"
                   alt=""
                 />
               </div>
             </div>
           </el-popover>
+          <div v-if="isCollapse" class="collapse-menu-divider"></div>
         </div>
         <!-- 菜单 -->
         <el-aside
           v-if="menuList && menuList.length"
           :class="['full-menu-aside', { 'full-menu-isCollapse': isCollapse }]"
         >
-          <el-menu
-            :default-openeds="defaultOpeneds"
-            :default-active="activeIndex"
-            :key="menuKey"
-            :collapse="isCollapse"
-          >
-            <!--菜单渲染-->
-            <div v-for="(n, i) in menuList" :key="`${i}ml`">
-              <!--有下一级-->
-              <el-submenu
-                v-if="n.children && checkPerm(n.perm)"
-                :index="n.index"
-              >
-                <template slot="title">
-                  <div class="menu-svg">
-                    <svg-icon class="menu-icon" :icon-class="n.icon" />
-                  </div>
-                  <span class="menu-withIcon-title">{{ n.name }}</span>
-                </template>
+          <!-- 展开状态：扁平化分组列表 -->
+          <div v-if="!isCollapse" class="flat-menu-list">
+            <template v-for="(n, i) in menuList" v-if="checkPerm(n.perm)">
+              <!-- 有子级：渲染每个子项 -->
+              <div v-if="n.children" :key="`${i}ml`" class="menu-group">
+                <div class="menu-group-title">{{ n.name }}</div>
                 <div
                   v-for="(m, j) in n.children"
-                  v-if="checkPerm(m.perm)"
                   :key="`${j}cl`"
+                  v-if="checkPerm(m.perm)"
+                  :class="[
+                    'flat-menu-item',
+                    { 'flat-menu-item-active': activeIndex === m.index },
+                  ]"
+                  @click="menuClick(m)"
                 >
-                  <el-submenu
-                    v-if="m.children"
-                    :index="m.index"
-                    :class="['menu-indent']"
-                  >
-                    <template slot="title">{{ m.name }}</template>
-                    <div
-                      v-for="(p, k) in m.children"
-                      :key="`${k}pl`"
-                      v-if="checkPerm(p.perm)"
-                    >
-                      <el-submenu
-                        v-if="p.children"
-                        :index="p.index"
-                        :class="['menu-indent-sub']"
-                      >
-                        <template slot="title">{{ p.name }}</template>
-                        <el-menu-item
-                          v-for="(item, index) in p.children"
-                          :key="`${index}itemEl`"
-                          :index="item.index"
-                          v-if="checkPerm(item.perm)"
-                          @click="menuClick(item)"
-                          :class="[{ 'is-active': activeIndex === item.index }]"
-                        >
-                          {{ item.name }}
-                        </el-menu-item>
-                      </el-submenu>
-                      <el-menu-item
-                        v-else
-                        :index="p.index"
-                        @click="menuClick(p)"
-                        :class="[{ 'is-active': activeIndex === p.index }]"
-                      >
-                        {{ p.name }}
-                      </el-menu-item>
-                    </div>
-                  </el-submenu>
-                  <el-menu-item
-                    v-else
-                    :index="m.index"
-                    @click="menuClick(m)"
-                    :class="[
-                      'menu-indent-item',
-                      { 'is-active': activeIndex === m.index },
-                    ]"
-                  >
-                    {{ m.name }}
-                  </el-menu-item>
+                  <div class="menu-svg">
+                    <svg-icon
+                      class="menu-icon"
+                      :icon-class="m.icon || 'menu_default'"
+                    />
+                  </div>
+                  <span class="menu-withIcon-title">{{ m.name }}</span>
                 </div>
-              </el-submenu>
-              <!--没有下一级-->
-              <el-menu-item
-                :index="n.index"
-                v-if="!n.children && checkPerm(n.perm)"
+              </div>
+              <!-- 无子级的顶级菜单项 -->
+              <div
+                v-else
+                :key="`${i}ml-top`"
+                :class="[
+                  'flat-menu-item',
+                  { 'flat-menu-item-active': activeIndex === n.index },
+                ]"
                 @click="menuClick(n)"
-                :class="[{ 'is-active': activeIndex === n.index }]"
               >
                 <div class="menu-svg">
                   <svg-icon class="menu-icon" :icon-class="n.icon" />
                 </div>
                 <span class="menu-withIcon-title">{{ n.name }}</span>
-              </el-menu-item>
-            </div>
-          </el-menu>
+              </div>
+            </template>
+          </div>
+
+          <!-- 收起状态：仅图标 + 分组分隔 -->
+          <div v-else class="collapse-menu-list">
+            <template v-for="(n, i) in menuList" v-if="checkPerm(n.perm)">
+              <!-- 分组分隔线（非第一组） -->
+              <div
+                v-if="i > 0"
+                :key="`${i}divider`"
+                class="collapse-menu-divider"
+              ></div>
+              <!-- 有子级：渲染每个子项图标 -->
+              <template v-if="n.children">
+                <div
+                  v-for="(m, j) in n.children"
+                  :key="`${i}-${j}cl`"
+                  v-if="checkPerm(m.perm)"
+                >
+                  <el-tooltip
+                    placement="right"
+                    trigger="click"
+                    width="auto"
+                    :content="m.name"
+                  >
+                    <div
+                      :class="[
+                        'collapse-menu-item',
+                        {
+                          'collapse-menu-item-active': activeIndex === m.index,
+                        },
+                      ]"
+                      @click="menuClick(m)"
+                    >
+                      <svg-icon
+                        class="menu-icon"
+                        :icon-class="m.icon || 'menu_default'"
+                      />
+                    </div>
+                  </el-tooltip>
+                </div>
+              </template>
+              <!-- 无子级 -->
+              <div v-else :key="`${i}top`">
+                <el-tooltip
+                  placement="right"
+                  trigger="click"
+                  width="auto"
+                  :content="n.name"
+                >
+                  <div
+                    :class="[
+                      'collapse-menu-item',
+                      { 'collapse-menu-item-active': activeIndex === n.index },
+                    ]"
+                    @click="menuClick(n)"
+                  >
+                    <svg-icon class="menu-icon" :icon-class="n.icon" />
+                  </div>
+                </el-tooltip>
+              </div>
+            </template>
+          </div>
         </el-aside>
         <div
           :class="['left-bottom-container', { 'menu-isCollapse': isCollapse }]"
@@ -534,12 +545,19 @@ export default {
   .outer-container {
     height: 100%;
 
+    .collapse-menu-divider {
+      width: 28px;
+      height: 0.5px;
+      background-color: #d8d8d8;
+      margin: 8px auto;
+    }
+
     .left-aside-container {
       position: relative;
       width: 208px;
       background: #fff;
       border-right: 1px solid #d8d8d8;
-      transition: width 0.25s linear !important;
+      transition: width 0.2s linear;
       .left-header-container {
         position: absolute;
         top: 0;
@@ -601,7 +619,7 @@ export default {
         display: block;
         text-align: center;
         height: 90px;
-        margin-top: 5px;
+        padding-top: 8px;
         .user-content-isCollapse {
           padding-bottom: 10px;
           border-bottom: 1px solid #d8d8d8;
@@ -615,12 +633,19 @@ export default {
           margin: 0 auto;
         }
       }
+      .menu-org-popover-icon {
+        width: 36px;
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid #e6e9ed;
+      }
       .menu-org-select-wrapper ::v-deep {
         display: flex;
         align-items: center;
-        margin: 18px 14px 0;
-        border: 1px solid #dcdfe6;
-        border-radius: 4px;
+        margin: 15px 14px 0;
+        border: 1px solid #e6e9ed;
+        border-radius: 12px;
         padding-left: 12px;
         .el-select .el-input.is-focus .el-input__inner,
         .el-input__inner,
@@ -628,6 +653,7 @@ export default {
           border: none !important;
           outline: none !important;
           padding-left: 12px;
+          background-color: rgba(255, 255, 255, 0) !important;
         }
       }
     }
@@ -646,118 +672,104 @@ export default {
       border-radius: 10px 0 0 10px;
       margin-top: 110px;
       position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
 
-      .el-menu {
-        height: 100%;
-        width: 100%;
-        overflow-x: auto;
-        overflow-y: auto;
-        border: none;
-        .menu-indent ::v-deep .el-submenu__title,
-        .menu-indent-item {
-          padding-left: 45px !important;
+    /* ===== 展开态：扁平化分组列表 ===== */
+    .flat-menu-list {
+      padding: 4px 0;
+      .menu-group {
+        margin-bottom: 4px;
+      }
+      .menu-group-title {
+        font-size: 12px;
+        color: #686f82;
+        padding: 12px 16px 6px 24px;
+        line-height: 1;
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .menu-group:first-of-type {
+        .menu-group-title {
+          padding-top: 0;
         }
-        .menu-indent-sub ::v-deep .el-submenu__title {
-          padding-left: 60px !important;
-        }
-        .menu-withIcon-title {
-          display: inline-block;
+      }
+      .flat-menu-item {
+        display: flex;
+        align-items: center;
+        height: 36px;
+        padding: 0 8px;
+        cursor: pointer;
+        border-radius: 12px;
+        margin: 3px 16px;
+        font-size: 14px;
+        color: $menu_text_color;
+        &:hover {
+          background-color: #f7f8fa;
         }
         .menu-svg {
           padding-top: 2px;
+          flex-shrink: 0;
           .menu-icon {
             font-size: 16px;
-            margin-right: 10px;
+            margin-right: 8px;
           }
           .svg-icon {
             color: #868d9c;
           }
         }
-      }
-      .el-menu ::v-deep {
-        .el-menu-item {
+        .menu-withIcon-title {
+          display: inline-block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 14px;
+          font-weight: 400;
           color: $menu_text_color;
         }
-        .el-submenu__title,
-        .el-menu-item span {
-          font-size: 14px !important;
+      }
+      .flat-menu-item-active {
+        background-color: $menu_bg_color !important;
+        .menu-withIcon-title {
+          font-weight: 500 !important;
+          color: $menu_text_color !important;
         }
-        .el-menu-item.is-active,
-        .el-menu-item:focus {
-          background-color: $color_opacity !important;
-        }
-        .el-menu-item.is-active,
-        .el-submenu.is-active {
-          .el-submenu__title:hover {
-            background-color: $color_opacity !important;
-          }
-          .svg-icon {
-            color: $color !important;
-          }
-        }
-        .el-submenu__title {
-          span {
-            font-size: 14px !important;
-          }
-        }
-        .el-submenu.is-active .el-submenu__title {
-          border-bottom-color: $color !important;
-        }
-        .el-submenu__title,
-        .el-menu-item {
-          height: 36px;
-          line-height: 36px;
-          display: flex;
-          align-items: center;
-          border-radius: 6px;
-          margin: 3px 6px;
-          min-width: auto;
-          font-size: 14px;
+        .menu-svg .svg-icon {
+          color: $menu_text_color !important;
         }
       }
-      .el-menu--collapse.el-menu ::v-deep {
-        width: 64px;
-        .el-submenu__title {
-          padding-left: 0 !important;
-          display: block !important;
+    }
+
+    /* ===== 收起态：仅图标 + 分组分隔 ===== */
+    .collapse-menu-list {
+      padding: 6px 0 4px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      .collapse-menu-item {
+        width: 40px;
+        height: 32px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        margin: 2px 0;
+        .menu-icon {
+          font-size: 18px;
         }
-        .el-submenu__icon-arrow.el-icon-arrow-right,
-        .menu-withIcon-title {
-          display: none;
+        .svg-icon {
+          color: #868d9c;
         }
-        .menu-svg {
-          width: 44px;
-          height: 40px;
-          border-radius: 6px;
-          text-align: center;
-          line-height: 40px;
-          .menu-icon {
-            font-size: 18px;
-            margin-right: 0;
-          }
+        &:hover {
+          background-color: #f7f8fa;
         }
-        .el-submenu.is-active,
-        .el-menu-item.is-active {
-          .menu-svg {
-            background: linear-gradient(
-              145deg,
-              #57e4fd -1%,
-              #41c9ff 32%,
-              #4161fe 114%
-            );
-            .svg-icon {
-              color: #fff !important;
-            }
-          }
-        }
-        .el-submenu__title,
-        .el-menu-item {
-          height: 40px;
-          line-height: 40px;
-          margin: 12px 10px;
-        }
-        .el-menu-item {
-          padding: 0 !important;
+      }
+      .collapse-menu-item-active {
+        background-color: #f7f8fa;
+        .svg-icon {
+          color: $menu_text_color !important;
         }
       }
     }
@@ -801,17 +813,6 @@ export default {
           }
         }
       }
-    }
-  }
-  .outer-container ::v-deep {
-    .el-submenu.is-active,
-    .el-submenu.is-active > .el-submenu__title,
-    .el-submenu.is-active > .el-submenu__title i:first-child,
-    .el-submenu.is-active > .el-submenu__title .el-submenu__icon-arrow {
-      color: $color;
-    }
-    .el-submenu .el-submenu__icon-arrow.el-icon-arrow-down:before {
-      content: '\e790';
     }
   }
 }

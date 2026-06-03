@@ -338,6 +338,9 @@ export default {
         background: rgba(255, 255, 255, 0);
         border-radius: 8px;
       }
+      ::v-deep .el-submenu__icon-arrow.el-icon-arrow-down:before {
+        content: '\e790';
+      }
       ::v-deep .el-menu-item {
         color: $color_title;
       }
