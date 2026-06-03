@@ -31,6 +31,42 @@ func FileUrlConvertBase64(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
+// UploadFileByBase64
+//
+//	@Tags		callback
+//	@Summary	通过base64上传文件
+//	@Accept		json
+//	@Produce	json
+//	@Param		data	body		request.UploadFileByBase64Req	true	"通过base64格式上传文件参数"
+//	@Success	200		{object}	response.Response{data=response.UploadFileByBase64Resp}
+//	@Router		/file/upload/base64 [post]
+func UploadFileByBase64(ctx *gin.Context) {
+	var req request.UploadFileByBase64Req
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	resp, err := service.UploadFileByBase64(ctx, &req)
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetUserListByUserIds
+//
+//	@Tags		callback
+//	@Summary	根据userIds获取用户信息
+//	@Accept		json
+//	@Produce	json
+//	@Param		data	body		request.GetUserListByUserIdsReq	true	"根据userIds获取用户信息参数"
+//	@Success	200		{object}	response.Response{data=response.ListResult{List=[]response.IDName}}
+//	@Router		/user/list [post]
+func GetUserListByUserIds(ctx *gin.Context) {
+	var req request.GetUserListByUserIdsReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	resp, err := service.GetUserListByUserIds(ctx, req.UserIds)
+	gin_util.Response(ctx, resp, err)
+}
+
 // UpdateDocStatus
 //
 //	@Tags			callback
@@ -177,22 +213,4 @@ func SearchQABase(ctx *gin.Context) {
 	}
 	resp, httpStatus := service.RagSearchQABase(ctx, &req)
 	gin_util.ResponseRawByte(ctx, httpStatus, resp)
-}
-
-// UploadFileByBase64
-//
-//	@Tags		callback
-//	@Summary	通过base64上传文件
-//	@Accept		json
-//	@Produce	json
-//	@Param		data	body		request.UploadFileByBase64Req	true	"通过base64格式上传文件参数"
-//	@Success	200		{object}	response.Response{data=response.UploadFileByBase64Resp}
-//	@Router		/file/upload/base64 [post]
-func UploadFileByBase64(ctx *gin.Context) {
-	var req request.UploadFileByBase64Req
-	if !gin_util.Bind(ctx, &req) {
-		return
-	}
-	resp, err := service.UploadFileByBase64(ctx, &req)
-	gin_util.Response(ctx, resp, err)
 }
