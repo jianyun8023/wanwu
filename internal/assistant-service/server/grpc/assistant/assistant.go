@@ -631,6 +631,7 @@ func buildAgentParams(ctx context.Context, cli client.IClient, agent *model.Assi
 		ConversationId: conversationId,
 		QueryUserId:    userId,
 		QueryOrgId:     orgId,
+		Ctx:            ctx,
 	}
 	return service.NewAgentChatParamsBuilder(&params_process.AgentInfo{
 		Assistant:         agent,

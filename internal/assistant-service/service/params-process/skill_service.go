@@ -112,10 +112,10 @@ func (k *SkillProcess) Prepare(agent *AgentInfo, prepareParams *AgentPreparePara
 			acquiredSkillIds = append(acquiredSkillIds, skill.SkillId)
 		}
 	}
-
+	ctx := userQueryParams.Ctx
 	//获取custom skill详情
 	if len(customSkillIds) > 0 {
-		customSkillResp, err := SearchCustomSkillList(context.Background(), &BuiltinSkillIdListParams{SkillIdList: customSkillIds})
+		customSkillResp, err := SearchCustomSkillList(ctx, &BuiltinSkillIdListParams{SkillIdList: customSkillIds})
 		if err != nil {
 			log.Errorf("Assistant服务获取Custom Skill详情失败，assistantId: %d, error: %v", agent.Assistant.ID, err)
 			return err
@@ -127,7 +127,7 @@ func (k *SkillProcess) Prepare(agent *AgentInfo, prepareParams *AgentPreparePara
 
 	//获取acquired skill详情
 	if len(acquiredSkillIds) > 0 {
-		acquiredSkillResp, err := SearchAcquiredSkillList(context.Background(), &BuiltinSkillIdListParams{SkillIdList: acquiredSkillIds})
+		acquiredSkillResp, err := SearchAcquiredSkillList(ctx, &BuiltinSkillIdListParams{SkillIdList: acquiredSkillIds})
 		if err != nil {
 			log.Errorf("Assistant服务获取Acquired Skill详情失败，assistantId: %d, error: %v", agent.Assistant.ID, err)
 			return err
@@ -139,7 +139,7 @@ func (k *SkillProcess) Prepare(agent *AgentInfo, prepareParams *AgentPreparePara
 
 	// 获取builtin skill详情
 	if len(builtinSkillIds) > 0 {
-		resp, err := SearchBuiltInSkillList(context.Background(), &BuiltinSkillIdListParams{SkillIdList: builtinSkillIds})
+		resp, err := SearchBuiltInSkillList(ctx, &BuiltinSkillIdListParams{SkillIdList: builtinSkillIds})
 		if err != nil {
 			log.Errorf("Assistant服务获取BuiltIn Skill详情失败，assistantId: %d, error: %v", agent.Assistant.ID, err)
 			return err

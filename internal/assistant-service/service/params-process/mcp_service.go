@@ -42,7 +42,7 @@ func (k *McpProcess) Prepare(agent *AgentInfo, prepareParams *AgentPrepareParams
 	if len(customMcpIdList) == 0 && len(mcpServerIdList) == 0 {
 		return nil
 	}
-	mcpListResp, err1 := clientInfo.MCP.GetMCPByMCPIdList(context.Background(), &mcp_service.GetMCPByMCPIdListReq{
+	mcpListResp, err1 := clientInfo.MCP.GetMCPByMCPIdList(userQueryParams.Ctx, &mcp_service.GetMCPByMCPIdListReq{
 		McpIdList:       customMcpIdList,
 		McpServerIdList: mcpServerIdList,
 		Identity: &mcp_service.Identity{

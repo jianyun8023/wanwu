@@ -1,7 +1,6 @@
 package params_process
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 
@@ -42,7 +41,7 @@ func (k *HistoryProcess) Prepare(agent *AgentInfo, prepareParams *AgentPreparePa
 		"orgId":          userQueryParams.QueryOrgId,
 	}
 
-	documents, _, err := es.Assistant().SearchByFields(context.Background(), esHistoryIndexPattern, fieldConditions, 0, maxHistory, "desc")
+	documents, _, err := es.Assistant().SearchByFields(userQueryParams.Ctx, esHistoryIndexPattern, fieldConditions, 0, maxHistory, "desc")
 	if err != nil {
 		log.Warnf("Assistant服务查询历史聊天记录失败，conversationId: %s, userId: %s, error: %v", userQueryParams.ConversationId, userQueryParams.QueryUserId, err)
 		return err

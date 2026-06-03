@@ -72,6 +72,7 @@ func buildMultiAgentParams(ctx context.Context, cli client.IClient, agent *model
 		ConversationId: req.ConversationId,
 		QueryOrgId:     req.Identity.OrgId,
 		QueryUserId:    req.Identity.UserId,
+		Ctx:            ctx,
 	}
 	return service.NewAgentChatParamsBuilder(&params_process.AgentInfo{
 		Assistant:         agent,
@@ -99,7 +100,7 @@ func buildSubAgentParams(ctx context.Context, cli client.IClient, agentSnapshot 
 		Assistant:         assistant,
 		AssistantSnapshot: agentSnapshot,
 		Draft:             agentSnapshot == nil,
-	}, nil, clientInfo).
+	}, &params_process.UserQueryParams{Ctx: ctx}, clientInfo).
 		AgentBaseParams().
 		ModelParams().
 		KnowledgeParams().
