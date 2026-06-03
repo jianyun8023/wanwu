@@ -5841,6 +5841,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/custom/general-agent": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "配置通用智能体图标",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "通用智能体自定义配置",
+                "parameters": [
+                    {
+                        "description": "通用智能体配置请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CustomGeneralAgentConfig"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/custom/home": {
             "post": {
                 "security": [
@@ -22534,6 +22573,27 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CustomGeneralAgentConfig": {
+            "type": "object",
+            "properties": {
+                "generalAgentIcon": {
+                    "description": "通用智能体图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "generalAgentMenuName": {
+                    "description": "通用智能体菜单名称",
+                    "type": "string"
+                },
+                "generalAgentWelcome": {
+                    "description": "通用智能体欢迎语",
+                    "type": "string"
+                }
+            }
+        },
         "request.CustomHomeConfig": {
             "type": "object",
             "properties": {
@@ -28150,6 +28210,27 @@ const docTemplate = `{
                 }
             }
         },
+        "response.CustomGeneralAgent": {
+            "type": "object",
+            "properties": {
+                "logo": {
+                    "description": "通用智能体图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "menuName": {
+                    "description": "通用智能体菜单名称",
+                    "type": "string"
+                },
+                "welcomeText": {
+                    "description": "通用智能体欢迎语",
+                    "type": "string"
+                }
+            }
+        },
         "response.CustomHome": {
             "type": "object",
             "properties": {
@@ -30339,6 +30420,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/response.CustomDefaultIcon"
+                        }
+                    ]
+                },
+                "generalAgent": {
+                    "description": "通用智能体配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.CustomGeneralAgent"
                         }
                     ]
                 },

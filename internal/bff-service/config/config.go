@@ -313,11 +313,12 @@ type CustomInfoConfig struct {
 }
 
 type CustomTheme struct {
-	Mode  string      `json:"mode" mapstructure:"mode"`
-	Login CustomLogin `json:"login" mapstructure:"login"`
-	Home  CustomHome  `json:"home" mapstructure:"home"`
-	Tab   CustomTab   `json:"tab" mapstructure:"tab"`
-	About CustomAbout `json:"about" mapstructure:"about"`
+	Mode         string             `json:"mode" mapstructure:"mode"`
+	Login        CustomLogin        `json:"login" mapstructure:"login"`
+	Home         CustomHome         `json:"home" mapstructure:"home"`
+	Tab          CustomTab          `json:"tab" mapstructure:"tab"`
+	About        CustomAbout        `json:"about" mapstructure:"about"`
+	GeneralAgent CustomGeneralAgent `json:"general_agent" mapstructure:"general_agent"`
 }
 
 type CustomLogin struct {
@@ -344,21 +345,27 @@ type CustomAbout struct {
 	Copyright string `json:"copyright" mapstructure:"copyright"`
 }
 
+type CustomGeneralAgent struct {
+	LogoPath    string `json:"logo_path" mapstructure:"logo_path"`
+	WelcomeText string `json:"welcome_text" mapstructure:"welcome_text"`
+}
+
 type DefaultIconConfig struct {
-	UserIcon        string `json:"user" mapstructure:"user"`
-	RagIcon         string `json:"rag" mapstructure:"rag"`
-	AgentIcon       string `json:"agent" mapstructure:"agent"`
-	WorkflowIcon    string `json:"workflow" mapstructure:"workflow"`
-	ChatflowIcon    string `json:"chatflow" mapstructure:"chatflow"`
-	McpCustomIcon   string `json:"mcpCustom" mapstructure:"mcpCustom"`
-	McpServerIcon   string `json:"mcpServer" mapstructure:"mcpServer"`
-	ToolIcon        string `json:"tool" mapstructure:"tool"`
-	PromptIcon      string `json:"prompt" mapstructure:"prompt"`
-	SkillIcon       string `json:"skill" mapstructure:"skill"`
-	CustomSkillIcon string `json:"skillCustom" mapstructure:"skillCustom"`
-	KnowledgeIcon   string `json:"knowledge" mapstructure:"knowledge"`
-	QAIcon          string `json:"qa" mapstructure:"qa"`
-	ModelIcon       string `json:"model" mapstructure:"model"`
+	UserIcon         string `json:"user" mapstructure:"user"`
+	RagIcon          string `json:"rag" mapstructure:"rag"`
+	AgentIcon        string `json:"agent" mapstructure:"agent"`
+	WorkflowIcon     string `json:"workflow" mapstructure:"workflow"`
+	ChatflowIcon     string `json:"chatflow" mapstructure:"chatflow"`
+	McpCustomIcon    string `json:"mcpCustom" mapstructure:"mcpCustom"`
+	McpServerIcon    string `json:"mcpServer" mapstructure:"mcpServer"`
+	ToolIcon         string `json:"tool" mapstructure:"tool"`
+	PromptIcon       string `json:"prompt" mapstructure:"prompt"`
+	SkillIcon        string `json:"skill" mapstructure:"skill"`
+	CustomSkillIcon  string `json:"skillCustom" mapstructure:"skillCustom"`
+	KnowledgeIcon    string `json:"knowledge" mapstructure:"knowledge"`
+	QAIcon           string `json:"qa" mapstructure:"qa"`
+	ModelIcon        string `json:"model" mapstructure:"model"`
+	GeneralAgentIcon string `json:"generalAgent" mapstructure:"generalAgent"`
 }
 
 func LoadConfig(in string) error {

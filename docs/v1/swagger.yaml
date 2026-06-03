@@ -2294,6 +2294,19 @@ definitions:
     required:
     - name
     type: object
+  request.CustomGeneralAgentConfig:
+    properties:
+      generalAgentIcon:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 通用智能体图标
+      generalAgentMenuName:
+        description: 通用智能体菜单名称
+        type: string
+      generalAgentWelcome:
+        description: 通用智能体欢迎语
+        type: string
+    type: object
   request.CustomHomeConfig:
     properties:
       homeBgColor:
@@ -6089,6 +6102,19 @@ definitions:
       status:
         type: boolean
     type: object
+  response.CustomGeneralAgent:
+    properties:
+      logo:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 通用智能体图标
+      menuName:
+        description: 通用智能体菜单名称
+        type: string
+      welcomeText:
+        description: 通用智能体欢迎语
+        type: string
+    type: object
   response.CustomHome:
     properties:
       backgroundColor:
@@ -7561,6 +7587,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/response.CustomDefaultIcon'
         description: 应用默认图片
+      generalAgent:
+        allOf:
+        - $ref: '#/definitions/response.CustomGeneralAgent'
+        description: 通用智能体配置
       home:
         allOf:
         - $ref: '#/definitions/response.CustomHome'
@@ -12844,6 +12874,30 @@ paths:
       summary: 删除对话流会话
       tags:
       - chatflow
+  /custom/general-agent:
+    post:
+      consumes:
+      - application/json
+      description: 配置通用智能体图标
+      parameters:
+      - description: 通用智能体配置请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.CustomGeneralAgentConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 通用智能体自定义配置
+      tags:
+      - setting
   /custom/home:
     post:
       consumes:
