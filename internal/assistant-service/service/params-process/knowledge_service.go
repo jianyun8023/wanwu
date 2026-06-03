@@ -1,7 +1,6 @@
 package params_process
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -107,7 +106,7 @@ func (k *KnowledgeProcess) Prepare(agent *AgentInfo, prepareParams *AgentPrepare
 			err = fmt.Errorf("Assistant服务解析智能体知识库配置失败，assistantId: %d, error: %v, knowledgebaseConfigRaw: %s", agent.Assistant.ID, err, agent.Assistant.KnowledgebaseConfig)
 			return err
 		}
-		knowledgeInfoList, err := clientInfo.Knowledge.SelectKnowledgeDetailByIdList(context.Background(), &knowledgebase_service.KnowledgeDetailSelectListReq{
+		knowledgeInfoList, err := clientInfo.Knowledge.SelectKnowledgeDetailByIdList(userQueryParams.Ctx, &knowledgebase_service.KnowledgeDetailSelectListReq{
 			KnowledgeIds: knowledgeParams.KnowledgeBaseIds,
 		})
 		if err != nil {

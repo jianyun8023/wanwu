@@ -3,6 +3,8 @@ package agent_tool
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"time"
 
 	mcp_util "github.com/UnicomAI/wanwu/pkg/mcp-util"
@@ -34,6 +36,12 @@ func createMCPClient(ctx context.Context, mcpToolInfo *request.MCPToolInfo) (cli
 		log.Errorf("failed to merge mcp params: %v", err)
 		return nil, fmt.Errorf("failed to merge mcp params: %w", err)
 	}
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	//header 注入traceID
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+
 	switch transportType {
 	case constant.MCPTransportStreamable:
 		// 创建 StreamableHTTP 客户端
