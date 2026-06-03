@@ -276,7 +276,8 @@ export default {
 
       const { EVENT_COMMON_CHANGE } = XSender.EventSet;
       this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
-        this.inputValue = this.tip + this.sender.getText();
+        const text = this.sender.getText();
+        this.inputValue = text ? this.tip + text : '';
         if (this.showConfigPopover) {
           this.updateMentionPosition();
           this.$nextTick(() => {
@@ -289,28 +290,16 @@ export default {
         }
       });
 
-      this.sender.chatElement.richText.addEventListener(
-        'keydown',
-        e => {
-          this.handleSenderKeydown(e);
-        },
-        true,
-      );
-
-      this.sender.chatElement.richText.addEventListener('blur', () => {
-        this.handleSenderBlur();
+      this.sender.chatElement.richText.addEventListener('keyup', e => {
+        this.handleSenderKeydown(e);
       });
 
       this.sender.chatElement.richText.addEventListener('keyup', e => {
-        if (e.key === '@' || +e.key === 2) {
-          const { instance, offset } = this.sender.getCurrentNode();
-          if (instance?.type !== 'Write') return;
-          if (instance.text[offset - 1] !== '@') return;
-          this.popoverTab = 'all';
-          this.updateMentionPosition();
-          this.showConfigPopover = true;
-          this.selectedIndex = 0;
-        }
+        this.handleSenderKeyup(e);
+      });
+
+      this.sender.chatElement.richText.addEventListener('blur', () => {
+        this.handleSenderBlur();
       });
     },
 
@@ -357,6 +346,34 @@ export default {
       } else if (e.key === 'Enter' && !e.shiftKey) {
         this.$emit('keydown-enter', e);
         this.clear();
+      }
+    },
+
+    handleSenderKeyup(e) {
+      if (this.showConfigPopover) return;
+      else if (e.key === '@' || +e.key === 2) {
+        const { instance, offset } = this.sender.getCurrentNode();
+        if (instance?.type !== 'Write') return;
+        if (instance.text[offset - 1] !== '@') return;
+        this.popoverTab = 'all';
+        this.updateMentionPosition();
+        this.showConfigPopover = true;
+        this.selectedIndex = 0;
+      } else if (e.key === 'Escape' && this.isDIP) {
+        // 去掉前面的@和后面的空格，只使用原先的text
+        const originalText = this.tip.slice(1, -1);
+        this.showTip(originalText);
+      } else if (e.key === 'Backspace' && this.isDIP) {
+        // 在输入框最前面按 Backspace，且是 DIP 模式时，唤起弹窗
+        const { instance, offset } = this.sender.getCurrentNode();
+        if (instance?.type === 'Write' && offset === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.popoverTab = 'all';
+          this.updateMentionPosition();
+          this.showConfigPopover = true;
+          this.selectedIndex = 0;
+        }
       }
     },
 
