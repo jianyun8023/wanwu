@@ -322,7 +322,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	// 解析用户消息中的 @提及资源
 	mentionResources := &wgaMentionResources{}
 	if userInputMessage != nil {
-		mentionNames := parseWgaResourceMentions(userInputMessage.Content)
+		mentionNames := parseWgaResourceMentions(userInputMessage.GetTextContent())
 		mentionResources = fetchWgaMentionResources(ctx, userID, orgID, mentionNames)
 	}
 
@@ -483,8 +483,16 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		opts = append(opts, knowledgeOpts...)
 	}
 
-	// 校验并构建Ontology知识网络的配置选项（追加@提及的Ontology知识网络）
-	ontologyOpts, ontologyMessage, err := buildWgaOntologyKnowledgeOptions(ctx, userID, orgID, agentID, wgaConfig.OntologyKnowledgeList, mentionResources.OntologyList)
+	// 校验并构建Ontology配置选项
+	var ontologyOpts []wga_option.Option
+	var ontologyMessage *schema.Message
+	if config.Cfg().Ontology.Enable != 0 {
+		if agentID == "DIP Agent" {
+			ontologyOpts, ontologyMessage, err = buildWgaOntologyDIPMode(ctx, userID, orgID, threadID, runID, strings.TrimSpace(userInputMessage.GetTextContent()))
+		} else {
+			ontologyOpts, ontologyMessage, err = buildWgaOntologyNonDIPMode(ctx, userID, orgID, mentionResources.OntologyList, wgaConfig.OntologyKnowledgeList)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +533,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	if skillMessage != nil {
 		messages = append(messages, skillMessage)
 	}
-	// 追加Ontology知识网络系统提示消息
+	// 追加Ontology提示消息
 	if ontologyMessage != nil {
 		messages = append(messages, ontologyMessage)
 	}

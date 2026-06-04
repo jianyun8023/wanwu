@@ -181,6 +181,25 @@ func (m *GeneralAgentConversationMessage) GetURLs() map[string]string {
 	return urls
 }
 
+func (m *GeneralAgentConversationMessage) GetTextContent() string {
+	var text string
+	switch v := m.Content.(type) {
+	case string:
+		text = v
+	case []interface{}:
+		for _, item := range v {
+			if m, ok := item.(map[string]interface{}); ok {
+				if typ, _ := m["type"].(string); typ == "text" {
+					if t, _ := m["text"].(string); t != "" {
+						text += t + " "
+					}
+				}
+			}
+		}
+	}
+	return text
+}
+
 type GeneralAgentWorkspaceDownloadReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID
 	RunID    string `json:"runId" form:"runId"`                           // 运行ID

@@ -250,24 +250,7 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 // 格式: @资源名称 后面跟空格或消息结束
 // 支持: "@mcp1 @workflow2 请帮我处理" -> ["mcp1", "workflow2"]
 // 返回: 提取到的资源名称列表（去重后）
-func parseWgaResourceMentions(content interface{}) []string {
-	var text string
-	switch v := content.(type) {
-	case string:
-		text = v
-	case []interface{}:
-		// 处理多部分消息，提取文本部分
-		for _, item := range v {
-			if m, ok := item.(map[string]interface{}); ok {
-				if typ, _ := m["type"].(string); typ == "text" {
-					if t, _ := m["text"].(string); t != "" {
-						text += t + " "
-					}
-				}
-			}
-		}
-	}
-
+func parseWgaResourceMentions(text string) []string {
 	// 使用正则提取 @name 格式，支持中文、英文、数字、下划线、连字符
 	matches := wgaResourceNameRegex.FindAllStringSubmatch(text, -1)
 
