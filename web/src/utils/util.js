@@ -662,7 +662,7 @@ export function getMimeType(fileExt) {
     htm: 'text/html',
   };
 
-  return mimeTypeMap[ext] || '';
+  return mimeTypeMap[ext] || `text/${ext}`;
 }
 
 /**
