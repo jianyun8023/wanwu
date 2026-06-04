@@ -951,6 +951,7 @@ export default {
     importStatus: '导入状态',
     author: '作者',
     noData: '暂无数据',
+    previewUnavailable: '此文件不支持预览',
     searchPlaceholder: '按照知识库名称搜索',
     searchPlaceholderQa: '按照问答库名称搜索',
     docPlaceholder: '按照文件名称搜索',

@@ -193,8 +193,11 @@
     </div>
 
     <div class="container">
-      <!-- 左侧：文件预览面板（仅在非禁用状态且存在下载链接时显示） -->
-      <div v-if="showPreviewPanel" class="section-preview-panel">
+      <!-- 左侧：文件预览面板（仅在非禁用状态且 canPreview 为 true 时显示） -->
+      <div
+        v-if="obj.disable !== 'true' && res?.canPreview === true"
+        class="section-preview-panel"
+      >
         <file-preview-drawer
           :blob="previewBlob"
           :file-name="previewFileName"
@@ -204,10 +207,23 @@
           :visible="true"
         />
       </div>
+      <!-- 不可预览时的兜底提示 -->
+      <div
+        v-else-if="obj.disable !== 'true' && res?.canPreview === false"
+        class="section-preview-panel preview-fail-panel"
+      >
+        <el-empty
+          :description="
+            res?.previewFailReason ||
+            '' ||
+            $t('knowledgeManage.previewUnavailable')
+          "
+        />
+      </div>
 
       <!-- 右侧：分段列表 -->
       <div
-        :class="{ 'full-width': !showPreviewPanel }"
+        :class="{ 'full-width': obj.disable === 'true' }"
         class="section-content-panel"
       >
         <div class="card">
@@ -681,10 +697,6 @@ export default {
     isMultiModal() {
       return Number(this.obj.category) === MULTIMODAL;
     },
-    // 判断是否显示预览面板：非禁用状态且存在下载链接
-    showPreviewPanel() {
-      return this.obj.disable !== 'true' && this.res?.downloadUrl;
-    },
   },
   created() {
     this.obj = this.$route.query;
@@ -978,7 +990,11 @@ export default {
           );
           this.metaDataList = res.data.metaDataList;
 
-          if (this.previewLoading && res.data?.downloadUrl) {
+          if (
+            this.previewLoading &&
+            res.data?.canPreview === true &&
+            res.data?.downloadUrl
+          ) {
             const fileName = this.obj.name;
             const hasExtension = fileName.includes('.');
             this.previewFileName = hasExtension ? fileName : `${fileName}.url`;
@@ -1409,6 +1425,14 @@ export default {
         right: -3px;
         border-radius: 0 12px 12px 0;
       }
+
+      &.preview-fail-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid #e4e7ed;
+        background: #fafafa;
+      }
     }
 
     .section-content-panel {
@@ -1433,6 +1457,7 @@ export default {
         flex-direction: column;
         gap: 12px;
         padding: 0 2px;
+        flex-wrap: nowrap;
 
         .text {
           font-size: 14px;

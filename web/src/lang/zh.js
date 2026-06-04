@@ -931,6 +931,7 @@ export default {
     questionPlaceholder: '按照问题搜索',
     metaPlaceholder: '按照元数据值搜索',
     segmentPlaceholder: '按照分段内容搜索',
+    previewUnavailable: '该文件不支持预览',
     createQaDatabase: '新建问答库',
     createDatabase: '新建数据库',
     desc: '知识库描述',
