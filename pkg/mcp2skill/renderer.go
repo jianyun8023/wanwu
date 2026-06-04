@@ -41,7 +41,7 @@ func (r *Renderer) RenderSkill(doc SkillDocument) string {
 		b.WriteString("\n")
 	}
 
-	// Key instruction if URL contains placeholder
+	// Authentication section
 	if strings.Contains(doc.ServerInfo.URL, "<YOUR_KEY>") {
 		b.WriteString("## Authentication\n\n")
 		b.WriteString("**This MCP server requires an API key.** The server URL contains `<YOUR_KEY>` as a placeholder.\n")
@@ -50,6 +50,18 @@ func (r *Renderer) RenderSkill(doc SkillDocument) string {
 		fmt.Fprintf(&b, "# Replace <YOUR_KEY> with your real key\n")
 		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url %s --transport %s --tool <tool-name> --arguments '{...}'\n",
 			strings.ReplaceAll(doc.ServerInfo.URL, "<YOUR_KEY>", "YOUR_ACTUAL_KEY"), doc.ServerInfo.TransportType)
+		b.WriteString("```\n\n")
+	} else if doc.ServerInfo.AuthHeader != "" {
+		b.WriteString("## Authentication\n\n")
+		b.WriteString("**This MCP server requires authentication via HTTP headers.**\n\n")
+		fmt.Fprintf(&b, "You **must** set the following header in every request:\n\n")
+		b.WriteString("```\n")
+		fmt.Fprintf(&b, "%s\n", doc.ServerInfo.AuthHeader)
+		b.WriteString("```\n\n")
+		b.WriteString("Example:\n```\n")
+		fmt.Fprintf(&b, "# Set the required header\n")
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url \"%s\" --transport %s --tool <tool-name> --arguments '{...}'\n",
+			doc.ServerInfo.URL, doc.ServerInfo.TransportType)
 		b.WriteString("```\n\n")
 	}
 
@@ -71,10 +83,21 @@ func (r *Renderer) RenderSkill(doc SkillDocument) string {
 	b.WriteString("## Quick Start\n\n")
 	b.WriteString("```bash\n")
 	b.WriteString("# List available tools\n")
-	fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url %s --transport %s --list\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
-	b.WriteString("\n")
-	b.WriteString("# Call a tool\n")
-	fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url %s --transport %s --tool <tool-name> --arguments '{\"key\": \"value\"}'\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
+	if doc.ServerInfo.AuthHeader != "" {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url \"%s\" --transport %s --headers '{\"Authorization\": \"<YOUR_TOKEN>\"}' --list\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
+	} else if strings.Contains(doc.ServerInfo.URL, "<YOUR_KEY>") {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url %s --transport %s --list\n", strings.ReplaceAll(doc.ServerInfo.URL, "<YOUR_KEY>", "YOUR_ACTUAL_KEY"), doc.ServerInfo.TransportType)
+	} else {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url \"%s\" --transport %s --list\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
+	}
+	b.WriteString("\n# Call a tool\n")
+	if doc.ServerInfo.AuthHeader != "" {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url \"%s\" --transport %s --headers '{\"Authorization\": \"<YOUR_TOKEN>\"}' --tool <tool-name> --arguments '{...}'\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
+	} else if strings.Contains(doc.ServerInfo.URL, "<YOUR_KEY>") {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url %s --transport %s --tool <tool-name> --arguments '{...}'\n", strings.ReplaceAll(doc.ServerInfo.URL, "<YOUR_KEY>", "YOUR_ACTUAL_KEY"), doc.ServerInfo.TransportType)
+	} else {
+		fmt.Fprintf(&b, "python3 scripts/mcp_client.py --server-url \"%s\" --transport %s --tool <tool-name> --arguments '{\"key\": \"value\"}'\n", doc.ServerInfo.URL, doc.ServerInfo.TransportType)
+	}
 	b.WriteString("```\n\n")
 
 	// Tools table
@@ -310,8 +333,8 @@ def list_tools() -> list:
 
 async def _call_tool(tool_name: str, arguments: dict) -> dict:
     """Async: Call a specific tool on the MCP server."""
-    server_url, transport = _get_config()
-    async with _create_transport(server_url, transport) as streams:
+    server_url, transport, headers = _get_config()
+    async with _create_transport(server_url, transport, headers) as streams:
         read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -327,8 +350,8 @@ async def _call_tool(tool_name: str, arguments: dict) -> dict:
 
 async def _list_tools() -> list:
     """Async: List available tools on the MCP server."""
-    server_url, transport = _get_config()
-    async with _create_transport(server_url, transport) as streams:
+    server_url, transport, headers = _get_config()
+    async with _create_transport(server_url, transport, headers) as streams:
         read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -342,38 +365,46 @@ async def _list_tools() -> list:
             return tools
 
 
-def _create_transport(server_url: str, transport: str):
+def _create_transport(server_url: str, transport: str, headers: dict | None = None):
     """Create the appropriate MCP transport context manager."""
+    extra_headers = headers or {}
     if transport == "sse":
-        return sse_client(server_url)
-    return streamablehttp_client(server_url)
+        return sse_client(server_url, headers=extra_headers)
+    return streamablehttp_client(server_url, headers=extra_headers)
 
 
-_config = {"server_url": None, "transport": "streamable"}
+_config = {"server_url": None, "transport": "streamable", "headers": None}
 
 
 def _get_config():
     server_url = _config["server_url"]
     if not server_url:
         raise RuntimeError("MCP client not configured. Call setup_client() first.")
-    return server_url, _config["transport"]
+    return server_url, _config["transport"], _config["headers"]
 
 
-def setup_client(server_url: str, transport: str = "streamable"):
+def setup_client(server_url: str, transport: str = "streamable", headers: dict | None = None):
     _config["server_url"] = server_url
     _config["transport"] = transport
+    _config["headers"] = headers
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MCP Client - Call tools on an MCP server")
     parser.add_argument("--server-url", required=True, help="MCP server URL")
     parser.add_argument("--transport", default="streamable", choices=["sse", "streamable"], help="Transport type")
+    parser.add_argument("--headers", default="{}", help="JSON headers for authentication, e.g. '{\"Authorization\": \"Bearer TOKEN\"}'")
     parser.add_argument("--list", action="store_true", help="List available tools")
     parser.add_argument("--tool", help="Tool name to call")
     parser.add_argument("--arguments", default="{}", help="JSON arguments for the tool")
 
     args = parser.parse_args()
-    setup_client(args.server_url, args.transport)
+    try:
+        req_headers = json.loads(args.headers)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON headers: {e}", file=sys.stderr)
+        sys.exit(1)
+    setup_client(args.server_url, args.transport, headers=req_headers)
 
     if args.list:
         tools = list_tools()
@@ -407,11 +438,9 @@ func toPythonParamName(name string) string {
 	// Replace hyphens and dots with underscores for valid Python identifiers.
 	result := strings.ReplaceAll(name, "-", "_")
 	result = strings.ReplaceAll(result, ".", "_")
-	// Prefix with underscore if it starts with a digit.
-	if len(result) > 0 && result[0] >= '0' && result[0] <= '9' {
-		result = "_" + result
-	}
-	return result
+	// Prefix with "arg_" so all tool parameters are clearly identifiable
+	// and can never conflict with Python keywords or builtins.
+	return "arg_" + result
 }
 
 func buildArgsDictWithMapping(params []ParameterDocument, pythonToOriginal map[string]string) string {
@@ -476,3 +505,4 @@ func yamlQuote(s string) string {
 	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
 	return `"` + escaped + `"`
 }
+

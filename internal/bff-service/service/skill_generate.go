@@ -10,10 +10,28 @@ import (
 	rag_service "github.com/UnicomAI/wanwu/api/proto/rag-service"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	mcp2skill "github.com/UnicomAI/wanwu/pkg/mcp2skill"
+	pkg_util "github.com/UnicomAI/wanwu/pkg/util"
 	openapi2skill "github.com/UnicomAI/wanwu/pkg/openapi2skill"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
 )
+
+// toMCP2SkillAuth converts pkg/util.ApiAuthWebRequest to mcp2skill.APIAuthConfig.
+// This bridges the service layer (which uses pkg/util types from proto conversion)
+// with the mcp2skill package (which uses a self-contained auth type to avoid
+// pulling in heavy proto/log dependencies in the standalone binary).
+func toMCP2SkillAuth(auth *pkg_util.ApiAuthWebRequest) *mcp2skill.APIAuthConfig {
+	if auth == nil {
+		return nil
+	}
+	return &mcp2skill.APIAuthConfig{
+		AuthType:           auth.AuthType,
+		ApiKeyHeaderPrefix: auth.ApiKeyHeaderPrefix,
+		ApiKeyHeader:       auth.ApiKeyHeader,
+		ApiKeyQueryParam:   auth.ApiKeyQueryParam,
+		ApiKeyValue:        auth.ApiKeyValue,
+	}
+}
 
 // GenerateSkillFromMCP generates skill files from an MCP server.
 // It fetches MCP connection info by mcpID via gRPC, then uses mcp2skill
@@ -37,6 +55,8 @@ func GenerateSkillFromMCP(ctx *gin.Context, mcpID, outputDir string) error {
 		StreamableUrl: mcpDetail.StreamableUrl,
 		SseUrl:        mcpDetail.SseUrl,
 		Transport:     transport,
+		ApiAuth:       toMCP2SkillAuth(toApiAuthPtr(mcpDetail.GetApiAuth())),
+		Headers:       mcpDetail.GetHeaders(),
 	}
 
 	return mcp2skill.ConvertFromMCPConfig(ctx.Request.Context(), cfg, outputDir)
