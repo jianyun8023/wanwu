@@ -7,6 +7,7 @@ import (
 
 	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
 	openapi3_util "github.com/UnicomAI/wanwu/pkg/openapi3-util"
+	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -72,9 +73,11 @@ type Skill struct {
 
 // MCP MCP 服务器配置。
 type MCP struct {
-	Name        string // MCP 名称
-	URL         string // MCP SSE/STREAMABLE 服务器地址
-	Description string // MCP 描述
+	Name        string                 // MCP 名称
+	URL         string                 // MCP SSE/STREAMABLE 服务器地址
+	Description string                 // MCP 描述
+	ApiAuth     *util.ApiAuthWebRequest // API 认证配置（可选）
+	Headers     map[string]string       // 自定义请求头（可选）
 }
 
 // RunSession 执行会话标识。

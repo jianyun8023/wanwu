@@ -170,6 +170,8 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 				Name:        mcp.Name,
 				URL:         mcp.URL,
 				Description: mcp.Description,
+				ApiAuth:     mcp.ApiAuth,
+				Headers:     mcp.Headers,
 			}
 		}
 		opts = append(opts, wga_sandbox_option.WithMCPs(mcps))

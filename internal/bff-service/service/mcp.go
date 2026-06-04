@@ -423,3 +423,12 @@ func toApiAuthResponse(auth *common.ApiAuthWebRequest) pkg_util.ApiAuthWebReques
 		ApiKeyValue:        auth.GetApiKeyValue(),
 	}
 }
+
+// toApiAuthPtr 将 proto ApiAuthWebRequest 转换为指针类型的 ApiAuthWebRequest。
+func toApiAuthPtr(auth *common.ApiAuthWebRequest) *pkg_util.ApiAuthWebRequest {
+	if auth == nil {
+		return nil
+	}
+	ret := toApiAuthResponse(auth)
+	return &ret
+}

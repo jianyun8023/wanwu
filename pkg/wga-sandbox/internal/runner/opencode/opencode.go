@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -64,7 +65,10 @@ const (
       "type": "remote",
       "url": "{{$mcp.URL}}",
       "description": "{{$mcp.Description}}",
-      "enabled": true
+      "enabled": true{{if $mcp.Headers}},
+      "headers": {
+{{- range $k, $v := $mcp.Headers}}        "{{$k}}": "{{$v}}"{{end}}
+      }{{end}}
     }{{if ne $i (sub (len $.MCPs) 1)}},{{end}}
 {{end}}  }{{end}}
 }`
@@ -323,9 +327,9 @@ func (r *Runner) setupTool(ctx context.Context, tool wga_sandbox_option.Tool) er
 		return fmt.Errorf("failed to write tool schema %s: %w", tool.Name, err)
 	}
 
-	// 使用 openapi-to-skills 转换为 skill
+	// 使用 openapi2skill 转换为 skill
 	skillName := toSkillName(tool.Name)
-	if _, err := r.sb.ExecuteSync(ctx, "openapi-to-skills", dstPath, "-o", ".opencode/skills", "-n", skillName, "-f"); err != nil {
+	if _, err := r.sb.ExecuteSync(ctx, "openapi2skill", dstPath, "-o", ".opencode/skills", "-n", skillName, "-f"); err != nil {
 		return fmt.Errorf("failed to convert tool %s to skill: %w", tool.Name, err)
 	}
 
@@ -974,13 +978,73 @@ func (r *Runner) convertQuestionEvent(event *sseEvent, eventType OpencodeEventTy
 // 模板渲染
 // ============================================================================
 
+// processedMCP 渲染用的 MCP 中间结构体，在渲染前统一完成鉴权处理。
+type processedMCP struct {
+	Name        string
+	URL         string
+	Description string
+	Headers     map[string]string // 最终注入到 opencode.json 的请求头
+}
+
 // renderConfig 渲染 opencode 配置文件。
 func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_option.MCP, enableHITL bool) (string, error) {
+	// 在渲染前统一处理鉴权：query 鉴权拼入 URL，header 鉴权转为 headers map
+	processedMcps := make([]processedMCP, 0, len(mcps))
+	for _, mcp := range mcps {
+		pm := processedMCP{
+			Name:        mcp.Name,
+			Description: mcp.Description,
+			Headers:     make(map[string]string),
+		}
+		// 自定义请求头优先注入
+		for k, v := range mcp.Headers {
+			pm.Headers[k] = v
+		}
+		// 处理 API 鉴权
+		if mcp.ApiAuth != nil && mcp.ApiAuth.AuthType != "" && mcp.ApiAuth.AuthType != util.AuthTypeNone {
+			switch mcp.ApiAuth.AuthType {
+			case util.AuthTypeAPIKeyQuery:
+				// query 鉴权拼入 URL
+				rawUrl, err := url.Parse(mcp.URL)
+				if err != nil {
+					return "", fmt.Errorf("mcp [%s] parse url err: %w", mcp.Name, err)
+				}
+				q := rawUrl.Query()
+				q.Set(mcp.ApiAuth.ApiKeyQueryParam, mcp.ApiAuth.ApiKeyValue)
+				rawUrl.RawQuery = q.Encode()
+				pm.URL = rawUrl.String()
+			case util.AuthTypeAPIKeyHeader:
+				// header 鉴权转为请求头
+				value := mcp.ApiAuth.ApiKeyValue
+				switch mcp.ApiAuth.ApiKeyHeaderPrefix {
+				case util.ApiKeyHeaderPrefixBasic:
+					value = "Basic " + mcp.ApiAuth.ApiKeyValue
+				case util.ApiKeyHeaderPrefixBearer:
+					value = "Bearer " + mcp.ApiAuth.ApiKeyValue
+				}
+				headerName := mcp.ApiAuth.ApiKeyHeader
+				if headerName == "" {
+					headerName = util.ApiKeyHeaderDefault
+				}
+				pm.Headers[headerName] = value
+			}
+		}
+		// 未设置 URL 的情况（无 query 鉴权）
+		if pm.URL == "" {
+			pm.URL = mcp.URL
+		}
+		// 没有 headers 则设为 nil，避免模板渲染空的 headers 块
+		if len(pm.Headers) == 0 {
+			pm.Headers = nil
+		}
+		processedMcps = append(processedMcps, pm)
+	}
+
 	tmpl, err := template.New("config").Funcs(template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"len": func(v interface{}) int {
 			switch s := v.(type) {
-			case []wga_sandbox_option.MCP:
+			case []processedMCP:
 				return len(s)
 			}
 			return 0
@@ -991,11 +1055,11 @@ func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_opti
 	}
 	data := struct {
 		wga_sandbox_option.ModelConfig
-		MCPs                 []wga_sandbox_option.MCP
+		MCPs                 []processedMCP
 		EnableHumanInTheLoop bool
 	}{
 		ModelConfig:          config,
-		MCPs:                 mcps,
+		MCPs:                 processedMcps,
 		EnableHumanInTheLoop: enableHITL,
 	}
 	var buf strings.Builder

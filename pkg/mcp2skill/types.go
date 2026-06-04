@@ -2,8 +2,9 @@ package mcp2skill
 
 // MCPServerConfig holds connection info for an MCP server.
 type MCPServerConfig struct {
-	URL           string // MCP server URL
-	TransportType string // "sse" or "streamable"
+	URL           string            // MCP server URL
+	TransportType string            // "sse" or "streamable"
+	Headers       map[string]string // HTTP headers to include in requests
 }
 
 // ConvertOptions configures the conversion process.
@@ -18,6 +19,8 @@ type ConvertOptions struct {
 	ServerURL string
 	// TransportType is included in SKILL.md for reference ("sse" or "streamable").
 	TransportType string
+	// ApiAuth is the API authentication configuration for credential display.
+	ApiAuth *APIAuthConfig
 }
 
 // =============================================================================
@@ -42,6 +45,7 @@ type SkillMeta struct {
 type ServerInfoDocument struct {
 	URL           string
 	TransportType string
+	AuthHeader    string // Description of header-based auth, e.g. "Authorization: Bearer <YOUR_TOKEN>"
 }
 
 // ToolDocument represents a single MCP tool in the IR.

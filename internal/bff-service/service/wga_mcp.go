@@ -82,6 +82,8 @@ func buildWgaMCPOptions(ctx *gin.Context, userId, orgId string, mcpList []*assis
 			Name:        item.Info.GetName(),
 			URL:         util.IfElse(item.Transport == constant.MCPTransportStreamable, item.StreamableUrl, item.SseUrl),
 			Description: item.Info.GetDesc(),
+			ApiAuth:     toApiAuthPtr(item.GetApiAuth()),
+			Headers:     item.GetHeaders(),
 		}))
 	}
 	for _, item := range mcpResp.Servers {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -106,6 +107,23 @@ func parseKeyValue(cfg *mcp2skill.MCPConfig, outputDir *string, timeout *time.Du
 			return fmt.Errorf("invalid timeout: %s", val)
 		}
 		*timeout = d
+	case "headers":
+		var headers map[string]string
+		if err := json.Unmarshal([]byte(val), &headers); err != nil {
+			return fmt.Errorf("invalid headers JSON: %v", err)
+		}
+		if cfg.Headers == nil {
+			cfg.Headers = make(map[string]string)
+		}
+		for k, v := range headers {
+			cfg.Headers[k] = v
+		}
+	case "apiAuth":
+		var auth mcp2skill.APIAuthConfig
+		if err := json.Unmarshal([]byte(val), &auth); err != nil {
+			return fmt.Errorf("invalid apiAuth JSON: %v", err)
+		}
+		cfg.ApiAuth = &auth
 	default:
 		return fmt.Errorf("unknown key: %s", key)
 	}
@@ -126,6 +144,8 @@ func printUsage() {
 	fmt.Println("  transport      Transport type: streamable (default) or sse")
 	fmt.Println("  output         Output directory (default: .)")
 	fmt.Println("  timeout        Connection timeout (default: 30s)")
+	fmt.Println("  headers        Custom HTTP headers as JSON object, e.g. '{\"Authorization\":\"Bearer TOKEN\"}'")
+	fmt.Println("  apiAuth        API auth config as JSON object, e.g. '{\"authType\":\"api_key_header\",\"apiKeyHeaderPrefix\":\"bearer\",\"apiKeyValue\":\"TOKEN\"}'")
 	fmt.Println("  -v, --version  Print version")
 	fmt.Println("  -h, --help     Print help")
 }

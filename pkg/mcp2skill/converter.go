@@ -25,9 +25,17 @@ import (
 //	{
 //	  "name": "天气查询streamable",
 //	  "description": "根据地点获取当前的天气情况",
-//	  "streamableUrl": "http://192.168.0.21:8081/service/api/openapi/v1/mcp/server/streamable?key=xxx",
+//	  "streamableUrl": "http://192.168.0.21:8081/service/api/openapi/v1/mcp/server/streamable",
 //	  "sseUrl": "",
-//	  "transport": "streamable"
+//	  "transport": "streamable",
+//	  "apiAuth": {
+//	    "authType": "api_key_query",
+//	    "apiKeyQueryParam": "key",
+//	    "apiKeyValue": "ww-xxx"
+//	  },
+//	  "headers": {
+//	    "X-Custom": "value"
+//	  }
 //	}
 type MCPConfig struct {
 	// Name is the skill name (e.g. MCP info name). Used as the skill directory name.
@@ -41,6 +49,10 @@ type MCPConfig struct {
 	SseUrl string `json:"sseUrl,omitempty"`
 	// Transport is the transport type: "streamable" or "sse". Defaults to "streamable".
 	Transport string `json:"transport,omitempty"`
+	// ApiAuth is the optional API authentication configuration.
+	ApiAuth *APIAuthConfig `json:"apiAuth,omitempty"`
+	// Headers are optional custom HTTP headers to include in requests.
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 // ConvertFromConfig reads a JSON config file, connects to the MCP server,
@@ -61,7 +73,8 @@ func ConvertFromConfig(ctx context.Context, configPath string, outputDir string)
 
 // ConvertFromMCPConfig connects to the MCP server described by MCPConfig,
 // fetches tools, and writes the skill output.
-// URLs containing key/secrets are automatically stripped in the generated output.
+// ApiAuth and Headers from the config are used for the connection but stripped
+// from the generated output — users must fill in their own credentials.
 func ConvertFromMCPConfig(ctx context.Context, cfg *MCPConfig, outputDir string) error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
@@ -85,10 +98,17 @@ func ConvertFromMCPConfig(ctx context.Context, cfg *MCPConfig, outputDir string)
 		return fmt.Errorf("no server URL available in config (need streamableUrl or sseUrl)")
 	}
 
-	// Connect with the full URL (including key) to fetch tools.
+	// Merge auth params into connection URL and extract headers.
+	connURL, connHeaders, err := mergeAuthParams(serverURL, cfg.ApiAuth, cfg.Headers)
+	if err != nil {
+		return fmt.Errorf("failed to merge auth params: %w", err)
+	}
+
+	// Connect with the full URL (including merged query params) and headers.
 	config := MCPServerConfig{
-		URL:           serverURL,
+		URL:           connURL,
 		TransportType: transportType,
+		Headers:       connHeaders,
 	}
 
 	// Derive skill name.
@@ -100,8 +120,8 @@ func ConvertFromMCPConfig(ctx context.Context, cfg *MCPConfig, outputDir string)
 		skillName = "mcp-skill"
 	}
 
-	// Mask key from URLs that appear in the generated output.
-	displayURL := maskURLKey(serverURL)
+	// Build display URL (without credentials) for the generated output.
+	displayURL := buildDisplayURL(serverURL, cfg.ApiAuth)
 
 	return ConvertFromServer(ctx, config, ConvertOptions{
 		OutputDir:     outputDir,
@@ -109,6 +129,7 @@ func ConvertFromMCPConfig(ctx context.Context, cfg *MCPConfig, outputDir string)
 		Description:   cfg.Description,
 		ServerURL:     displayURL,
 		TransportType: transportType,
+		ApiAuth:       cfg.ApiAuth,
 	})
 }
 
@@ -142,6 +163,7 @@ func ConvertFromTools(tools []*protocol.Tool, opts ConvertOptions) error {
 	skillDoc.ServerInfo = ServerInfoDocument{
 		URL:           opts.ServerURL,
 		TransportType: opts.TransportType,
+		AuthHeader:    buildAuthHeaderDescription(opts.ApiAuth),
 	}
 
 	renderer := NewRenderer()
@@ -166,10 +188,42 @@ var insecureHTTPClient = &http.Client{
 	},
 }
 
+// headerTransport is an http.RoundTripper wrapper for injecting custom headers.
+type headerTransport struct {
+	base    http.RoundTripper
+	headers map[string]string
+}
+
+func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for key, value := range t.headers {
+		req.Header.Set(key, value)
+	}
+	return t.base.RoundTrip(req)
+}
+
+// newHTTPClientWithHeaders creates an http.Client with custom headers injected.
+func newHTTPClientWithHeaders(headers map[string]string) *http.Client {
+	if len(headers) == 0 {
+		return insecureHTTPClient
+	}
+	return &http.Client{
+		Transport: &headerTransport{
+			base: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+			headers: headers,
+		},
+	}
+}
+
 func listToolsFromServer(ctx context.Context, config MCPServerConfig) ([]*protocol.Tool, error) {
 	if config.URL == "" {
 		return nil, fmt.Errorf("MCP server URL is required")
 	}
+
+	httpClient := newHTTPClientWithHeaders(config.Headers)
 
 	var transportClient transport.ClientTransport
 	var err error
@@ -177,12 +231,12 @@ func listToolsFromServer(ctx context.Context, config MCPServerConfig) ([]*protoc
 	switch config.TransportType {
 	case "streamable":
 		transportClient, err = transport.NewStreamableHTTPClientTransport(config.URL,
-			transport.WithStreamableHTTPClientOptionHTTPClient(insecureHTTPClient),
+			transport.WithStreamableHTTPClientOptionHTTPClient(httpClient),
 		)
 	case "sse":
 		transportClient, err = transport.NewSSEClientTransport(config.URL,
 			transport.WithSSEClientOptionReceiveTimeout(time.Minute*2),
-			transport.WithSSEClientOptionHTTPClient(insecureHTTPClient),
+			transport.WithSSEClientOptionHTTPClient(httpClient),
 		)
 	default:
 		return nil, fmt.Errorf("unsupported transport type: %s (use 'sse' or 'streamable')", config.TransportType)
@@ -261,8 +315,106 @@ func maskParamInQuery(query, param string) string {
 }
 
 // =============================================================================
-// Output writing
+// Auth params merging
 // =============================================================================
+
+// mergeAuthParams merges API auth and custom headers into a connection URL
+// and headers map. Query auth params are merged into the URL, header auth
+// params and custom headers are returned as a combined headers map.
+func mergeAuthParams(serverURL string, apiAuth *APIAuthConfig, headers map[string]string) (string, map[string]string, error) {
+	connHeaders := make(map[string]string)
+	for k, v := range headers {
+		connHeaders[k] = v
+	}
+
+	if apiAuth == nil || apiAuth.AuthType == "" || apiAuth.AuthType == AuthTypeNone {
+		return serverURL, connHeaders, nil
+	}
+
+	switch apiAuth.AuthType {
+	case AuthTypeAPIKeyQuery:
+		rawUrl, err := url.Parse(serverURL)
+		if err != nil {
+			return "", nil, fmt.Errorf("parse url err: %w", err)
+		}
+		q := rawUrl.Query()
+		q.Set(apiAuth.ApiKeyQueryParam, apiAuth.ApiKeyValue)
+		rawUrl.RawQuery = q.Encode()
+		return rawUrl.String(), connHeaders, nil
+
+	case AuthTypeAPIKeyHeader:
+		value := apiAuth.ApiKeyValue
+		switch apiAuth.ApiKeyHeaderPrefix {
+		case ApiKeyHeaderPrefixBasic:
+			value = "Basic " + apiAuth.ApiKeyValue
+		case ApiKeyHeaderPrefixBearer:
+			value = "Bearer " + apiAuth.ApiKeyValue
+		}
+		headerName := apiAuth.ApiKeyHeader
+		if headerName == "" {
+			headerName = ApiKeyHeaderDefault
+		}
+		connHeaders[headerName] = value
+		return serverURL, connHeaders, nil
+	}
+
+	return serverURL, connHeaders, nil
+}
+
+// buildDisplayURL builds the URL to display in the generated skill output.
+// It strips credential info so users know what they need to fill in.
+func buildDisplayURL(serverURL string, apiAuth *APIAuthConfig) string {
+	if apiAuth == nil || apiAuth.AuthType == "" || apiAuth.AuthType == AuthTypeNone {
+		return maskURLKey(serverURL)
+	}
+
+	switch apiAuth.AuthType {
+	case AuthTypeAPIKeyQuery:
+		// Use maskParamInQuery to replace the query param value with <YOUR_KEY>,
+		// preserving the raw query string to avoid URL-encoding angle brackets.
+		u, err := url.Parse(serverURL)
+		if err != nil {
+			return serverURL
+		}
+		if u.RawQuery == "" {
+			// No query params yet, add the placeholder
+			u.RawQuery = apiAuth.ApiKeyQueryParam + "=<YOUR_KEY>"
+		} else {
+			u.RawQuery = maskParamInQuery(u.RawQuery, apiAuth.ApiKeyQueryParam)
+		}
+		return u.String()
+	case AuthTypeAPIKeyHeader:
+		// Header auth doesn't affect URL, just mask any existing sensitive params.
+		return maskURLKey(serverURL)
+	}
+	return maskURLKey(serverURL)
+}
+
+// buildAuthHeaderDescription builds a human-readable description of header-based auth.
+func buildAuthHeaderDescription(apiAuth *APIAuthConfig) string {
+	if apiAuth == nil || apiAuth.AuthType == "" || apiAuth.AuthType == AuthTypeNone {
+		return ""
+	}
+	if apiAuth.AuthType == AuthTypeAPIKeyHeader {
+		prefix := apiAuth.ApiKeyHeaderPrefix
+		if prefix == "" {
+			prefix = "custom"
+		}
+		headerName := apiAuth.ApiKeyHeader
+		if headerName == "" {
+			headerName = ApiKeyHeaderDefault
+		}
+		switch prefix {
+		case "bearer":
+			return headerName + ": Bearer <YOUR_TOKEN>"
+		case "basic":
+			return headerName + ": Basic <YOUR_CREDENTIALS>"
+		default:
+			return headerName + ": <YOUR_VALUE>"
+		}
+	}
+	return ""
+}
 
 func writeSkillOutput(doc SkillDocument, outputDir string, renderer *Renderer) error {
 	skillDir := filepath.Join(outputDir, doc.Meta.Name)
