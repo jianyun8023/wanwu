@@ -169,6 +169,7 @@ def check_knowledge_base(user_id, kb_info):
 # -----------------删除知识库
 def del_konwledge_base(user_id, kb_info):
     kb_name = kb_info["kb_name"]
+    kb_id = kb_info["kb_id"]
     kb_path = os.path.join(user_data_path, user_id, kb_name)
     response_info = {'code': 0, "message": "成功"}
     # ====== check 知识库是否存在 ===
@@ -185,7 +186,7 @@ def del_konwledge_base(user_id, kb_info):
             graph_utils.delete_kb_graph(user_id, kb_name)
             logger.info(f"知识图谱删除成功, kb_name:{kb_name}")
             graph_redis_client = redis_utils.get_redis_connection()
-            redis_utils.delete_graph_vocabulary_set(graph_redis_client, kb_meta["id"])
+            redis_utils.delete_graph_vocabulary_set(graph_redis_client, kb_id)
         except Exception as e:
             logger.error(f"知识图谱删除失败, error: {repr(e)}")
 

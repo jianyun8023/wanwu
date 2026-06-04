@@ -80,7 +80,7 @@ def get_uk_kb_name_list(index_name, user_id):
 
 def get_uk_kb_id_list(index_name, user_id):
     """获取某个 user_id 在映射表中所有知识库的 kb_id 列表（含 QA 库）"""
-    body = {
+    query = {
         "query": {
             "bool": {
                 "must": [
@@ -89,10 +89,17 @@ def get_uk_kb_id_list(index_name, user_id):
             }
         },
         "_source": ["kb_id"],
-        "size": 100000
     }
-    response = es.search(index=index_name, body=body)
-    return [hit["_source"]["kb_id"] for hit in response["hits"]["hits"]]
+    return [
+        doc["_source"]["kb_id"]
+        for doc in helpers.scan(
+            es,
+            query=query,
+            index=index_name,
+            scroll="5m",
+            size=1000,
+        )
+    ]
 
 
 def get_uk_kb_emb_model_id(userId, kb_name):

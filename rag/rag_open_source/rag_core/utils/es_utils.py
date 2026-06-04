@@ -338,8 +338,6 @@ def del_es_kb(user_id, kb_info):
     response_info = {'code': 0, "message": "成功"}
     kb_name = kb_info["kb_name"]
     es_data = {}
-    es_data['index_name'] = 'rag2_' + user_id + '_' + kb_name
-    es_data['index_name'] = es_data['index_name'].lower()
     es_data['user_id'] = user_id
     es_data['kb_info'] = kb_info
     es_url = ES_BASE_URL + "/api/v1/rag/es/delete_index"

@@ -1688,7 +1688,6 @@ def snippet_delete_index_kb_name(request_json=None):
     logger.info("request: /api/v1/rag/es/delete_index")
     logger.info('delete_index request_params: ' + json.dumps(request_json, indent=4, ensure_ascii=False))
 
-    # index_name = data.get('index_name') 之前拼接好的，弃用
     user_id = request_json.get('user_id')
     user_id = user_id.replace('-', '_')
     index_name = SNIPPET_INDEX_NAME_PREFIX + user_id
