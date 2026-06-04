@@ -577,6 +577,7 @@ export function getFileType(fileName) {
     ppt: ['ppt', 'pptx'],
     excel: ['csv', 'xls', 'xlsx'],
     word: ['doc', 'docx'],
+    ofd: ['ofd'],
     html: ['html', 'htm'],
     markdown: ['md'],
   };
@@ -656,6 +657,7 @@ export function getMimeType(fileExt) {
     wma: 'audio/x-ms-wma',
     // 文档类型
     pdf: 'application/pdf',
+    ofd: 'application/ofd',
     html: 'text/html',
     htm: 'text/html',
   };

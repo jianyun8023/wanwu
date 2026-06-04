@@ -2338,6 +2338,8 @@ export default {
       unsupportedType: '此文件类型暂不支持预览',
       processFailed: '处理文件失败',
       wordPreviewFailed: 'Word 文档预览失败',
+      ofdPreviewFailed: 'OFD 文档预览失败',
+      ofdLoading: 'OFD 文档加载中...',
     },
     messageHeader: {
       user: '你',

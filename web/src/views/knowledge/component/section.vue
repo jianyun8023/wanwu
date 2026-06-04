@@ -1020,7 +1020,6 @@ export default {
           this.$message.error(this.$t('knowledgeManage.getListFail'));
         })
         .finally(() => {
-          this.previewLoading = false;
           this.loading.itemStatus = false;
         });
     },
@@ -1033,6 +1032,8 @@ export default {
         }
       } catch (e) {
         console.error('文件预览下载失败:', e);
+      } finally {
+        this.previewLoading = false;
       }
     },
     handleCurrentChange(val) {

@@ -2079,6 +2079,8 @@ export default {
       unsupportedType: 'This file type is not supported for preview',
       processFailed: 'Failed to process file',
       wordPreviewFailed: 'Word document preview failed',
+      ofdPreviewFailed: 'OFD document preview failed',
+      ofdLoading: 'Loading OFD document...',
     },
     messageHeader: {
       user: 'You',
