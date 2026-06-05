@@ -521,7 +521,9 @@ def es_knn_search(request_json=None):
             scores = [item[1] for item in top_results]
 
         for item in search_list:  # 将 kb_id 转换为 kb_name
+            item["kb_id"] = item["kb_name"]
             item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
+
         result = {
             "code": 0,
             "message": "success",
@@ -690,6 +692,8 @@ def get_content_list(request_json=None):
         content_result = es_ops.get_file_content_list(searched_index_name, kb_id, file_name, page_size, search_after)
         content_list = content_result["content_list"]
         for content in content_list:
+            content["kb_id"] = kb_id
+            content["kb_name"] = display_kb_name
             if "is_parent" in content and content["is_parent"]:
                 child_result = es_ops.get_child_contents(index_name, kb_id, content["content_id"])
                 content["child_chunk_total_num"] = child_result["child_chunk_total_num"]
@@ -733,6 +737,9 @@ def get_child_content_list(request_json=None):
         logger.info(
             f"用户:{userId},请求的kb_id为:{kb_id},file_name:{file_name},chunk_id:{chunk_id}")
         content_result = es_ops.get_child_contents(index_name, kb_id, chunk_id, child_chunk_current_num)
+        for child_content in content_result["child_content_list"]:
+            child_content["kb_id"] = kb_id
+            child_content["kb_name"] = display_kb_name
         result = {
             "code": 0,
             "message": "success",
@@ -1070,6 +1077,7 @@ def get_content_by_ids(request_json=None):
             searched_index_name = 'community_report_' + index_name
         contents = es_ops.get_contents_by_ids(searched_index_name, kb_id, content_ids)
         for item in contents:  # 将 kb_id 转换为 kb_name
+            item["kb_id"] = kb_id
             item["kb_name"] = display_kb_name
         result = {
             "code": 0,
@@ -1391,11 +1399,9 @@ def snippet_search(request_json=None):
     search_by = request_json.get('search_by', "snippet")
     filter_file_name_list = request_json.get("filter_file_name_list", [])
     metadata_filtering_conditions = request_json.get("metadata_filtering_conditions", [])
-    kb_id_2_kb_name = {}
     try:
         if not kb_id:
             raise ValueError("kb_info.kb_id is required")
-        kb_id_2_kb_name[kb_id] = kb_name
 
         final_conditions = []
         for condition in metadata_filtering_conditions:
@@ -1423,7 +1429,8 @@ def snippet_search(request_json=None):
                                                 filter_file_name_list=filter_file_name_list)
         search_list = result["search_list"]
         for item in search_list:  # 将 kb_id 转换为 kb_name
-            item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
+            item["kb_id"] = kb_id
+            item["kb_name"] = kb_name
         response = json.dumps({'code': 200, 'msg': 'Success', 'result': result}, indent=4, ensure_ascii=False)
         logger.info("search response: %s", response)
         return Response(response, mimetype='application/json', status=200)
@@ -1486,6 +1493,7 @@ def keyword_search(request_json=None):
         search_list = result["search_list"]
         for item in search_list:  # 将 kb_id 转换为 kb_name
             item["kb_name"] = display_kb_name
+            item["kb_id"] = kb_id
         response = json.dumps({'code': 200, 'msg': 'Success', 'result': result}, indent=4, ensure_ascii=False)
         logger.info("search response: %s", response)
         return Response(response, mimetype='application/json', status=200)
@@ -1544,6 +1552,7 @@ def snippet_rescore(request_json=None):
                 result = es_ops.rescore_bm25_score(index_name, query, search_by, regular_list)
                 rescored = result["search_list"]
                 for item in rescored:
+                    item["kb_id"] = item["kb_name"]
                     item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
                     item["user_id"] = user_id
                 search_list.extend(rescored)
@@ -1553,6 +1562,7 @@ def snippet_rescore(request_json=None):
                 graph_result = es_ops.rescore_bm25_score(index_name, query, "meta_data.reference_snippet", graph_list)
                 graph_rescored = graph_result["search_list"]
                 for item in graph_rescored:
+                    item["kb_id"] = item["kb_name"]
                     item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
                     item["user_id"] = user_id
                     item["snippet"] = item["meta_data"]["reference_snippet"]
@@ -1875,6 +1885,7 @@ def search_community_reports(request_json=None):
             scores = [item[1] for item in top_results]
 
         for item in search_list:  # 将 kb_id 转换为 kb_name
+            item["kb_id"] = item["kb_name"]
             item["kb_name"] = kb_id_2_kb_name[item["kb_name"]]
         result = {
             "code": 0,

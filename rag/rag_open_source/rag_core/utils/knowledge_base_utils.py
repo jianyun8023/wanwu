@@ -307,7 +307,7 @@ def get_file_child_content_list(user_id: str, kb_info: dict, file_name: str, chu
     logger.info(f"get_file_child_content_list start: {user_id}, kb_info: {kb_info}, "
                 f"file_name: {file_name}, chunk_id:{chunk_id}")
     response_info = milvus_utils.get_milvus_file_child_content_list(user_id, kb_info, file_name, chunk_id)
-    logger.info(f"get_file_child_content_list end: {user_id}, kb_name: {kb_name}, kb_id: {kb_id}, "
+    logger.info(f"get_file_child_content_list end: {user_id}, kb_info: {kb_info}"
                 f"file_name: {file_name}, chunk_id:{chunk_id}, response: {response_info}")
     return response_info
 
@@ -439,6 +439,7 @@ def get_knowledge_based_answer(knowledge_base_info, question, rate, top_k, chunk
                         "title": item["file_name"],
                         "snippet": item["content"],
                         "kb_name": item["kb_name"],
+                        "kb_id": item["kb_id"],
                         "content_id": item["content_id"],
                         "meta_data": item["meta_data"],
                         "user_id": user_id

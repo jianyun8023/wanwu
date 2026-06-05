@@ -32,7 +32,7 @@ def get_weighted_rerank(query, weights, search_list, top_k):
         if "content_type" in item and item["content_type"] == "image":
             continue
         base_name = item["kb_name"]
-        base_id = item.get("kb_id", "")
+        base_id = item.get("kb_id")
         user_id = item["user_id"]
 
         if user_id not in search_list_infos:

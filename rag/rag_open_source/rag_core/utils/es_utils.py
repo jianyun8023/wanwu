@@ -213,10 +213,7 @@ def search_es(user_id, kb_infos, query, top_k, filter_file_name_list=[], metadat
             response = requests.post(es_url, headers=headers, json=es_data, timeout=TIME_OUT)
             if response.status_code == 200:
                 tmp_sl = response.json()['result']['search_list']
-                for x in range(len(tmp_sl)):
-                    tmp_sl[x]['kb_name'] = kb_name
-                    tmp_sl[x]['kb_id'] = kb_id
-                search_list = search_list + tmp_sl
+                search_list.extend(tmp_sl)
                 logger.info("知识库：" + repr(kb_name) + "es检索请求成功")
             else:
                 logger.error("知识库：" + repr(kb_name) + "es检索请求失败：" + repr(response.text))
@@ -247,10 +244,7 @@ def search_graph_es(user_id, kb_infos, query, top_k, filter_file_name_list=[]):
             response = requests.post(es_url, headers=headers, json=es_data, timeout=TIME_OUT)
             if response.status_code == 200:
                 tmp_sl = response.json()['result']['search_list']
-                for x in range(len(tmp_sl)):
-                    tmp_sl[x]['kb_name'] = kb_name
-                    tmp_sl[x]['kb_id'] = kb_id
-                search_list = search_list + tmp_sl
+                search_list.extend(tmp_sl)
                 logger.info("知识库：" + repr(kb_name) + f" query:{query}" + "graph_es检索请求成功")
             else:
                 logger.error("知识库：" + repr(kb_name) + f" query:{query}" + "graph_es检索请求失败：" + repr(response.text))
