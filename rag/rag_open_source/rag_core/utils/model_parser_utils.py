@@ -90,11 +90,9 @@ def get_page_data(page_num, add_file_path, ocr_model_id):
                 if ret_json.get("code") == "200":
                     text = ret_json["content"]
                     # logger.info(f"get_paged_data page:%s, result:%s" % (page_num, text))
-                    version = ret_json["version"]
-                    if version != "private":
-                        image_url_prefix = ret_json["prefix_image_url"]
-                        text, replace_info = minio_utils.replace_minio_url(text, version, image_url_prefix)
-                        logger.info(f"get_page_data replace url info: {replace_info}")
+                    image_url_prefix = ret_json["prefix_image_url"]
+                    text, replace_info = minio_utils.replace_minio_url(text, image_url_prefix)
+                    logger.info(f"get_page_data replace url info: {replace_info}")
                     return text, page_num
 
                 else:

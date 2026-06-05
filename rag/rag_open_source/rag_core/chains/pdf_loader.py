@@ -1391,8 +1391,8 @@ class PDFLoader(TextLoader):
                                 page_content.append(bottom_line)
                     else:
                         clean_text = plumber_page.extract_text()
-                        logger.info("---->clean_text=%s" % clean_text)
-                        print("---->clean_text=%s" % clean_text)
+                        # logger.info("---->clean_text=%s" % clean_text)
+                        # print("---->clean_text=%s" % clean_text)
                         page_content.append(clean_text)
 
                     current_page_content = "".join(page_content)
