@@ -14,12 +14,6 @@ export default {
 </script>
 
 <style lang="scss">
-@font-face {
-  font-family: NotoSansSC;
-  src: url(@/assets/fonts/NotoSansSC_VariableFont.ttf) format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
 * {
   margin: 0;
   padding: 0;
@@ -34,7 +28,6 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: NotoSansSC;
 }
 
 /*优化弹窗出现表格左移问题*/
@@ -43,8 +36,8 @@ body.el-popup-parent--hidden {
 }
 
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 6px;
   background-color: rgba(255, 255, 255, 0);
 }
 ::-webkit-scrollbar-button {
@@ -54,7 +47,7 @@ body.el-popup-parent--hidden {
   background-color: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #c1c1c1;
+  background-color: rgba(16, 18, 25, 0.3) !important;
   min-height: 40px;
   min-width: 40px;
   -webkit-border-radius: 10px;

@@ -49,6 +49,13 @@
         </el-form>
       </span>
       <span slot="footer" class="dialog-footer">
+        <el-button
+          :type="isRuleFormChanged ? 'primary' : ''"
+          :disabled="!isRuleFormChanged"
+          @click="resetForm"
+        >
+          {{ $t('common.button.reset') }}
+        </el-button>
         <el-button @click="dialogVisible = false">
           {{ $t('common.button.cancel') }}
         </el-button>
@@ -60,6 +67,21 @@
   </div>
 </template>
 <script>
+const getDefaultRuleForm = () => ({
+  temperature: 0.7,
+  topP: 1,
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+  maxTokens: 512,
+  temperatureEnable: false,
+  topPEnable: false,
+  presencePenaltyEnable: false,
+  maxTokensEnable: false,
+  frequencyPenaltyEnable: false,
+});
+
+const cloneForm = form => JSON.parse(JSON.stringify(form));
+
 export default {
   props: {
     modelform: {
@@ -74,21 +96,16 @@ export default {
   data() {
     return {
       dialogVisible: false,
-      ruleForm: {
-        temperature: 0.7,
-        topP: 1,
-        frequencyPenalty: 0,
-        presencePenalty: 0,
-        maxTokens: 512,
-        temperatureEnable: false,
-        topPEnable: false,
-        presencePenaltyEnable: false,
-        maxTokensEnable: false,
-        frequencyPenaltyEnable: false,
-      },
+      ruleForm: getDefaultRuleForm(),
+      initialRuleForm: getDefaultRuleForm(),
     };
   },
   computed: {
+    isRuleFormChanged() {
+      return (
+        JSON.stringify(this.ruleForm) !== JSON.stringify(this.initialRuleForm)
+      );
+    },
     modelSet() {
       const baseModelSet = [
         {
@@ -153,10 +170,15 @@ export default {
   methods: {
     showDialog() {
       this.dialogVisible = true;
-      if (this.modelform !== null) {
-        const data = JSON.parse(JSON.stringify(this.modelform));
-        this.ruleForm = data;
-      }
+      const data =
+        this.modelform !== null
+          ? cloneForm(this.modelform)
+          : getDefaultRuleForm();
+      this.ruleForm = data;
+      this.initialRuleForm = cloneForm(data);
+    },
+    resetForm() {
+      this.ruleForm = cloneForm(this.initialRuleForm);
     },
     handleClose() {
       this.dialogVisible = false;

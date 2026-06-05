@@ -1,13 +1,9 @@
 <template>
   <transition name="preview-slide">
-    <div v-if="visible" class="preview-panel" :style="mergedPanelStyle">
-      <!-- 左侧拖拽手柄 -->
-      <div class="resize-handle" @mousedown="startResize"></div>
-      <!-- 拖拽时的透明遮罩，防止 iframe 捕获鼠标事件 -->
-      <div v-if="isResizing" class="resize-overlay"></div>
+    <div v-if="visible" class="preview-panel">
       <div class="preview-header">
-        <div class="preview-title" :title="filePath || (file ? file.name : '')">
-          {{ filePath || (file ? file.name : '') }}
+        <div :title="fileName" class="preview-title">
+          {{ fileName }}
         </div>
         <div class="preview-actions">
           <el-button size="small" @click="handleDownload">
@@ -25,7 +21,7 @@
             <i class="el-icon-link"></i>
             {{ $t('generalAgent.filePreview.newWindow') }}
           </el-button>
-          <button class="close-btn" @click="handleClose">
+          <button v-if="showClose" class="close-btn" @click="handleClose">
             <i class="el-icon-close"></i>
           </button>
         </div>
@@ -75,8 +71,8 @@
           <!-- PPT 预览 -->
           <div v-else-if="previewType === 'ppt'" class="preview-ppt-wrapper">
             <ppt-preview
-              :src="blob"
-              :file-name="file ? file.name : ''"
+              :src="internalBlob"
+              :file-name="fileName"
               @close="handleClose"
             />
           </div>
@@ -158,7 +154,16 @@
             v-else-if="previewType === 'word'"
             class="preview-office-wrapper"
           >
-            <vue-office-docx :src="blob" @error="handleWordError" />
+            <vue-office-docx :src="internalBlob" @error="handleWordError" />
+          </div>
+
+          <!-- OFD 预览 -->
+          <div v-else-if="previewType === 'ofd'" class="preview-ofd-wrapper">
+            <ofd-preview
+              :file-name="fileName"
+              :src="internalBlob"
+              @close="handleClose"
+            />
           </div>
 
           <!-- 文本/代码预览 -->
@@ -169,7 +174,7 @@
           <!-- 不支持的格式 -->
           <div v-else class="preview-unsupported">
             <i class="el-icon-document"></i>
-            <p class="file-name">{{ file ? file.name : '' }}</p>
+            <p class="file-name">{{ fileName }}</p>
             <p class="notice-text">
               {{ $t('generalAgent.filePreview.unsupportedType') }}
             </p>
@@ -182,16 +187,18 @@
 
 <script>
 import PptPreview from './PptPreview.vue';
+import OfdPreview from './OfdPreview.vue';
 import StreamMarkdown from './StreamMarkdown.vue';
 import VueOfficeDocx from '@vue-office/docx';
 import '@vue-office/docx/lib/index.css';
-import { resDownloadFile, getFileType } from '@/utils/util';
+import { resDownloadFile, getFileType, getMimeType } from '@/utils/util';
 import * as XLSX from 'xlsx';
 
 export default {
   name: 'FilePreviewDrawer',
   components: {
     PptPreview,
+    OfdPreview,
     StreamMarkdown,
     VueOfficeDocx,
   },
@@ -200,11 +207,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    file: {
-      type: Object,
-      default: null,
-    },
-    filePath: {
+    // 文件名（用于显示标题、判断类型等）
+    fileName: {
       type: String,
       default: '',
     },
@@ -221,11 +225,14 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    // 是否显示关闭按钮
+    showClose: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
-      isResizing: false,
-      panelWidth: null,
       activeSheetIndex: 0,
       // 内部预览状态
       previewType: '',
@@ -233,23 +240,17 @@ export default {
       previewContent: '',
       previewBlobUrl: '',
       previewExcelData: null,
+      internalBlob: null,
     };
   },
   computed: {
     fileExt() {
-      if (!this.file || !this.file.name) return '';
-      return this.file.name.split('.').pop().toLowerCase();
+      if (!this.fileName) return '';
+      return this.fileName.split('.').pop().toLowerCase();
     },
     fencedCode() {
       if (!this.previewContent) return '';
       return '```' + this.fileExt + '\n' + this.previewContent + '\n```';
-    },
-    mergedPanelStyle() {
-      const style = { ...this.panelStyle };
-      if (this.panelWidth) {
-        style.width = `${this.panelWidth}px`;
-      }
-      return style;
     },
   },
   watch: {
@@ -269,13 +270,10 @@ export default {
       }
     },
   },
-  beforeDestroy() {
-    this.stopResize();
-  },
   methods: {
     // 处理 blob 数据
     async processBlob() {
-      if (!this.blob || !this.file) {
+      if (!this.blob || !this.fileName) {
         return;
       }
 
@@ -288,28 +286,25 @@ export default {
       this.activeSheetIndex = 0;
 
       try {
-        this.previewType = getFileType(this.file.name);
+        this.previewType = getFileType(this.fileName);
+        // 根据文件扩展名自动设置正确的 MIME 类型，确保浏览器能正确预览而非下载
+        const mimeType = getMimeType(this.fileExt);
+        // 使用内部副本，避免直接修改 prop
+        this.internalBlob = mimeType
+          ? new Blob([this.blob], { type: mimeType })
+          : this.blob;
 
         if (
           ['image', 'video', 'audio', 'pdf', 'html'].includes(this.previewType)
         ) {
-          // SVG 需要正确的 MIME 类型才能在 <img> 中渲染，
-          // API 返回的 Blob 通常是 application/octet-stream，浏览器无法据此识别 SVG
-          if (this.previewType === 'image' && this.fileExt === 'svg') {
-            const svgBlob = new Blob([this.blob], {
-              type: 'image/svg+xml',
-            });
-            this.previewBlobUrl = URL.createObjectURL(svgBlob);
-          } else {
-            this.previewBlobUrl = URL.createObjectURL(this.blob);
-          }
+          this.previewBlobUrl = URL.createObjectURL(this.internalBlob);
           this.previewUrl = this.previewBlobUrl;
         } else if (['markdown', 'text'].includes(this.previewType)) {
-          this.previewContent = await this.blob.text();
+          this.previewContent = await this.internalBlob.text();
         } else if (this.previewType === 'excel') {
-          const arrayBuffer = await this.blob.arrayBuffer();
+          const arrayBuffer = await this.internalBlob.arrayBuffer();
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-          const excelData = workbook.SheetNames.map(sheetName => {
+          this.previewExcelData = workbook.SheetNames.map(sheetName => {
             const sheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(sheet, {
               header: 1,
@@ -333,7 +328,6 @@ export default {
               ),
             };
           });
-          this.previewExcelData = excelData;
         }
       } catch (error) {
         console.error('处理文件失败:', error);
@@ -348,42 +342,11 @@ export default {
         URL.revokeObjectURL(this.previewBlobUrl);
         this.previewBlobUrl = '';
       }
-      this.stopResize();
     },
 
     handleClose() {
       this.$emit('update:visible', false);
       this.$emit('close');
-    },
-
-    startResize(e) {
-      e.preventDefault();
-      this.isResizing = true;
-      document.addEventListener('mousemove', this.doResize);
-      document.addEventListener('mouseup', this.stopResize);
-      document.body.style.cursor = 'ew-resize';
-      document.body.style.userSelect = 'none';
-    },
-
-    doResize(e) {
-      if (!this.isResizing) return;
-      const panelEl = this.$el;
-      if (!panelEl) return;
-      const rect = panelEl.getBoundingClientRect();
-      // 面板右边缘固定，宽度 = 右边缘 - 鼠标位置
-      const newWidth = rect.right - e.clientX;
-      const minWidth = 500;
-      // 最大宽度不超过视口减去边距
-      const maxWidth = window.innerWidth - 100;
-      this.panelWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-    },
-
-    stopResize() {
-      this.isResizing = false;
-      document.removeEventListener('mousemove', this.doResize);
-      document.removeEventListener('mouseup', this.stopResize);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     },
 
     handleError() {
@@ -435,12 +398,12 @@ export default {
 
     // 下载文件
     async handleDownload() {
-      if (!this.file || !this.blob) {
+      if (!this.fileName || !this.internalBlob) {
         return;
       }
 
       try {
-        resDownloadFile(this.blob, this.file.name);
+        resDownloadFile(this.internalBlob, this.fileName);
         this.$message.success(
           this.$t('generalAgent.workspace.downloadSuccess'),
         );
@@ -470,37 +433,6 @@ export default {
   display: flex;
   flex-direction: column;
   z-index: 10;
-}
-
-.resize-handle {
-  position: absolute;
-  left: -3px; /* 拖拽手柄稍微偏移，使其覆盖在边框上 */
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  cursor: ew-resize;
-  background: transparent;
-  border-radius: 12px 0 0 12px;
-  transition: background 0.2s;
-  z-index: 10;
-}
-
-.resize-handle:hover {
-  background: rgba(16, 163, 127, 0.3);
-}
-
-.resize-handle:active {
-  background: rgba(16, 163, 127, 0.5);
-}
-
-.resize-overlay {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
-  cursor: ew-resize;
 }
 
 .preview-header {
@@ -745,6 +677,7 @@ export default {
 
 .preview-pdf-wrapper,
 .preview-ppt-wrapper,
+.preview-ofd-wrapper,
 .preview-html-wrapper {
   overflow: hidden;
   width: 100%;

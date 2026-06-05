@@ -24,11 +24,38 @@
                   ref="searchInput"
                   @handleSearch="handleSearch"
                 />
+                <el-select
+                  v-model="docQuery.metaType"
+                  class="no-border-input"
+                  size="small"
+                  style="width: 110px; margin-right: 15px"
+                  @change="handleMetaTypeChange"
+                >
+                  <el-option label="String" value="string" />
+                  <el-option label="Number" value="number" />
+                  <el-option label="Time" value="time" />
+                </el-select>
                 <search-input
+                  v-if="docQuery.metaType !== 'time'"
                   class="cover-input-icon"
                   :placeholder="$t('knowledgeManage.metaPlaceholder')"
                   ref="searchInputMeta"
                   @handleSearch="handleSearchByMeta"
+                />
+                <el-date-picker
+                  v-else
+                  v-model="metaDateRange"
+                  :end-placeholder="
+                    $t('knowledgeManage.meta.metaValueEndPlaceholder')
+                  "
+                  :start-placeholder="
+                    $t('knowledgeManage.meta.metaValueStartPlaceholder')
+                  "
+                  class="no-border-input"
+                  size="small"
+                  style="width: 330px"
+                  type="datetimerange"
+                  @change="handleMetaDateChange"
                 />
               </div>
 
@@ -505,7 +532,11 @@
     />
     <!-- 导出记录 -->
     <exportRecord ref="exportRecord" />
-    <createKnowledge ref="createKnowledge" @reloadData="reload" :category="0" />
+    <createKnowledge
+      ref="createKnowledge"
+      :category="KNOWLEDGE"
+      @reloadData="reload"
+    />
   </div>
 </template>
 
@@ -546,6 +577,7 @@ import {
   KNOWLEDGE_STATUS_CHECK_FAIL,
   KNOWLEDGE_STATUS_FAIL,
   KNOWLEDGE_GRAPH_STATUS_INITIAL,
+  KNOWLEDGE,
 } from '@/views/knowledge/constants';
 import exportRecord from '@/views/knowledge/qaDatabase/exportRecord.vue';
 import CopyIcon from '@/components/copyIcon.vue';
@@ -579,11 +611,15 @@ export default {
       docQuery: {
         docIdList: [],
         docName: '',
+        metaType: 'string',
         metaValue: '',
+        metaStartTime: '',
+        metaEndTime: '',
         knowledgeId: this.$route.params.id,
         status: [ALL],
         graphStatus: [ALL],
       },
+      metaDateRange: null,
       fileList: [],
       listApi: getDocList,
       title_tips: '',
@@ -605,6 +641,7 @@ export default {
       KNOWLEDGE_GRAPH_STATUS_OPTIONS,
       dropdownGroups: DROPDOWN_GROUPS.slice(0, 1),
       graphDropdownGroups: DROPDOWN_GROUPS.slice(2),
+      KNOWLEDGE,
       INITIAL,
       STATUS_FINISHED,
       STATUS_FAILED,
@@ -631,14 +668,9 @@ export default {
     },
     metaData: {
       handler(val) {
-        if (
-          val.some(item => !item.metaKey || !item.metaValueType) ||
-          !val.length
-        ) {
-          this.isDisabled = true;
-        } else {
-          this.isDisabled = false;
-        }
+        this.isDisabled = !!(
+          val.some(item => !item.metaKey || !item.metaValueType) || !val.length
+        );
       },
     },
   },
@@ -679,8 +711,6 @@ export default {
     this.clearTimer();
   },
   methods: {
-    // 莫删，保证createKnowledge弹窗的调用
-    clearIptValue() {},
     showEdit() {
       this.$refs.createKnowledge.showDialog({
         category: this.category,
@@ -872,6 +902,24 @@ export default {
     },
     handleSearchByMeta(val) {
       this.docQuery.metaValue = val;
+      this.getTableData(this.docQuery);
+    },
+    handleMetaTypeChange() {
+      this.docQuery.metaValue = '';
+      this.$refs.searchInputMeta.clearValue();
+      this.docQuery.metaStartTime = '';
+      this.docQuery.metaEndTime = '';
+      this.metaDateRange = null;
+      this.getTableData(this.docQuery);
+    },
+    handleMetaDateChange(val) {
+      if (val && val.length === 2) {
+        this.docQuery.metaStartTime = new Date(val[0]).getTime().toString();
+        this.docQuery.metaEndTime = new Date(val[1]).getTime().toString();
+      } else {
+        this.docQuery.metaStartTime = '';
+        this.docQuery.metaEndTime = '';
+      }
       this.getTableData(this.docQuery);
     },
     handleRetry(data) {

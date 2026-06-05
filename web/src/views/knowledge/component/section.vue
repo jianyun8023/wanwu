@@ -12,215 +12,244 @@
       ></i>
       {{ obj.name }}
     </div>
-    <div class="container">
-      <el-descriptions
-        class="margin-top"
-        title=""
-        :column="3"
-        :size="''"
-        border
-      >
-        <el-descriptions-item :label="$t('knowledgeManage.fileName')">
-          {{ res.fileName }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.splitNum')">
-          {{ res.segmentTotalNum }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.importTime')">
-          {{ res.uploadTime }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.chunkType')">
-          {{
-            Number(res.segmentType) === 0
-              ? $t('knowledgeManage.autoChunk')
-              : $t('knowledgeManage.autoConfigChunk')
-          }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.setMaxLength')">
-          {{ String(res.maxSegmentSize) }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.markSplit')">
-          {{ String(res.splitter).replace(/\n/g, '\\n') }}
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.metaData')">
-          <template v-if="metaDataList && metaDataList.length > 0">
-            <span
-              v-for="(item, index) in metaDataList.slice(0, 3)"
-              :key="index"
-              class="metaItem"
-            >
-              {{ item.metaKey }}:
-              {{
-                item.metaValueType === 'time'
-                  ? formatTimestamp(item.metaValue)
-                  : item.metaValue
-              }}
-            </span>
-            <el-tooltip
-              v-if="metaDataList.length > 3"
-              :content="filterData(metaDataList.slice(3))"
-              placement="bottom"
-            >
-              <span class="metaItem">...</span>
-            </el-tooltip>
-          </template>
-          <span v-else>{{ $t('knowledgeManage.zeroData') }}</span>
-          <span
-            class="el-icon-edit-outline editIcon"
-            @click="showDatabase(metaDataList || [])"
-            v-if="
-              metaDataList &&
-              [
-                POWER_TYPE_EDIT,
-                POWER_TYPE_ADMIN,
-                POWER_TYPE_SYSTEM_ADMIN,
-              ].includes(permissionType) &&
-              obj.disable !== 'true'
-            "
-          ></span>
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.metaDataRules')">
-          <template v-if="metaRuleList && metaRuleList.length > 0">
-            <span
-              v-for="(item, index) in metaRuleList.slice(0, 3)"
-              :key="index"
-              class="metaItem"
-            >
-              {{ item.metaKey }}: {{ item.metaRule }}
-              <span v-if="index < metaRuleList.slice(0, 3).length - 1"></span>
-            </span>
-            <el-tooltip
-              v-if="metaRuleList.length > 3"
-              :content="filterRule(metaRuleList.slice(3))"
-              placement="bottom"
-            >
-              <span class="metaItem">...</span>
-            </el-tooltip>
-          </template>
-          <span v-else>{{ $t('knowledgeManage.zeroData') }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.batchAddSplit')">
-          <span>{{ res.segmentImportStatus || '-' }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item :label="$t('knowledgeManage.parsingMethod')">
-          <div class="keyword-tags">
-            <template v-if="res.docAnalyzerText?.length">
-              <template v-for="(item, index) in res.docAnalyzerText">
-                <span>
-                  {{ item.text }}
-                </span>
-                <el-tooltip
-                  v-if="item.displayName"
-                  effect="light"
-                  placement="top"
-                  popper-class="custom-tooltip"
-                  style="pointer-events: auto !important"
-                >
-                  <div slot="content" class="tooltip-content">
-                    <span>
-                      {{ item.displayName }}
-                    </span>
-                    <template v-if="item.tags?.length">
-                      <el-tag
-                        v-for="(tag, tagIndex) in item.tags"
-                        :key="'tag-' + tagIndex"
-                        size="small"
-                        color="#E6F0FF"
-                        class="keyword-tag"
-                      >
-                        {{ tag.text }}
-                      </el-tag>
-                    </template>
-                  </div>
-                  <i class="el-icon-question question-icon" />
-                </el-tooltip>
-                <span v-if="index < res.docAnalyzerText.length - 1">;</span>
-              </template>
-            </template>
-            <span v-else>-</span>
-          </div>
-        </el-descriptions-item>
-      </el-descriptions>
 
-      <div v-if="obj.disable !== 'true'" class="btn">
-        <search-input
-          :placeholder="$t('knowledgeManage.segmentPlaceholder')"
-          ref="searchInput"
-          @handleSearch="handleSearch"
-        />
-        <div>
-          <el-button
-            type="primary"
-            @click="createChunk(false)"
-            size="mini"
-            :loading="loading.start"
-            v-if="
-              [
-                POWER_TYPE_EDIT,
-                POWER_TYPE_ADMIN,
-                POWER_TYPE_SYSTEM_ADMIN,
-              ].includes(permissionType)
-            "
+    <el-descriptions :column="3" :size="''" border class="margin-top" title="">
+      <el-descriptions-item :label="$t('knowledgeManage.fileName')">
+        {{ res.fileName }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.splitNum')">
+        {{ res.segmentTotalNum }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.importTime')">
+        {{ res.uploadTime }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.chunkType')">
+        {{
+          Number(res.segmentType) === 0
+            ? $t('knowledgeManage.autoChunk')
+            : $t('knowledgeManage.autoConfigChunk')
+        }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.setMaxLength')">
+        {{ String(res.maxSegmentSize) }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.markSplit')">
+        {{ String(res.splitter).replace(/\n/g, '\\n') }}
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.metaData')">
+        <template v-if="metaDataList && metaDataList.length > 0">
+          <span
+            v-for="(item, index) in metaDataList.slice(0, 3)"
+            :key="index"
+            class="metaItem"
           >
-            新增分段
-          </el-button>
-          <el-button
-            type="primary"
-            @click="handleStatus('start')"
-            size="mini"
-            :loading="loading.start"
-            v-if="
-              [
-                POWER_TYPE_EDIT,
-                POWER_TYPE_ADMIN,
-                POWER_TYPE_SYSTEM_ADMIN,
-              ].includes(permissionType)
-            "
+            {{ item.metaKey }}:
+            {{
+              item.metaValueType === 'time'
+                ? formatTimestamp(item.metaValue)
+                : item.metaValue
+            }}
+          </span>
+          <el-tooltip
+            v-if="metaDataList.length > 3"
+            :content="filterData(metaDataList.slice(3))"
+            placement="bottom"
           >
-            {{ $t('knowledgeManage.allRun') }}
-          </el-button>
-          <el-button
-            type="primary"
-            @click="handleStatus('stop')"
-            size="mini"
-            :loading="loading.stop"
-            v-if="
-              [
-                POWER_TYPE_EDIT,
-                POWER_TYPE_ADMIN,
-                POWER_TYPE_SYSTEM_ADMIN,
-              ].includes(permissionType)
-            "
+            <span class="metaItem">...</span>
+          </el-tooltip>
+        </template>
+        <span v-else>{{ $t('knowledgeManage.zeroData') }}</span>
+        <span
+          v-if="
+            metaDataList &&
+            [
+              POWER_TYPE_EDIT,
+              POWER_TYPE_ADMIN,
+              POWER_TYPE_SYSTEM_ADMIN,
+            ].includes(permissionType) &&
+            obj.disable !== 'true'
+          "
+          class="el-icon-edit-outline editIcon"
+          @click="showDatabase(metaDataList || [])"
+        ></span>
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.metaDataRules')">
+        <template v-if="metaRuleList && metaRuleList.length > 0">
+          <span
+            v-for="(item, index) in metaRuleList.slice(0, 3)"
+            :key="index"
+            class="metaItem"
           >
-            {{ $t('knowledgeManage.allStop') }}
-          </el-button>
+            {{ item.metaKey }}: {{ item.metaRule }}
+            <span v-if="index < metaRuleList.slice(0, 3).length - 1"></span>
+          </span>
+          <el-tooltip
+            v-if="metaRuleList.length > 3"
+            :content="filterRule(metaRuleList.slice(3))"
+            placement="bottom"
+          >
+            <span class="metaItem">...</span>
+          </el-tooltip>
+        </template>
+        <span v-else>{{ $t('knowledgeManage.zeroData') }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.batchAddSplit')">
+        <span>{{ res.segmentImportStatus || '-' }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item :label="$t('knowledgeManage.parsingMethod')">
+        <div class="keyword-tags">
+          <template v-if="res.docAnalyzerText?.length">
+            <template v-for="(item, index) in res.docAnalyzerText">
+              <span>
+                {{ item.text }}
+              </span>
+              <el-tooltip
+                v-if="item.displayName"
+                effect="light"
+                placement="top"
+                popper-class="custom-tooltip"
+                style="pointer-events: auto !important"
+              >
+                <div slot="content" class="tooltip-content">
+                  <span>
+                    {{ item.displayName }}
+                  </span>
+                  <template v-if="item.tags?.length">
+                    <el-tag
+                      v-for="(tag, tagIndex) in item.tags"
+                      :key="'tag-' + tagIndex"
+                      class="keyword-tag"
+                      color="#E6F0FF"
+                      size="small"
+                    >
+                      {{ tag.text }}
+                    </el-tag>
+                  </template>
+                </div>
+                <i class="el-icon-question question-icon" />
+              </el-tooltip>
+              <span v-if="index < res.docAnalyzerText.length - 1">;</span>
+            </template>
+          </template>
+          <span v-else>-</span>
         </div>
+      </el-descriptions-item>
+    </el-descriptions>
+
+    <div v-if="obj.disable !== 'true'" class="btn">
+      <search-input
+        style="visibility: hidden"
+        ref="searchInput"
+        :placeholder="$t('knowledgeManage.segmentPlaceholder')"
+        @handleSearch="handleSearch"
+      />
+      <div>
+        <el-button
+          v-if="
+            [
+              POWER_TYPE_EDIT,
+              POWER_TYPE_ADMIN,
+              POWER_TYPE_SYSTEM_ADMIN,
+            ].includes(permissionType)
+          "
+          :loading="loading.start"
+          size="mini"
+          type="primary"
+          @click="createChunk(false)"
+        >
+          {{ $t('knowledgeManage.create.createChunk') }}
+        </el-button>
+        <el-button
+          v-if="
+            [
+              POWER_TYPE_EDIT,
+              POWER_TYPE_ADMIN,
+              POWER_TYPE_SYSTEM_ADMIN,
+            ].includes(permissionType)
+          "
+          :loading="loading.start"
+          size="mini"
+          type="primary"
+          @click="handleStatus('start')"
+        >
+          {{ $t('knowledgeManage.allRun') }}
+        </el-button>
+        <el-button
+          v-if="
+            [
+              POWER_TYPE_EDIT,
+              POWER_TYPE_ADMIN,
+              POWER_TYPE_SYSTEM_ADMIN,
+            ].includes(permissionType)
+          "
+          :loading="loading.stop"
+          size="mini"
+          type="primary"
+          @click="handleStatus('stop')"
+        >
+          {{ $t('knowledgeManage.allStop') }}
+        </el-button>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- 左侧：文件预览面板（仅在非禁用状态且 canPreview 为 true 时显示） -->
+      <div
+        v-if="obj.disable !== 'true' && res?.canPreview === true"
+        class="section-preview-panel"
+      >
+        <file-preview-drawer
+          :blob="previewBlob"
+          :file-name="previewFileName"
+          :loading="previewLoading"
+          :panel-style="{ width: '100%', height: '100%' }"
+          :showClose="false"
+          :visible="true"
+        />
+      </div>
+      <!-- 不可预览时的兜底提示 -->
+      <div
+        v-else-if="obj.disable !== 'true' && res?.canPreview === false"
+        class="section-preview-panel preview-fail-panel"
+      >
+        <el-empty
+          :description="
+            res?.previewFailReason ||
+            '' ||
+            $t('knowledgeManage.previewUnavailable')
+          "
+        />
       </div>
 
-      <div class="card">
-        <el-row
-          v-if="res.contentList.length > 0 && obj.disable !== 'true'"
-          :gutter="20"
-        >
-          <el-col
-            :span="6"
-            v-for="(item, index) in res.contentList"
-            :key="index"
-            class="card-box"
-          >
-            <el-card class="box-card">
+      <!-- 右侧：分段列表 -->
+      <div
+        :class="{ 'full-width': obj.disable === 'true' }"
+        class="section-content-panel"
+      >
+        <div class="card">
+          <template v-if="res.contentList.length > 0 && obj.disable !== 'true'">
+            <el-card
+              v-for="(item, index) in res.contentList"
+              :key="index"
+              class="box-card segment-card"
+            >
               <div slot="header" class="clearfix">
                 <span>
                   {{ $t('knowledgeManage.split') + ':' + item.contentNum }}
                   <span class="segment-type">
-                    #{{ item.isParent ? '父子分段' : '通用分段' }}
+                    #{{
+                      item.isParent
+                        ? $t('knowledgeManage.config.parentSonSegment')
+                        : $t('knowledgeManage.config.commonSegment')
+                    }}
                   </span>
                   <span class="segment-length" v-if="!item.isParent">
                     #{{ item.content.length
                     }}{{ $t('knowledgeManage.character') }}
                   </span>
                   <span class="segment-child" v-if="item.childNum">
-                    #{{ item.childNum || 0 }}个子分段
+                    #{{ item.childNum || 0
+                    }}{{ $t('knowledgeManage.childSegmentUnit') }}
                   </span>
                 </span>
                 <div>
@@ -295,26 +324,29 @@
                 </span>
               </div>
             </el-card>
-          </el-col>
-        </el-row>
-        <el-empty v-else :description="$t('knowledgeManage.noData')"></el-empty>
-      </div>
+          </template>
+          <el-empty
+            v-else
+            :description="$t('knowledgeManage.noData')"
+          ></el-empty>
+        </div>
 
-      <div
-        v-if="obj.disable !== 'true'"
-        class="list-common"
-        style="text-align: right"
-      >
-        <el-pagination
-          background
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :current-page="page.pageNo"
-          :page-sizes="page.pageSizeList"
-          :page-size="page.pageSize"
-          layout="total, prev, pager, next, jumper"
-          :total="page.total"
-        ></el-pagination>
+        <div
+          v-if="obj.disable !== 'true'"
+          class="list-common"
+          style="text-align: right; flex-shrink: 0; padding: 10px 0"
+        >
+          <el-pagination
+            :current-page="page.pageNo"
+            :page-size="page.pageSize"
+            :page-sizes="page.pageSizeList"
+            :total="page.total"
+            background
+            layout="total, prev, pager, next, jumper"
+            @current-change="handleCurrentChange"
+            @size-change="handleSizeChange"
+          ></el-pagination>
+        </div>
       </div>
     </div>
 
@@ -399,7 +431,7 @@
                   @click="handleSubmit"
                   :loading="submitLoading"
                 >
-                  保存并重新解析子分段
+                  {{ $t('knowledgeManage.create.saveAndReparseChild') }}
                 </el-button>
               </div>
               <div
@@ -431,7 +463,7 @@
                           @click.stop="editSegment(scope.row, index)"
                         >
                           <i class="el-icon-edit-outline"></i>
-                          编辑
+                          {{ $t('common.button.edit') }}
                         </span>
                         <span
                           v-if="
@@ -448,7 +480,7 @@
                           @click.stop="deleteSegment(scope.row, index)"
                         >
                           <i class="el-icon-delete"></i>
-                          删除
+                          {{ $t('common.button.delete') }}
                         </span>
                         <span
                           v-if="
@@ -458,7 +490,7 @@
                           @click.stop="confirmEdit(scope.row, index)"
                         >
                           <i class="el-icon-check"></i>
-                          保存
+                          {{ $t('common.button.save') }}
                         </span>
                         <span
                           v-if="
@@ -468,7 +500,7 @@
                           @click.stop="cancelEdit(scope.row, index)"
                         >
                           <i class="el-icon-close"></i>
-                          取消
+                          {{ $t('common.button.cancel') }}
                         </span>
                       </div>
                     </template>
@@ -525,7 +557,7 @@
           :loading="submitLoading"
           v-if="!cardObj[0]['isParent']"
         >
-          确定
+          {{ $t('common.confirm.confirm') }}
         </el-button>
         <el-button
           type="primary"
@@ -540,7 +572,7 @@
           "
           :disabled="submitLoading"
         >
-          新增子分段
+          {{ $t('knowledgeManage.create.addChildChunk') }}
         </el-button>
         <el-button
           type="primary"
@@ -587,6 +619,7 @@ import {
 import dataBaseDialog from './dataBaseDialog';
 import tagDialog from './tagDialog.vue';
 import createChunk from './chunk/createChunk.vue';
+import FilePreviewDrawer from '@/views/generalAgent/components/FilePreviewDrawer.vue';
 import { mapGetters } from 'vuex';
 import { Md2Img } from '@/utils/util';
 import {
@@ -607,12 +640,12 @@ export default {
     tagDialog,
     createChunk,
     uploadImgMd,
+    FilePreviewDrawer,
   },
   data() {
     return {
       submitLoading: false,
       oldContent: '',
-      title: '创建关键词',
       dialogVisible: false,
       editingSegments: {},
       editingContent: {},
@@ -629,12 +662,6 @@ export default {
       value: true,
       activeStatus: false,
       activeNames: [],
-      page: {
-        pageNo: 1,
-        pageSize: 8,
-        pageSizeList: [10, 15, 20, 50],
-        total: 0,
-      },
       loading: {
         start: false,
         stop: false,
@@ -650,6 +677,18 @@ export default {
       contentId: '',
       timer: null,
       refreshCount: 0,
+      // 分页相关
+      page: {
+        pageNo: 1,
+        pageSize: 10,
+        pageSizeList: [10, 15, 20, 50],
+        total: 0,
+      },
+      keyword: '',
+      // 文件预览相关
+      previewLoading: false,
+      previewFileName: '',
+      previewBlob: null,
       INITIAL,
       POWER_TYPE_READ,
       POWER_TYPE_EDIT,
@@ -661,6 +700,9 @@ export default {
     ...mapGetters('app', ['permissionType']),
     isMultiModal() {
       return Number(this.obj.category) === MULTIMODAL;
+    },
+    title() {
+      return this.$t('knowledgeManage.createKeyword');
     },
   },
   created() {
@@ -693,7 +735,12 @@ export default {
   methods: {
     Md2Img,
     handleSearch(val) {
-      this.getList(val);
+      // keyword 变化时重置页码
+      if (this.keyword !== val) {
+        this.keyword = val;
+        this.page.pageNo = 1;
+        this.getList();
+      }
     },
     createChunk(isChildChunk) {
       this.$refs.createChunk.showDialog(
@@ -735,7 +782,7 @@ export default {
       const newContent = this.editingContent[key];
 
       if (!newContent || newContent.trim() === '') {
-        this.$message.warning('内容不能为空');
+        this.$message.warning(this.$t('knowledgeManage.contentEmpty'));
         return;
       }
       updateSegmentChild({
@@ -749,16 +796,16 @@ export default {
       })
         .then(res => {
           if (res.code === 0) {
-            this.$message.success('更新成功');
+            this.$message.success(this.$t('knowledgeManage.updateSuccess'));
             this.handleParse();
             this.$set(this.editingSegments, key, false);
             this.$delete(this.editingContent, key);
           } else {
-            this.$message.error('更新失败');
+            this.$message.error(this.$t('knowledgeManage.updateFail'));
           }
         })
         .catch(() => {
-          this.$message.error('更新失败');
+          this.$message.error(this.$t('knowledgeManage.updateFail'));
         });
     },
     handleParse() {
@@ -777,11 +824,15 @@ export default {
         .catch(() => {});
     },
     deleteSegment(row, index) {
-      this.$confirm('确定要删除这个子分段吗？', '提示', {
-        confirmButtonText: this.$t('common.confirm.confirm'),
-        cancelButtonText: this.$t('common.confirm.cancel'),
-        type: 'warning',
-      }).then(() => {
+      this.$confirm(
+        this.$t('knowledgeManage.create.deleteChildChunkTips'),
+        this.$t('common.confirm.title'),
+        {
+          confirmButtonText: this.$t('common.confirm.confirm'),
+          cancelButtonText: this.$t('common.confirm.cancel'),
+          type: 'warning',
+        },
+      ).then(() => {
         delSegmentChild({
           docId: this.obj.id,
           parentId: row['childContent'][index].parentId,
@@ -790,12 +841,14 @@ export default {
         })
           .then(res => {
             if (res.code === 0) {
-              this.$message.success('删除成功');
+              this.$message.success(
+                this.$t('knowledgeManage.create.deleteSuccess'),
+              );
               this.handleParse();
             }
           })
           .catch(() => {
-            this.$message.error('删除失败');
+            this.$message.error(this.$t('knowledgeManage.deleteFail'));
           });
       });
     },
@@ -816,7 +869,7 @@ export default {
     },
     clearTimer() {
       if (this.timer) {
-        clearInterval(this.timer);
+        clearTimeout(this.timer);
         this.timer = null;
       }
     },
@@ -824,7 +877,7 @@ export default {
       const hasChanges = this.oldContent !== this.cardObj[0]['content'];
 
       if (!hasChanges) {
-        this.$message.warning('无修改');
+        this.$message.warning(this.$t('knowledgeManage.noChange'));
         return false;
       }
 
@@ -836,13 +889,12 @@ export default {
       })
         .then(res => {
           if (res.code === 0) {
-            this.$message.success('操作成功');
+            this.$message.success(this.$t('knowledgeManage.operateSuccess'));
             this.dialogVisible = false;
-            this.submitLoading = false;
             this.getList();
           }
         })
-        .catch(() => {
+        .finally(() => {
           this.submitLoading = false;
         });
     },
@@ -858,7 +910,9 @@ export default {
       delSegment({ contentId: item.contentId, docId: this.obj.id })
         .then(res => {
           if (res.code === 0) {
-            this.$message.success('删除成功');
+            this.$message.success(
+              this.$t('knowledgeManage.create.deleteSuccess'),
+            );
             this.getList();
           }
         })
@@ -932,26 +986,64 @@ export default {
     filterRule(rule) {
       return rule.map(item => `${item.metaKey}:${item.metaRule}`).join(', ');
     },
-    getList(keyword = '') {
+    getList() {
       this.loading.itemStatus = true;
+      // 预览文件只在 created 首次加载时下载一次,后续 getList 不再重复下载
+      this.previewLoading = !this.previewFileName;
+
       getSectionList({
-        keyword: keyword,
+        keyword: this.keyword,
         docId: this.obj.id,
         pageNo: this.page.pageNo,
         pageSize: this.page.pageSize,
       })
         .then(res => {
-          this.loading.itemStatus = false;
           this.res = res.data;
-          this.page.total = this.res.segmentTotalNum;
+          this.page.total = res.data.segmentTotalNum || 0;
           this.metaRuleList = res.data.metaDataList.filter(
             item => item.metaRule,
           );
           this.metaDataList = res.data.metaDataList;
+
+          if (
+            this.previewLoading &&
+            res.data?.canPreview === true &&
+            res.data?.downloadUrl
+          ) {
+            const fileName = this.obj.name;
+            const hasExtension = fileName.includes('.');
+            this.previewFileName = hasExtension ? fileName : `${fileName}.url`;
+            this.downloadPreviewFile(res.data.downloadUrl);
+          }
         })
         .catch(() => {
+          this.$message.error(this.$t('knowledgeManage.getListFail'));
+        })
+        .finally(() => {
           this.loading.itemStatus = false;
         });
+    },
+    // 异步下载预览文件,不阻塞列表加载
+    async downloadPreviewFile(url) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          this.previewBlob = await response.blob();
+        }
+      } catch (e) {
+        console.error('文件预览下载失败:', e);
+      } finally {
+        this.previewLoading = false;
+      }
+    },
+    handleCurrentChange(val) {
+      this.page.pageNo = val;
+      this.getList();
+    },
+    handleSizeChange(val) {
+      this.page.pageSize = val;
+      this.page.pageNo = 1;
+      this.getList();
     },
     handleClick(item, index) {
       this.dialogVisible = true;
@@ -966,14 +1058,6 @@ export default {
         this.activeStatus = obj.available;
         this.activeNames = [];
       });
-    },
-    handleCurrentChange(val) {
-      this.page.pageNo = val;
-      this.getList();
-    },
-    handleSizeChange(val) {
-      this.page.pageSize = val;
-      this.getList();
     },
     handleDetailStatusChange(val) {
       this.loading.dialog = true;
@@ -1028,13 +1112,12 @@ export default {
         all: true,
       })
         .then(res => {
-          this.loading.itemStatus = false;
           if (res.code === 0) {
             this.$message.success(this.$t('knowledgeManage.operateSuccess'));
             this.getList();
           }
         })
-        .catch(() => {
+        .finally(() => {
           this.loading.itemStatus = false;
         });
     },
@@ -1302,10 +1385,14 @@ export default {
 
 .section {
   width: 100%;
-  height: 100%;
-  padding: 20px 20px 30px 20px;
+  height: calc(100vh - 64px);
+  min-height: unset;
+  padding: 20px 20px 0 20px;
   margin: auto;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 
   .el-divider--horizontal {
     margin: 30px 0;
@@ -1318,63 +1405,109 @@ export default {
     padding: 10px 0;
   }
 
+  .el-descriptions :not(.is-bordered) .el-descriptions-item__cell {
+    &:nth-child(even) {
+      width: 25%;
+    }
+
+    padding: 10px;
+  }
+
+  .btn {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+
   .container {
+    display: flex;
     min-width: 980px;
-    padding: 15px;
-    height: calc(100% - 45px);
+    flex: 1;
+    min-height: 0;
     border-radius: 5px;
-    overflow: auto;
+    overflow: hidden;
 
-    .el-descriptions :not(.is-bordered) .el-descriptions-item__cell {
-      &:nth-child(even) {
-        width: 25%;
+    .section-preview-panel {
+      width: 50%;
+      min-width: 400px;
+      max-width: 60%;
+      flex-shrink: 0;
+      overflow: hidden;
+
+      // 覆盖 FilePreviewDrawer 内部样式以适应左侧面板
+      .preview-panel {
+        border-left: none;
+        border-right: 1px solid #e4e7ed;
       }
 
-      padding: 10px;
-    }
-
-    .btn {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-    }
-
-    .card {
-      flex-wrap: wrap;
-
-      .el-row {
-        margin: 0 !important;
+      .resize-handle {
+        left: auto;
+        right: -3px;
+        border-radius: 0 12px 12px 0;
       }
 
-      .text {
-        font-size: 14px;
-      }
-
-      .item {
-        height: 120px;
-        margin-bottom: 18px;
-        display: -webkit-box;
-        -webkit-line-clamp: 6;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        img {
-          width: auto;
-          max-height: 115px;
-        }
-      }
-
-      .clearfix {
+      &.preview-fail-panel {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: center;
+        border-right: 1px solid #e4e7ed;
+        background: #fafafa;
+      }
+    }
+
+    .section-content-panel {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0 10px;
+      overflow: hidden;
+
+      // 当预览面板隐藏时，分段列表占据全部宽度
+      &.full-width {
+        padding: 0;
       }
 
-      .card-box {
-        margin-bottom: 10px;
+      .card {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0 2px;
+        flex-wrap: nowrap;
 
-        .box-card {
+        .text {
+          font-size: 14px;
+        }
+
+        .item {
+          min-height: 40px;
+          margin-bottom: 10px;
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+
+          img {
+            width: auto;
+            max-height: 75px;
+          }
+        }
+
+        .clearfix {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .segment-card {
+          flex-shrink: 0;
+          margin: 0 10px;
+
           &:hover {
             cursor: pointer;
             transform: scale(1.03);
@@ -1386,6 +1519,10 @@ export default {
             transform: rotate(90deg);
             font-size: 16px;
             color: #8c8c8f;
+          }
+
+          ::v-deep .el-card__body {
+            overflow: hidden;
           }
         }
 
@@ -1405,10 +1542,6 @@ export default {
           font-size: 12px;
           padding-left: 5px;
         }
-      }
-
-      .el-card__header {
-        padding: 8px 20px;
       }
     }
   }

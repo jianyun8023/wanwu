@@ -13,10 +13,6 @@
       <el-button size="small" @click="loadPpt">
         {{ $t('common.button.retry') }}
       </el-button>
-      <el-button size="small" @click="handleDownload">
-        <i class="el-icon-download"></i>
-        {{ $t('generalAgent.pptPreview.downloadFile') }}
-      </el-button>
     </div>
 
     <!-- PPT 预览内容 -->
@@ -121,7 +117,7 @@
                   v-for="(cell, cellIndex) in row"
                   :key="cellIndex"
                   :style="getCellStyle(cell, element)"
-                  v-html="cell && cell.content ? cell.content : ''"
+                  v-html="getCellContent(cell)"
                 ></td>
               </tr>
             </table>
@@ -169,10 +165,6 @@
     <div v-else class="ppt-empty">
       <i class="el-icon-document"></i>
       <p>{{ $t('generalAgent.pptPreview.parseFailed') }}</p>
-      <el-button type="primary" @click="handleDownload">
-        <i class="el-icon-download"></i>
-        {{ $t('generalAgent.pptPreview.downloadFile') }}
-      </el-button>
     </div>
   </div>
 </template>
@@ -528,10 +520,6 @@ export default {
       return {};
     },
 
-    handleDownload() {
-      this.$emit('download');
-    },
-
     // 处理内容，修复字体等问题
     processContent(content) {
       if (!content) return '';
@@ -583,6 +571,55 @@ export default {
           const pxSize = Number.parseFloat(size) * 1.333 * scale;
           return `font-size: ${pxSize.toFixed(1)}px`;
         });
+    },
+
+    // 获取表格单元格内容(处理不同数据结构)
+    getCellContent(cell) {
+      if (!cell) return '';
+
+      let content = '';
+
+      // 情况1: cell.content 是字符串
+      if (typeof cell.content === 'string') {
+        content = cell.content;
+      }
+      // 情况2: cell.content 是对象,尝试提取文本
+      else if (typeof cell.content === 'object' && cell.content !== null) {
+        // 如果有 paragraphs 数组
+        if (Array.isArray(cell.content.paragraphs)) {
+          content = cell.content.paragraphs
+            .map(p => {
+              // 段落可能是字符串或对象
+              if (typeof p === 'string') return p;
+              if (p && typeof p.text === 'string') return p.text;
+              if (p && Array.isArray(p.runs)) {
+                return p.runs.map(r => r.text || '').join('');
+              }
+              return '';
+            })
+            .join('');
+        }
+        // 如果有 text 字段
+        else if (typeof cell.content.text === 'string') {
+          content = cell.content.text;
+        }
+        // 如果有 runs 数组
+        else if (Array.isArray(cell.content.runs)) {
+          content = cell.content.runs.map(r => r.text || '').join('');
+        }
+        // 其他对象类型,尝试转换为字符串
+        else {
+          console.warn('[PptPreview] 未知的单元格内容结构:', cell.content);
+          content = String(cell.content);
+        }
+      }
+      // 情况3: 直接使用 cell 的 text 字段(某些版本可能直接放在 cell 上)
+      else if (typeof cell.text === 'string') {
+        content = cell.text;
+      }
+
+      // 应用字体和字号处理
+      return this.processContent(content);
     },
 
     // 鼠标滚轮翻页

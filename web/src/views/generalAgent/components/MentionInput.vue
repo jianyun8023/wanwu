@@ -68,7 +68,10 @@
 </template>
 
 <script>
-import { getGeneralAgentResourceSelect } from '@/api/generalAgent';
+import {
+  getGeneralAgentResourceSelect,
+  getGeneralAgentEmployeeSelect,
+} from '@/api/generalAgent';
 import { avatarSrc } from '@/utils/util';
 import XSender from 'x-sender';
 import 'x-sender/style';
@@ -93,6 +96,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // 提交前的处理（校验...）
+    beforeEnterSubmit: {
+      type: Function,
+      default: () => Promise.resolve(true),
+    },
   },
   data() {
     return {
@@ -106,6 +114,7 @@ export default {
       selectedIndex: 0,
       sender: null,
       ontologyId: null, // ontology单选
+      tip: '',
     };
   },
   computed: {
@@ -180,22 +189,24 @@ export default {
         this.initTabs();
       }
     },
-    isDIP(newVal) {
+    async isDIP(newVal) {
       if (newVal) {
-        this.resourceList = {
-          dip: [
-            { id: '1', name: '员工A', desc: '测试员工A' },
-            { id: '2', name: '员工B', desc: '测试员工B' },
-            { id: '3', name: '员工C', desc: '测试员工C' },
-          ],
-        };
-        this.sender.showTip({
-          text: '@' + this.resourceList.dip?.[0].name,
-          dialogText: '',
-        });
+        const res = await getGeneralAgentEmployeeSelect();
+        if (res?.data && Array.isArray(res.data)) {
+          this.resourceList = {
+            dip: res.data.map(item => ({
+              ...item,
+              resourceType: 'dip',
+            })),
+          };
+          const firstEmployee = this.resourceList.dip?.[0];
+          if (firstEmployee) {
+            this.showTip(firstEmployee.name);
+          }
+        }
       } else {
         this.sender.closeTip();
-        this.fetchConfigData();
+        await this.fetchConfigData();
       }
     },
   },
@@ -270,7 +281,8 @@ export default {
 
       const { EVENT_COMMON_CHANGE } = XSender.EventSet;
       this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
-        this.inputValue = this.sender.getText();
+        const text = this.sender.getText();
+        this.inputValue = text ? this.tip + text : '';
         if (this.showConfigPopover) {
           this.updateMentionPosition();
           this.$nextTick(() => {
@@ -283,28 +295,16 @@ export default {
         }
       });
 
-      this.sender.chatElement.richText.addEventListener(
-        'keydown',
-        e => {
-          this.handleSenderKeydown(e);
-        },
-        true,
-      );
-
-      this.sender.chatElement.richText.addEventListener('blur', () => {
-        this.handleSenderBlur();
+      this.sender.chatElement.richText.addEventListener('keyup', e => {
+        this.handleSenderKeydown(e);
       });
 
       this.sender.chatElement.richText.addEventListener('keyup', e => {
-        if (e.key === '@' || +e.key === 2) {
-          const { instance, offset } = this.sender.getCurrentNode();
-          if (instance?.type !== 'Write') return;
-          if (instance.text[offset - 1] !== '@') return;
-          this.popoverTab = 'all';
-          this.updateMentionPosition();
-          this.showConfigPopover = true;
-          this.selectedIndex = 0;
-        }
+        this.handleSenderKeyup(e);
+      });
+
+      this.sender.chatElement.richText.addEventListener('blur', () => {
+        this.handleSenderBlur();
       });
     },
 
@@ -329,7 +329,7 @@ export default {
         this.mentionSearchText = currentText.substring(lastAtIndex + 1, offset);
     },
 
-    handleSenderKeydown(e) {
+    async handleSenderKeydown(e) {
       if (this.showConfigPopover) {
         const keyHandlers = {
           Escape: () => {
@@ -349,8 +349,45 @@ export default {
           keyHandlers[e.key]();
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        let canSubmit = true;
+        try {
+          canSubmit = await this.beforeEnterSubmit(e);
+        } catch (error) {
+          canSubmit = false;
+        }
+        if (!canSubmit) return;
         this.$emit('keydown-enter', e);
         this.clear();
+      }
+    },
+
+    handleSenderKeyup(e) {
+      if (this.showConfigPopover) return;
+      else if (e.key === '@' || +e.key === 2) {
+        const { instance, offset } = this.sender.getCurrentNode();
+        if (instance?.type !== 'Write') return;
+        if (instance.text[offset - 1] !== '@') return;
+        this.popoverTab = 'all';
+        this.updateMentionPosition();
+        this.showConfigPopover = true;
+        this.selectedIndex = 0;
+      } else if (e.key === 'Escape' && this.isDIP) {
+        // 去掉前面的@和后面的空格，只使用原先的text
+        const originalText = this.tip.slice(1, -1);
+        this.showTip(originalText);
+      } else if (e.key === 'Backspace' && this.isDIP) {
+        // 在输入框最前面按 Backspace，且是 DIP 模式时，唤起弹窗
+        const { instance, offset } = this.sender.getCurrentNode();
+        if (instance?.type === 'Write' && offset === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.popoverTab = 'all';
+          this.updateMentionPosition();
+          this.showConfigPopover = true;
+          this.selectedIndex = 0;
+        }
       }
     },
 
@@ -416,11 +453,7 @@ export default {
       this.sender.backspace(-(this.mentionSearchText.length + 1));
 
       if (this.isDIP) {
-        this.sender.closeTip();
-        this.sender.showTip({
-          text: '@' + item.name,
-          dialogText: '',
-        });
+        this.showTip(item.name);
         return;
       }
 
@@ -441,6 +474,16 @@ export default {
         }
         this.ontologyId = item.id;
       }
+    },
+
+    showTip(name) {
+      this.sender.closeTip();
+      this.tip = '@' + name;
+      this.sender.showTip({
+        text: this.tip,
+        dialogText: '',
+      });
+      this.tip += ' ';
     },
 
     clear() {

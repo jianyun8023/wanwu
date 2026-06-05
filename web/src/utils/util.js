@@ -566,7 +566,7 @@ export function throttle(fn, interval = 100) {
  * @returns {string} 文件类型
  */
 export function getFileType(fileName) {
-  if (!fileName) return 'unsupported';
+  if (!fileName) return 'text';
   const ext = fileName.split('.').pop().toLowerCase();
 
   const typeMap = {
@@ -575,56 +575,11 @@ export function getFileType(fileName) {
     audio: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'wma'],
     pdf: ['pdf'],
     ppt: ['ppt', 'pptx'],
-    excel: ['xls', 'xlsx'],
+    excel: ['csv', 'xls', 'xlsx'],
     word: ['doc', 'docx'],
+    ofd: ['ofd'],
     html: ['html', 'htm'],
     markdown: ['md'],
-    text: [
-      'txt',
-      'json',
-      'js',
-      'ts',
-      'jsx',
-      'tsx',
-      'vue',
-      'py',
-      'java',
-      'go',
-      'rs',
-      'c',
-      'cpp',
-      'h',
-      'hpp',
-      'cs',
-      'rb',
-      'php',
-      'swift',
-      'kt',
-      'scala',
-      'css',
-      'scss',
-      'sass',
-      'less',
-      'xml',
-      'yaml',
-      'yml',
-      'toml',
-      'ini',
-      'conf',
-      'cfg',
-      'sh',
-      'bash',
-      'zsh',
-      'bat',
-      'sql',
-      'dockerfile',
-      'makefile',
-      'r',
-      'm',
-      'lua',
-      'pl',
-      'pm',
-    ],
   };
 
   for (const [type, exts] of Object.entries(typeMap)) {
@@ -633,7 +588,7 @@ export function getFileType(fileName) {
     }
   }
 
-  return 'unsupported';
+  return 'text';
 }
 
 /**
@@ -661,6 +616,53 @@ export function isImageFile(file) {
   }
 
   return false;
+}
+
+/**
+ * 根据文件扩展名获取对应的 MIME 类型
+ * @param {string} fileExt - 文件扩展名（不含点，如 'png', 'pdf'）
+ * @returns {string} MIME 类型字符串，未知类型返回空字符串
+ */
+export function getMimeType(fileExt) {
+  if (!fileExt) return '';
+
+  const ext = fileExt.toLowerCase();
+
+  // MIME 类型映射表
+  const mimeTypeMap = {
+    // 图片类型
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+    webp: 'image/webp',
+    bmp: 'image/bmp',
+    ico: 'image/x-icon',
+    // 视频类型
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    ogg: 'video/ogg',
+    mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    // 音频类型
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    oga: 'audio/ogg',
+    m4a: 'audio/mp4',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    wma: 'audio/x-ms-wma',
+    // 文档类型
+    pdf: 'application/pdf',
+    ofd: 'application/ofd',
+    html: 'text/html',
+    htm: 'text/html',
+  };
+
+  return mimeTypeMap[ext] || `text/${ext}`;
 }
 
 /**

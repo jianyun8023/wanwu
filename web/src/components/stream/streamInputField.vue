@@ -31,7 +31,7 @@
           <el-image
             class="echo-img"
             :src="file.fileUrl"
-            :preview-src-list="[file.imgUrl]"
+            :preview-src-list="[file.imgUrl || file.fileUrl]"
           ></el-image>
           <i class="el-icon-close echo-close" @click.stop="removeFile(i)"></i>
           <span
@@ -105,16 +105,13 @@
           </div>
           <div class="edtable--wrap">
             <streamUploadField
-              v-if="!(type === 'ragChat' && maxPicNum === 0)"
+              v-if="visibleUpload"
               :fileTypeArr="fileTypeArr"
               :type="type"
               @setFileId="setFileId"
               @setFile="setFile"
             ></streamUploadField>
-            <el-divider
-              v-if="!(type === 'ragChat' && maxPicNum === 0)"
-              direction="vertical"
-            ></el-divider>
+            <el-divider v-if="visibleUpload" direction="vertical"></el-divider>
             <el-button class="editable-send-btn" circle plain @click="preSend">
               <svg class="editable-send-icon">
                 <use xlink:href="#icon-chatSend" />
@@ -181,6 +178,7 @@ export default {
     supportReminder: { type: Boolean, default: false },
     hasHistory: { type: Boolean, default: false },
     visibleClearHistory: { type: Boolean, default: true },
+    visibleUpload: { type: Boolean, default: true },
   },
   mixins: [commonMixin, uploadChunk],
   components: { streamUploadField },

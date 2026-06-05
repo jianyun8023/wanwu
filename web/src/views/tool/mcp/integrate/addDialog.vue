@@ -70,7 +70,7 @@
               :placeholder="$t('tool.integrate.streamableUrlMsg')"
             ></el-input>
           </el-form-item>
-          <!--<el-form-item
+          <el-form-item
             :label="$t('tool.custom.apiAuth')"
             prop="apiAuth"
             required
@@ -120,7 +120,7 @@
                 + {{ $t('tool.integrate.addParams') }}
               </el-button>
             </div>
-          </el-form-item>-->
+          </el-form-item>
           <el-form-item label="" style="text-align: right; margin-top: -10px">
             <el-button
               type="primary"
