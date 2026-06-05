@@ -363,11 +363,11 @@ def split_file_adapter(add_file_path: str, download_link: str, config: SplitConf
         logger.info("-----定制化word解析+切分：支持复杂表格-------")
         loader = DOCXLoader(add_file_path, autodetect_encoding=True)
         chunks = loader.custom_load_and_split_doc()
-    elif file_name.lower().endswith((".wav", ".mp3", ".aac", ".m4a", ".mp4",  ".mov", ".avi")):
+    elif file_name.lower().endswith((".wav", ".mp3", ".aac", ".m4a", ".mp4",  ".mov", ".avi", ".wmv")):
         if "asr" in config.parser_choices:
             logger.info("-----执行音视频ASR解析转文本-------")
             chunks = asr_utils.asr_parser_chunk(add_file_path, config.asr_model_id)
-        if file_name.lower().endswith((".mp4", ".mov", ".avi")):
+        if file_name.lower().endswith((".mp4", ".mov", ".avi", ".wmv")):
             logger.info("-----执行视频画面关键帧解析转文本-------")
             keyframe_chunks = keyframe_extract.exact(add_file_path, config.parser_choices, config.multimodal_model_id)
             if keyframe_chunks:
