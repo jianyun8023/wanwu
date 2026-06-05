@@ -19,3 +19,11 @@ type UploadFileByBase64Req struct {
 func (u *UploadFileByBase64Req) Check() error {
 	return nil
 }
+
+type GetUserListByUserIdsReq struct {
+	UserIds []string `json:"userIds" validate:"required"` // 用户ID列表
+}
+
+func (u *GetUserListByUserIdsReq) Check() error {
+	return nil
+}

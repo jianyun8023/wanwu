@@ -131,6 +131,23 @@ func GetUserList(ctx *gin.Context, orgID, name string, pageNo, pageSize int32) (
 	}, nil
 }
 
+func GetUserListByUserIds(ctx *gin.Context, userIDs []string) (*response.ListResult, error) {
+	resp, err := iam.GetUserSelectByUserIDs(ctx.Request.Context(), &iam_service.GetUserSelectByUserIDsReq{
+		UserIds: userIDs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var users []*response.IDName
+	for _, user := range resp.Selects {
+		users = append(users, &response.IDName{
+			ID:   user.Id,
+			Name: user.Name,
+		})
+	}
+	return &response.ListResult{List: users, Total: int64(len(users))}, nil
+}
+
 func ChangeUserStatus(ctx *gin.Context, userID, orgID string, status bool) error {
 	_, err := iam.ChangeUserStatus(ctx.Request.Context(), &iam_service.ChangeUserStatusReq{
 		UserId: userID,

@@ -148,10 +148,14 @@ type WgaSandboxSandboxConfig struct {
 }
 
 type OntologyServiceConfig struct {
-	Enable                  int                            `json:"enable" mapstructure:"enable"`
-	Endpoint                string                         `json:"endpoint" mapstructure:"endpoint"`
-	KnowledgeNetworkListUri string                         `json:"knowledge_network_list_uri" mapstructure:"knowledge_network_list_uri"`
-	SmartDataSkills         []OntologySmartDataSkillConfig `json:"smart_data_skills" mapstructure:"smart_data_skills"`
+	Enable                        int                            `json:"enable" mapstructure:"enable"`
+	Endpoint                      string                         `json:"endpoint" mapstructure:"endpoint"`
+	KnowledgeNetworkListUri       string                         `json:"knowledge_network_list_uri" mapstructure:"knowledge_network_list_uri"`
+	DigitalEmployeeListUri        string                         `json:"digital_employee_list_uri" mapstructure:"digital_employee_list_uri"`
+	DigitalEmployeeInfoUri        string                         `json:"digital_employee_info_uri" mapstructure:"digital_employee_info_uri"`
+	DigitalEmployeePromptTemplate string                         `json:"digital_employee_prompt_template" mapstructure:"digital_employee_prompt_template"`
+	BuiltinSkills                 []string                       `yaml:"builtin_skills" json:"builtin_skills" mapstructure:"builtin_skills"`
+	SmartDataSkills               []OntologySmartDataSkillConfig `json:"smart_data_skills" mapstructure:"smart_data_skills"`
 }
 
 type OntologySmartDataSkillConfig struct {

@@ -181,6 +181,25 @@ func (m *GeneralAgentConversationMessage) GetURLs() map[string]string {
 	return urls
 }
 
+func (m *GeneralAgentConversationMessage) GetTextContent() string {
+	var text string
+	switch v := m.Content.(type) {
+	case string:
+		text = v
+	case []interface{}:
+		for _, item := range v {
+			if m, ok := item.(map[string]interface{}); ok {
+				if typ, _ := m["type"].(string); typ == "text" {
+					if t, _ := m["text"].(string); t != "" {
+						text += t + " "
+					}
+				}
+			}
+		}
+	}
+	return text
+}
+
 type GeneralAgentWorkspaceDownloadReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID
 	RunID    string `json:"runId" form:"runId"`                           // 运行ID
@@ -203,58 +222,6 @@ type GeneralAgentWorkspaceReq struct {
 }
 
 func (c *GeneralAgentWorkspaceReq) Check() error { return nil }
-
-type GeneralAgentCopilotRuntimeReq struct {
-	Method string                 `json:"method"`
-	Params map[string]interface{} `json:"params,omitempty"`
-	Body   map[string]interface{} `json:"body,omitempty"`
-}
-
-func (c *GeneralAgentCopilotRuntimeReq) Check() error { return nil }
-
-func (c *GeneralAgentCopilotRuntimeReq) GetThreadID() string {
-	threadID, _ := c.Body["threadId"].(string)
-	return threadID
-}
-
-func (c *GeneralAgentCopilotRuntimeReq) GetMessages() []GeneralAgentConversationMessage {
-	if c.Body == nil {
-		return nil
-	}
-
-	bodyMessages, ok := c.Body["messages"]
-	if !ok || bodyMessages == nil {
-		return nil
-	}
-
-	messagesSlice, ok := bodyMessages.([]interface{})
-	if !ok {
-		return nil
-	}
-
-	messages := make([]GeneralAgentConversationMessage, 0, len(messagesSlice))
-	for _, m := range messagesSlice {
-		msgMap, ok := m.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		role, _ := msgMap["role"].(string)
-		if role == "" {
-			continue
-		}
-
-		id, _ := msgMap["id"].(string)
-		content := msgMap["content"]
-		messages = append(messages, GeneralAgentConversationMessage{
-			ID:      id,
-			Role:    role,
-			Content: content,
-		})
-	}
-
-	return messages
-}
 
 type GeneralAgentReplyQuestionReq struct {
 	RunID      string     `json:"runId" validate:"required"`

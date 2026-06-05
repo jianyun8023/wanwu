@@ -436,6 +436,10 @@ services:
       - ./configs/microservice/bff-service/configs/agent-skills/ontology/bkn-modeling-advisor:/home/root/.claude/skills/bkn-modeling-advisor
       - ./configs/microservice/bff-service/configs/agent-skills/ontology/create-bkn:/home/root/.claude/skills/create-bkn
       - ./configs/microservice/bff-service/configs/agent-skills/ontology/ontology-core:/home/root/.claude/skills/ontology-core
+      # --- ontology: smart-data ---
+      - ./configs/microservice/bff-service/configs/agent-skills/ontology/smart-ask-data:/home/root/.claude/skills/smart-ask-data
+      - ./configs/microservice/bff-service/configs/agent-skills/ontology/smart-data-analysis:/home/root/.claude/skills/smart-data-analysis
+      - ./configs/microservice/bff-service/configs/agent-skills/ontology/smart-search-tables:/home/root/.claude/skills/smart-search-tables
     environment:
       USER: root
       OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: 600000

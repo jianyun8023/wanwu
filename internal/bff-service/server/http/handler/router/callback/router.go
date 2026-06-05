@@ -12,6 +12,8 @@ func Register(callbackAPI *gin.RouterGroup) {
 	// callback
 	mid.Sub("callback").Reg(callbackAPI, "/file/url/base64", http.MethodPost, callback.FileUrlConvertBase64, "文件URL转换为base64")
 	mid.Sub("callback").Reg(callbackAPI, "/file/upload/base64", http.MethodPost, callback.UploadFileByBase64, "通过base64上传文件")
+	// user
+	mid.Sub("callback").Reg(callbackAPI, "/user/list", http.MethodPost, callback.GetUserListByUserIds, "根据userId获取用户信息")
 	// model
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId", http.MethodGet, callback.GetModelById, "根据modelId获取模型")
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId/chat/completions", http.MethodPost, callback.ModelChatCompletions, "Model Chat Completions")
@@ -48,7 +50,7 @@ func Register(callbackAPI *gin.RouterGroup) {
 	mid.Sub("callback").Reg(callbackAPI, "/wga/sandbox/cleanup", http.MethodPost, callback.WgaSandboxCleanup, "WGA沙箱清理")
 	// app record
 	mid.Sub("callback").Reg(callbackAPI, "/app/record", http.MethodPost, callback.AppRecord, "应用使用记录")
-	//skill
+	// skill
 	mid.Sub("callback").Reg(callbackAPI, "/skill/builtin/list", http.MethodPost, callback.SearchBuiltInSkillList, "内置skill详情列表")
 	mid.Sub("callback").Reg(callbackAPI, "/skill/custom/list", http.MethodPost, callback.SearchCustomSkillList, "自定义skill详情列表")
 	mid.Sub("callback").Reg(callbackAPI, "/skill/acquired/list", http.MethodPost, callback.SearchAcquiredSkillList, "我添加skill详情列表")
