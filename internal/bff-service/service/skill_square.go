@@ -141,6 +141,7 @@ func GetSquareShareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) 
 	isAcquired := false
 	acquiredResp, err := mcp.CheckAcquiredSkill(ctx.Request.Context(), &mcp_service.CheckAcquiredSkillReq{
 		SkillIds: []string{skillId},
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
 	if err == nil && acquiredResp != nil {
 		isAcquired = acquiredResp.GetAcquiredMap()[skillId]
