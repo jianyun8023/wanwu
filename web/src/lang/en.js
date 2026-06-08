@@ -550,6 +550,8 @@ export default {
       color: '颜色',
       platformTitle: '显示“帮助文档”页面上方',
       imgUpload: '点击图标上传，可上传 .png、.jpg、.jpeg文件',
+      bgSizeLimit: '背景图大小不能超过1MB',
+      logoSizeLimit: '图标大小不能超过100KB',
       labelIcon: '显示在浏览器标签页上的图标',
       logo: '显示在平台左上方的LOGO',
       oneColor: '单色',
