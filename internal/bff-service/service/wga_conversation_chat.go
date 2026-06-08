@@ -551,9 +551,11 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		if err != nil {
 			log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
 		} else {
-			if err := applyWgaWorkspaceDirPolicy(agentID, dirs); err != nil {
-				log.Errorf("[wga] thread %v apply workspace dir policy err: %v", threadID, err)
-				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, err.Error())
+			if agentID == generalAgentSkillChatNormalAgentID || agentID == generalAgentSkillChatImportAgentID || agentID == generalAgentSkillChatPreviewAgentID {
+				if dirs, err = applyWgaWorkspaceDirSkillPolicy(dirs); err != nil {
+					log.Errorf("[wga] thread %v apply workspace dir policy err: %v", threadID, err)
+					return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, err.Error())
+				}
 			}
 			opts = append(opts, wga_option.WithInputDir(dirs.InputDir))
 			if !workspaceReadOnly {
@@ -561,7 +563,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 			}
 			if urls := userInputMessage.GetURLs(); len(urls) > 0 {
 				if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
-					log.Errorf("download URLs %+v to workspace dir %v failed: %v", urls, dirs.OutputDir, err)
+					log.Errorf("[wga] thread %v download URLs %+v to workspace dir %v failed: %v", threadID, urls, dirs.OutputDir, err)
 				}
 			}
 		}

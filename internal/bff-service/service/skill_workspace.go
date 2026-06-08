@@ -15,9 +15,9 @@ import (
 )
 
 const (
+	generalAgentWorkspaceSkillDirName = "skill"         // wga 工作区中 skill 目录名
 	maxFileSize                       = 1 * 1024 * 1024 // 最大文件大小 1MB
 	maxSearchResults                  = 1000            // 最大搜索结果数
-	generalAgentSkillWorkspaceDirName = "skill"         // skill 工作区目录名（与 wga_skill_import.go 中保持一致）
 	maxFileTreeNodes                  = 5000
 	maxFileTreeDepth                  = 100
 	maxSearchLineBytes                = 256 * 1024
@@ -43,7 +43,7 @@ func resolveSkillWorkspace(ctx *gin.Context, userId, orgId, customSkillID string
 	return &skillWorkspaceContext{
 		customSkillID: customSkillID,
 		skillDir:      skillDir,
-		workspaceDir:  filepath.Join(skillDir, generalAgentSkillWorkspaceDirName),
+		workspaceDir:  filepath.Join(skillDir, generalAgentWorkspaceSkillDirName),
 		repo:          git_util.Open(skillDir),
 	}, nil
 }

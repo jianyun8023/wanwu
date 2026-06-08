@@ -181,7 +181,7 @@ func importLegacyCustomSkillWorkspace(ctx *gin.Context, skillId, zipURL string) 
 		return err
 	}
 	log.Infof("[wga-skill-legacy] skill %v prepared overwrite workspace, outputDir=%s", skillId, dirs.OutputDir)
-	skillDir := filepath.Join(dirs.OutputDir, generalAgentSkillImportDirName)
+	skillDir := filepath.Join(dirs.OutputDir, generalAgentWorkspaceSkillDirName)
 	data, err := downloadCustomSkillZip(ctx, zipURL)
 	if err != nil {
 		_ = CleanupWgaWorkspace(store)
@@ -231,7 +231,7 @@ func overwriteCustomSkillWorkspaceFromZip(ctx *gin.Context, skillId string, data
 		return err
 	}
 	skillRoot := dirs.OutputDir
-	skillDir := filepath.Join(skillRoot, generalAgentSkillImportDirName)
+	skillDir := filepath.Join(skillRoot, generalAgentWorkspaceSkillDirName)
 	stagingDir := filepath.Join(skillRoot, ".skill-rollback-"+util.GenUUID())
 	defer func() { _ = os.RemoveAll(stagingDir) }()
 
@@ -254,8 +254,10 @@ func replaceCustomSkillDirWithGitGuard(skillRoot, skillDir, stagingDir string) e
 	}
 
 	if gitInitialized {
-		if err := ensureSkillWorkspaceGitMetadataPresent(skillRoot); err != nil {
+		if ok, err := pathHasGitMetadata(skillRoot); err != nil {
 			return grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("skill workspace git metadata missing after rollback: %v", err))
+		} else if !ok {
+			return grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("%s not found", filepath.Join(skillRoot, ".git")))
 		}
 	}
 	return nil
@@ -287,18 +289,6 @@ func replaceCustomSkillDir(skillDir, stagingDir string) error {
 			_ = os.Rename(backupDir, skillDir)
 		}
 		return grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("replace skill workspace err: %v", err))
-	}
-	return nil
-}
-
-// ensureSkillWorkspaceGitMetadataPresent 确认工作区 Git 元数据未丢失。
-func ensureSkillWorkspaceGitMetadataPresent(skillRoot string) error {
-	ok, err := pathHasGitMetadata(skillRoot)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("%s not found", filepath.Join(skillRoot, ".git"))
 	}
 	return nil
 }
@@ -506,7 +496,7 @@ func buildCustomSkillPublishPackage(ctx *gin.Context, userId, orgId, skillId, ve
 		return "", "", nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_uncommitted_changes", "工作区尚未提交，请先提交后再发布")
 	}
 
-	hasChanges, err := ws.repo.HasChangesInSubDir(generalAgentSkillWorkspaceDirName)
+	hasChanges, err := ws.repo.HasChangesInSubDir(generalAgentWorkspaceSkillDirName)
 	if err != nil {
 		return "", "", nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_check_git_status_failed")
 	}
@@ -522,9 +512,9 @@ func buildCustomSkillPublishPackage(ctx *gin.Context, userId, orgId, skillId, ve
 		return "", "", nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_version_exists", fmt.Sprintf("版本 %s 已存在，请使用其他版本号", version))
 	}
 
-	zipBytes, err := ws.repo.ArchivePath("HEAD", generalAgentSkillWorkspaceDirName)
+	zipBytes, err := ws.repo.ArchivePath("HEAD", generalAgentWorkspaceSkillDirName)
 	if err != nil {
-		return "", "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("archive git HEAD:%s failed for skill %s: %v", generalAgentSkillWorkspaceDirName, skillId, err))
+		return "", "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("archive git HEAD:%s failed for skill %s: %v", generalAgentWorkspaceSkillDirName, skillId, err))
 	}
 
 	markdown, _, err := util.ExtractSkillMarkdownFromZip(zipBytes)

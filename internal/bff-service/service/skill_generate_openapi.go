@@ -3,26 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
+
+	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 )
-
-// wanwuExternalEndpoint returns the external base URL for wanwu APIs.
-// It reads WANWU_WEB_BASE_URL first (full URL with scheme),
-// then falls back to combining WANWU_EXTERNAL_SCHEME + WANWU_EXTERNAL_ENDPOINT,
-// and finally defaults to "http://localhost:8081".
-func wanwuExternalEndpoint() string {
-	if v := os.Getenv("SERVER_WEB_BASE_URL"); v != "" {
-		return v
-	}
-	return "http://localhost:8081"
-}
-
-// jsonMarshal is a wrapper around json.Marshal for use in template functions.
-func jsonMarshal(v interface{}) ([]byte, error) {
-	return json.Marshal(v)
-}
 
 // SkillCategory constants for wanwu API categories.
 const (
@@ -56,7 +41,15 @@ func renderWanwuOpenAPISpec(category, uuid, name, desc string) ([]byte, error) {
 		return nil, fmt.Errorf("unsupported wanwu API category: %s (supported: %s, %s, %s)", category, SkillCategoryAgent, SkillCategoryWorkflow, SkillCategoryRAG)
 	}
 
-	t, err := newTemplate(category).Parse(tmpl)
+	t, err := template.New(category).Funcs(template.FuncMap{
+		"tojson": func(v interface{}) (string, error) {
+			b, err := json.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+			return string(b), nil
+		},
+	}).Parse(tmpl)
 	if err != nil {
 		return nil, fmt.Errorf("parse %s openapi template err: %w", category, err)
 	}
@@ -70,25 +63,13 @@ func renderWanwuOpenAPISpec(category, uuid, name, desc string) ([]byte, error) {
 		UUID:      uuid,
 		Name:      name,
 		Desc:      desc,
-		ServerURL: wanwuExternalEndpoint(),
+		ServerURL: config.Cfg().Server.WebBaseUrl,
 	}
 	var buf strings.Builder
 	if err := t.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("execute %s openapi template err: %w", category, err)
 	}
 	return []byte(buf.String()), nil
-}
-
-func newTemplate(name string) *template.Template {
-	return template.New(name).Funcs(template.FuncMap{
-		"tojson": func(v interface{}) (string, error) {
-			b, err := jsonMarshal(v)
-			if err != nil {
-				return "", err
-			}
-			return string(b), nil
-		},
-	})
 }
 
 const agentOpenAPITemplate = `{
