@@ -25,9 +25,23 @@ var imageExt = map[string]bool{
 	".tiff": true,
 }
 
+var zipExt = map[string]bool{
+	".zip": true,
+	".rar": true,
+	".7z":  true,
+}
+
 // ImageFile 判断文件是否为图片
 func ImageFile(fileName string) bool {
 	return imageExt[strings.ToLower(filepath.Ext(fileName))]
+}
+
+// ZipFile 判断文件是否为压缩包
+func ZipFile(fileName string) bool {
+	if strings.HasSuffix(fileName, ".tar.gz") {
+		return true
+	}
+	return zipExt[strings.ToLower(filepath.Ext(fileName))]
 }
 
 // ExtractFileNameFromURL 从URL中提取文件名

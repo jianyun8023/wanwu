@@ -140,22 +140,24 @@ func buildAgentChatInfo(ctx *gin.Context, req *request.AgentChatParams) (*servic
 	}
 	var functionCall = modelInfo.Config.FunctionCalling != "noSupport"
 	var vision = modelInfo.Config.VisionSupport == "support"
+	imageFile, zipFile := buildUploadFileType(req.UploadFile)
 	return &service_model.AgentChatInfo{
 		FunctionCalling: functionCall,
 		VisionSupport:   vision,
 		UploadUrl:       len(req.UploadFile) > 0,
-		ImageUpload:     buildImageUpload(req.UploadFile),
+		ImageUpload:     imageFile,
+		ZipFile:         zipFile,
 		ModelInfo:       modelInfo,
 	}, nil
 }
 
-// buildImageUpload 构建图片上传
-func buildImageUpload(uploadFile []string) bool {
+// buildUploadFileType 构建图片上传
+func buildUploadFileType(uploadFile []string) (imageFile bool, zipFile bool) {
 	if len(uploadFile) == 0 {
-		return false
+		return false, false
 	}
 	fileName := util.ExtractFileNameFromURL(uploadFile[0])
-	return util.ImageFile(fileName)
+	return util.ImageFile(fileName), util.ZipFile(fileName)
 }
 
 // searchSingleAgent 查询智能体详情
