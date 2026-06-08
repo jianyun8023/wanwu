@@ -51,7 +51,15 @@ func (f FileDocImportService) AnalyzeDoc(ctx context.Context, importTask *model.
 
 func (f FileDocImportService) CheckDoc(ctx context.Context, importTask *model.KnowledgeImportTask, docList []*model.DocInfo) ([]*CheckFileResult, error) {
 	var resultList []*CheckFileResult
-	fileTypeMap := BuildFileTypeMap()
+	knowledge, err := orm.SelectKnowledgeById(ctx, importTask.KnowledgeId, "", "")
+	var multimodal = false
+	if err != nil {
+		//查询失败不影响主流程
+		log.Errorf("check doc select knowledge error %v", err)
+	} else {
+		multimodal = knowledge.Category == model.CategoryMultimodal
+	}
+	fileTypeMap := BuildFileTypeMap(multimodal)
 	for _, docInfo := range docList {
 		checkResult, checkMessage := checkOneFile(ctx, importTask, docInfo, fileTypeMap)
 		var status = model.DocInit
@@ -222,10 +230,29 @@ func buildKnowledgeDoc(importTask *model.KnowledgeImportTask, checkFileResult *C
 	}
 }
 
-func BuildFileTypeMap() map[string]bool {
-	fileTypes := strings.Split(config.GetConfig().UsageLimit.FileTypes, ";")
+func BuildFileTypeMap(multiModal bool) map[string]bool {
 	var fileTypeMap = make(map[string]bool)
+	var filterTypeMap = make(map[string]bool)
+	//非多模态过滤对应类型
+	if !multiModal {
+		fileTypes := strings.Split(config.GetConfig().UsageLimit.AudioTypes, ";")
+		for _, fileType := range fileTypes {
+			filterTypeMap["."+fileType] = true
+		}
+		fileTypes = strings.Split(config.GetConfig().UsageLimit.VideoTypes, ";")
+		for _, fileType := range fileTypes {
+			filterTypeMap["."+fileType] = true
+		}
+		fileTypes = strings.Split(config.GetConfig().UsageLimit.ImageTypes, ";")
+		for _, fileType := range fileTypes {
+			filterTypeMap["."+fileType] = true
+		}
+	}
+	fileTypes := strings.Split(config.GetConfig().UsageLimit.FileTypes, ";")
 	for _, fileType := range fileTypes {
+		if filterTypeMap[fileType] {
+			continue
+		}
 		fileTypeMap[fileType] = true
 	}
 	compressedFileTypeList := strings.Split(config.GetConfig().UsageLimit.CompressedFileType, ";")

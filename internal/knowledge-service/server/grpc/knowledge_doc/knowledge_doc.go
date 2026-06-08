@@ -168,18 +168,19 @@ func (s *Service) ReImportDoc(ctx context.Context, req *knowledgebase_doc_servic
 		log.Errorf("get doc info %v", err)
 		return nil, util.ErrCode(errs.Code_KnowledgeDocSearchFail)
 	}
-	//2.文档校验
-	docIdList, err := checkDocFile(ctx, req, docInfos)
+	// 2.知识库详情查询
+	knowledge, err := orm.SelectKnowledgeById(ctx, req.KnowledgeId, "", "")
+	if err != nil {
+		return nil, err
+	}
+	//3.文档校验
+	docIdList, err := checkDocFile(ctx, req, docInfos, knowledge)
 	if err != nil {
 		return nil, util.ErrCode(errs.Code_KnowledgeDocSearchFail)
 	}
 	req.DocIdList = docIdList
 	docInfoMap := buildDocInfoMap(docInfos)
-	// 3.导入任务详情查询
-	knowledge, err := orm.SelectKnowledgeById(ctx, req.KnowledgeId, "", "")
-	if err != nil {
-		return nil, err
-	}
+	//4.任务详情查询
 	tasks, err := orm.SelectKnowledgeImportTaskByIdList(ctx, buildImportTaskIdList(docInfos))
 	if err != nil {
 		return nil, err
@@ -1604,9 +1605,9 @@ func checkDocFinishStatus(ctx context.Context, req *knowledgebase_doc_service.Up
 	return nil
 }
 
-func checkDocFile(ctx context.Context, req *knowledgebase_doc_service.ReImportDocReq, docInfos []*model.KnowledgeDoc) ([]string, error) {
+func checkDocFile(ctx context.Context, req *knowledgebase_doc_service.ReImportDocReq, docInfos []*model.KnowledgeDoc, knowledge *model.KnowledgeBase) ([]string, error) {
 	var docIdList []string
-	fileTypeMap := import_service.BuildFileTypeMap()
+	fileTypeMap := import_service.BuildFileTypeMap(knowledge.Category == model.CategoryMultimodal)
 	for _, doc := range docInfos {
 		//1.文件状态校验
 		if int32(util.BuildDocRespStatus(doc.Status)) != model.DocFail {
