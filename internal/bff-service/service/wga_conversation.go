@@ -622,9 +622,16 @@ func GeneralAgentSkillConversationChat(ctx *gin.Context, userId, orgId string, r
 		}
 	}
 
-	agentID, err := generalAgentSkillChatAgentID(mode)
-	if err != nil {
-		return err
+	var agentID string
+	switch mode {
+	case "", generalAgentSkillChatModeNormal:
+		agentID = generalAgentSkillChatNormalAgentID
+	case generalAgentSkillChatModeImport, generalAgentSkillChatModeConvert:
+		agentID = generalAgentSkillChatImportAgentID
+	case generalAgentSkillChatModePreview:
+		agentID = generalAgentSkillChatPreviewAgentID
+	default:
+		return grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("unsupported skill chat mode: %s", mode))
 	}
 
 	configResp, err := assistant.GetWgaConversationConfig(ctx.Request.Context(), &assistant_service.GetWgaConversationConfigReq{
@@ -650,7 +657,7 @@ func GeneralAgentSkillConversationChat(ctx *gin.Context, userId, orgId string, r
 		Messages:          req.Messages,
 		ModelConfig:       modelConfig,
 		WorkspaceStore:    workspaceStore,
-		WorkspaceReadOnly: isGeneralAgentSkillChatWorkspaceReadOnlyMode(mode),
+		WorkspaceReadOnly: mode == generalAgentSkillChatModePreview,
 	}); err != nil {
 		return err
 	}
@@ -661,20 +668,13 @@ func GeneralAgentSkillConversationChat(ctx *gin.Context, userId, orgId string, r
 		}
 	}
 	if mode != generalAgentSkillChatModePreview {
-		scheduleCustomSkillMetaUpdateFromWorkspace(req.CustomSkillID)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			updateCustomSkillMetaFromWorkspace(ctx, req.CustomSkillID)
+		}()
 	}
 	return nil
-}
-
-func scheduleCustomSkillMetaUpdateFromWorkspace(customSkillID string) {
-	if customSkillID == "" {
-		return
-	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		updateCustomSkillMetaFromWorkspace(ctx, customSkillID)
-	}()
 }
 
 func updateCustomSkillMetaFromWorkspace(ctx context.Context, customSkillID string) {
@@ -695,28 +695,6 @@ func updateCustomSkillMetaFromWorkspace(ctx context.Context, customSkillID strin
 		return
 	}
 	log.Infof("[wga-skill] customSkillID %v updated generated skill metadata from workspace", customSkillID)
-}
-
-func generalAgentSkillChatAgentID(mode string) (string, error) {
-	switch strings.TrimSpace(strings.ToLower(mode)) {
-	case "", generalAgentSkillChatModeNormal:
-		return generalAgentSkillChatNormalAgentID, nil
-	case generalAgentSkillChatModeImport, generalAgentSkillChatModeConvert:
-		return generalAgentSkillChatImportAgentID, nil
-	case generalAgentSkillChatModePreview:
-		return generalAgentSkillChatPreviewAgentID, nil
-	default:
-		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("unsupported skill chat mode: %s", mode))
-	}
-}
-
-func isGeneralAgentSkillChatWorkspaceReadOnlyMode(mode string) bool {
-	switch strings.TrimSpace(strings.ToLower(mode)) {
-	case generalAgentSkillChatModePreview:
-		return true
-	default:
-		return false
-	}
 }
 
 func GeneralAgentReplyQuestion(ctx context.Context, runID string, questionID string, answers [][]string) error {

@@ -586,7 +586,7 @@ func DownloadWgaWorkspaceURLs(urls map[string]string, dir string) error {
 		return nil
 	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("[DownloadWgaWorkspaceURLs] create dir %s failed: %w", dir, err)
+		return fmt.Errorf("create dir %s failed: %w", dir, err)
 	}
 	for fileName, urlStr := range urls {
 		log.Infof("[DownloadWgaWorkspaceURLs] downloading URL %s to %s", urlStr, dir)

@@ -26,7 +26,7 @@ func ConvertGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string
 		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, err.Error())
 	}
 
-	sourceType := normalizeGeneralAgentSkillConvertType(req.Type)
+	sourceType := strings.TrimSpace(strings.ToLower(req.Type))
 	title := generalAgentSkillConvertTitle(ctx, sourceType)
 	previewID := util.GenUUID()
 
@@ -97,7 +97,7 @@ func prepareGeneralAgentSkillConvertOutputDir(customSkillID string) (string, err
 	if err != nil {
 		return "", err
 	}
-	outputDir := filepath.Join(GetWgaWorkspaceThreadDir(store), generalAgentSkillImportDirName)
+	outputDir := filepath.Join(GetWgaWorkspaceThreadDir(store), generalAgentWorkspaceSkillDirName)
 	if err := recreateDir(outputDir); err != nil {
 		return "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("prepare skill dir err: %v", err))
 	}
@@ -119,10 +119,6 @@ func generateGeneralAgentSkillFromSource(ctx *gin.Context, sourceType, id, outpu
 	default:
 		return fmt.Errorf("unsupported type: %s", sourceType)
 	}
-}
-
-func normalizeGeneralAgentSkillConvertType(sourceType string) string {
-	return strings.TrimSpace(strings.ToLower(sourceType))
 }
 
 func generalAgentSkillConvertTitle(ctx *gin.Context, sourceType string) string {

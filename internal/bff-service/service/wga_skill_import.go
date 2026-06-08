@@ -23,8 +23,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const generalAgentSkillImportDirName = "skill"
-
 type importedSkillRoot struct {
 	zipPath string
 	name    string
@@ -91,7 +89,7 @@ func ImportGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string,
 		rollbackImportedSkillConversation(ctx, userId, orgId, threadResp.ThreadId, customSkillID)
 		return nil, err
 	}
-	skillDir := filepath.Join(GetWgaWorkspaceThreadDir(store), generalAgentSkillImportDirName)
+	skillDir := filepath.Join(GetWgaWorkspaceThreadDir(store), generalAgentWorkspaceSkillDirName)
 	fm, err := importSkillIntoWorkspace(ctx, req.ZipUrl, skillDir)
 	if err != nil {
 		rollbackImportedSkillConversation(ctx, userId, orgId, threadResp.ThreadId, customSkillID)
@@ -130,7 +128,7 @@ func rollbackImportedSkillConversation(ctx *gin.Context, userId, orgId, threadId
 	}
 }
 
-func importSkillIntoWorkspace(ctx *gin.Context, zipURL, skillDir string) (*util.FrontMatter, error) {
+func importSkillIntoWorkspace(ctx *gin.Context, zipURL, skillDir string) (*util.SkillFrontMatter, error) {
 	data, err := minio_util.DownloadFileDirect(ctx.Request.Context(), zipURL)
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("download skill zip err: %v", err))
@@ -138,7 +136,7 @@ func importSkillIntoWorkspace(ctx *gin.Context, zipURL, skillDir string) (*util.
 	return importSkillDataIntoWorkspace(data, skillDir)
 }
 
-func importSkillDataIntoWorkspace(data []byte, skillDir string) (*util.FrontMatter, error) {
+func importSkillDataIntoWorkspace(data []byte, skillDir string) (*util.SkillFrontMatter, error) {
 	if err := recreateDir(skillDir); err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("prepare skill dir err: %v", err))
 	}
@@ -206,7 +204,7 @@ func findSkillRootInZip(reader *zip.Reader) (*importedSkillRoot, error) {
 	}
 }
 
-func parseZipSkillFrontMatter(file *zip.File) (*util.FrontMatter, error) {
+func parseZipSkillFrontMatter(file *zip.File) (*util.SkillFrontMatter, error) {
 	rc, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SKILL.md file: %v", err)
@@ -253,7 +251,8 @@ func unzipSkillRoot(reader *zip.Reader, skillRoot, destDir string) error {
 		}
 
 		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(absTargetPath, safeDirPerm(file.Mode())); err != nil {
+			perm := file.Mode().Perm()
+			if err := os.MkdirAll(absTargetPath, util.IfElse(perm == 0, os.FileMode(0755), perm)); err != nil {
 				return err
 			}
 			continue
@@ -309,7 +308,8 @@ func writeZipFile(file *zip.File, targetPath string) error {
 	}
 	defer func() { _ = source.Close() }()
 
-	target, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, safeFilePerm(file.Mode()))
+	perm := file.Mode().Perm()
+	target, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, util.IfElse(perm == 0, os.FileMode(0644), perm))
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func cleanSkillDirName(name string) (string, error) {
 	return name, nil
 }
 
-func readImportedSkillFrontMatter(skillDir string) (*util.FrontMatter, error) {
+func readImportedSkillFrontMatter(skillDir string) (*util.SkillFrontMatter, error) {
 	entries, err := os.ReadDir(skillDir)
 	if err != nil {
 		return nil, err
@@ -360,20 +360,4 @@ func readImportedSkillFrontMatter(skillDir string) (*util.FrontMatter, error) {
 	default:
 		return nil, fmt.Errorf("expected exactly one imported skill directory, got %d", len(skillDirs))
 	}
-}
-
-func safeDirPerm(mode os.FileMode) os.FileMode {
-	perm := mode.Perm()
-	if perm == 0 {
-		return 0755
-	}
-	return perm
-}
-
-func safeFilePerm(mode os.FileMode) os.FileMode {
-	perm := mode.Perm()
-	if perm == 0 {
-		return 0644
-	}
-	return perm
 }

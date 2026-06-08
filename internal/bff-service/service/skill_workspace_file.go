@@ -258,9 +258,6 @@ func UpdateSkillWorkspaceFile(ctx *gin.Context, userId, orgId string, req reques
 		log.Errorf("[Workspace] UpdateFile mkdir %s err: %v", filepath.Dir(fullPath), err)
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_create_dir_failed")
 	}
-	if err := ensureNoSymlinkInPath(ws.workspaceDir, filepath.Dir(fullPath), true); err != nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
-	}
 	if info, err := os.Lstat(fullPath); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "symlink path not allowed")
@@ -326,15 +323,4 @@ func writeFileAtomic(filePath string, data []byte) error {
 		}
 	}
 	return nil
-}
-
-// shouldIncludeFile 根据 include/exclude 模式决定是否搜索该文件。
-func shouldIncludeFile(relPath string, includePattern, excludePattern string) bool {
-	if excludePattern != "" && matchPattern(relPath, excludePattern) {
-		return false
-	}
-	if includePattern != "" {
-		return matchPattern(relPath, includePattern)
-	}
-	return true
 }

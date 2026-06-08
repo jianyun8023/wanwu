@@ -9,37 +9,28 @@ import (
 	git_util "github.com/UnicomAI/wanwu/pkg/git-util"
 )
 
-// applyWgaWorkspaceDirPolicy 对 Skill 生成场景应用工作区目录策略。
-func applyWgaWorkspaceDirPolicy(agentID string, dirs *WgaWorkspaceDirs) error {
-	if dirs == nil || !isGeneralAgentSkillChatAgentID(agentID) || dirs.OutputDir == "" {
-		return nil
+// applyWgaWorkspaceDirSkillPolicy 对 Skill 生成场景应用工作区目录策略。
+func applyWgaWorkspaceDirSkillPolicy(dirs *WgaWorkspaceDirs) (*WgaWorkspaceDirs, error) {
+	if dirs == nil || dirs.OutputDir == "" {
+		return dirs, nil
 	}
 
-	skillDir := filepath.Join(dirs.OutputDir, generalAgentSkillWorkspaceDirName)
+	skillDir := filepath.Join(dirs.OutputDir, generalAgentWorkspaceSkillDirName)
 	info, err := os.Stat(skillDir)
 	if os.IsNotExist(err) {
-		return nil
+		return dirs, nil
 	}
 	if err != nil {
-		return fmt.Errorf("stat skill workspace dir %s: %w", skillDir, err)
+		return nil, fmt.Errorf("stat skill workspace dir %s: %w", skillDir, err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("skill workspace path is not a directory: %s", skillDir)
+		return nil, fmt.Errorf("skill workspace path is not a directory: %s", skillDir)
 	}
 
-	dirs.InputDir = filepath.Clean(skillDir)
-	dirs.OutputDir = skillDir
-	return nil
-}
-
-// isGeneralAgentSkillChatAgentID 判断 agentID 是否为 Skill 生成会话。
-func isGeneralAgentSkillChatAgentID(agentID string) bool {
-	switch strings.TrimSpace(agentID) {
-	case generalAgentSkillChatNormalAgentID, generalAgentSkillChatImportAgentID, generalAgentSkillChatPreviewAgentID:
-		return true
-	default:
-		return false
-	}
+	return &WgaWorkspaceDirs{
+		InputDir:  filepath.Clean(skillDir),
+		OutputDir: skillDir,
+	}, nil
 }
 
 // normalizeCustomSkillWorkspaceNestedSkill 归并工作区内多余嵌套的 skill 目录。
@@ -62,8 +53,8 @@ func normalizeCustomSkillWorkspaceNestedSkill(customSkillID string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	workspaceDir := filepath.Join(skillRoot, generalAgentSkillWorkspaceDirName)
-	nestedDir := filepath.Join(workspaceDir, generalAgentSkillWorkspaceDirName)
+	workspaceDir := filepath.Join(skillRoot, generalAgentWorkspaceSkillDirName)
+	nestedDir := filepath.Join(workspaceDir, generalAgentWorkspaceSkillDirName)
 	info, err := os.Lstat(nestedDir)
 	if os.IsNotExist(err) {
 		return nil
@@ -117,7 +108,7 @@ func mergeCustomSkillNestedEntry(srcDir, dstDir string, entry os.DirEntry) error
 	if err != nil {
 		return fmt.Errorf("stat nested skill workspace entry %s: %w", srcPath, err)
 	}
-	if sameCleanPath(dstPath, srcDir) {
+	if filepath.Clean(dstPath) == filepath.Clean(srcDir) {
 		if !srcInfo.IsDir() || srcInfo.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("refuse to merge nested skill workspace entry into itself: %s", srcPath)
 		}
@@ -163,9 +154,4 @@ func mergeCustomSkillNestedEntry(srcDir, dstDir string, entry os.DirEntry) error
 		return fmt.Errorf("move nested skill workspace entry %s to %s: %w", srcPath, dstPath, err)
 	}
 	return nil
-}
-
-// sameCleanPath 判断两个路径清理后是否指向同一位置。
-func sameCleanPath(a, b string) bool {
-	return filepath.Clean(a) == filepath.Clean(b)
 }

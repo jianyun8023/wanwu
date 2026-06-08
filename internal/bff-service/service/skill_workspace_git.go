@@ -63,7 +63,7 @@ func GetSkillWorkspaceGitDiff(ctx *gin.Context, userId, orgId string, req reques
 
 	useRoot := false
 	responseFromCommit := fromCommit
-	diff, err := ws.repo.GetDiff(fromCommit, toCommit, generalAgentSkillWorkspaceDirName)
+	diff, err := ws.repo.GetDiff(fromCommit, toCommit, generalAgentWorkspaceSkillDirName)
 	if err != nil {
 		if !shouldFallbackGitDiffToRoot(defaultedFromCommit, fromCommit, toCommit) {
 			log.Errorf("[Workspace] GetGitDiff skill=%s fromCommit=%s toCommit=%s err=%v", req.CustomSkillID, fromCommit, toCommit, err)
@@ -72,7 +72,7 @@ func GetSkillWorkspaceGitDiff(ctx *gin.Context, userId, orgId string, req reques
 		log.Infof("[Workspace] GetGitDiff fromCommit=%s failed, trying --root: %v", fromCommit, err)
 		useRoot = true
 		responseFromCommit = "ROOT"
-		diff, err = ws.repo.GetDiff("ROOT", toCommit, generalAgentSkillWorkspaceDirName)
+		diff, err = ws.repo.GetDiff("ROOT", toCommit, generalAgentWorkspaceSkillDirName)
 		if err != nil {
 			log.Errorf("[Workspace] GetGitDiff skill=%s err=%v", req.CustomSkillID, err)
 			return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_get_diff_failed")
@@ -81,9 +81,9 @@ func GetSkillWorkspaceGitDiff(ctx *gin.Context, userId, orgId string, req reques
 
 	var changedFileInfos []git_util.FileChangeInfo
 	if useRoot {
-		changedFileInfos, err = ws.repo.GetChangedFiles("ROOT", toCommit, generalAgentSkillWorkspaceDirName)
+		changedFileInfos, err = ws.repo.GetChangedFiles("ROOT", toCommit, generalAgentWorkspaceSkillDirName)
 	} else {
-		changedFileInfos, err = ws.repo.GetChangedFiles(fromCommit, toCommit, generalAgentSkillWorkspaceDirName)
+		changedFileInfos, err = ws.repo.GetChangedFiles(fromCommit, toCommit, generalAgentWorkspaceSkillDirName)
 	}
 	if err != nil {
 		log.Warnf("[Workspace] GetGitDiff get changed files err: %v", err)
@@ -131,7 +131,7 @@ func GetSkillWorkspaceGitFile(ctx *gin.Context, userId, orgId string, req reques
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, err.Error())
 	}
-	relGitFilePath := path.Join(generalAgentSkillWorkspaceDirName, cleanRelPath)
+	relGitFilePath := path.Join(generalAgentWorkspaceSkillDirName, cleanRelPath)
 
 	content, err := ws.repo.GetFileContentAtCommit(commitHash, relGitFilePath)
 	if err != nil {
@@ -166,7 +166,7 @@ func GetSkillWorkspaceGitFileDiff(ctx *gin.Context, userId, orgId string, req re
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFInvalidArg, err.Error())
 	}
-	relGitFilePath := path.Join(generalAgentSkillWorkspaceDirName, cleanRelPath)
+	relGitFilePath := path.Join(generalAgentWorkspaceSkillDirName, cleanRelPath)
 
 	responseFromCommit := fromCommit
 	diff, err := ws.repo.GetFileDiff(fromCommit, toCommit, relGitFilePath)
@@ -214,7 +214,7 @@ func GetGitStatus(ctx *gin.Context, userId, orgId string, req request.GitStatusR
 		return nil, err
 	}
 
-	statusFiles, err := ws.repo.Status(generalAgentSkillWorkspaceDirName)
+	statusFiles, err := ws.repo.Status(generalAgentWorkspaceSkillDirName)
 	if err != nil {
 		log.Errorf("[Workspace] GetGitStatus GitStatus skill=%s err=%v", req.CustomSkillID, err)
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_status_failed")
@@ -240,7 +240,7 @@ func GitAdd(ctx *gin.Context, userId, orgId string, req request.GitAddReq) error
 		return err
 	}
 
-	if err := ws.repo.Add(req.Paths, generalAgentSkillWorkspaceDirName); err != nil {
+	if err := ws.repo.Add(req.Paths, generalAgentWorkspaceSkillDirName); err != nil {
 		log.Errorf("[Workspace] GitAdd skill=%s paths=%v err=%v", req.CustomSkillID, req.Paths, err)
 		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_add_failed")
 	}
@@ -255,7 +255,7 @@ func GitReset(ctx *gin.Context, userId, orgId string, req request.GitResetReq) e
 		return err
 	}
 
-	if err := ws.repo.Reset(req.Paths, generalAgentSkillWorkspaceDirName); err != nil {
+	if err := ws.repo.Reset(req.Paths, generalAgentWorkspaceSkillDirName); err != nil {
 		log.Errorf("[Workspace] GitReset skill=%s paths=%v err=%v", req.CustomSkillID, req.Paths, err)
 		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_reset_failed")
 	}
@@ -270,7 +270,7 @@ func GitDiscardWorkingTree(ctx *gin.Context, userId, orgId string, req request.G
 		return err
 	}
 
-	if err := ws.repo.DiscardWorkingTree(req.Paths, generalAgentSkillWorkspaceDirName); err != nil {
+	if err := ws.repo.DiscardWorkingTree(req.Paths, generalAgentWorkspaceSkillDirName); err != nil {
 		log.Errorf("[Workspace] GitDiscard skill=%s paths=%v err=%v", req.CustomSkillID, req.Paths, err)
 		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_discard_failed")
 	}
@@ -300,7 +300,7 @@ func GetGitDiffWorkingTree(ctx *gin.Context, userId, orgId string, req request.G
 		return nil, err
 	}
 
-	diff, err := ws.repo.DiffWorkingTree(generalAgentSkillWorkspaceDirName, req.FilePath)
+	diff, err := ws.repo.DiffWorkingTree(generalAgentWorkspaceSkillDirName, req.FilePath)
 	if err != nil {
 		log.Errorf("[Workspace] GetGitDiffWorkingTree skill=%s err=%v", req.CustomSkillID, err)
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_diff_failed")
@@ -325,7 +325,7 @@ func GetGitDiffStaged(ctx *gin.Context, userId, orgId string, req request.GitSta
 		return nil, err
 	}
 
-	diff, err := ws.repo.DiffStaged(generalAgentSkillWorkspaceDirName, req.FilePath)
+	diff, err := ws.repo.DiffStaged(generalAgentWorkspaceSkillDirName, req.FilePath)
 	if err != nil {
 		log.Errorf("[Workspace] GetGitDiffStaged skill=%s err=%v", req.CustomSkillID, err)
 		return nil, grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_diff_staged_failed")
@@ -349,7 +349,7 @@ func getGitDiffStagedContents(ws *skillWorkspaceContext, filePath string) (strin
 	if err != nil {
 		return "", "", err
 	}
-	relGitFilePath := path.Join(generalAgentSkillWorkspaceDirName, cleanRelPath)
+	relGitFilePath := path.Join(generalAgentWorkspaceSkillDirName, cleanRelPath)
 
 	oldSnapshot, err := ws.repo.GetFileSnapshotAtCommit("HEAD", relGitFilePath)
 	if err != nil {
@@ -368,7 +368,7 @@ func getGitDiffWorkingTreeContents(ws *skillWorkspaceContext, filePath string) (
 	if err != nil {
 		return "", "", err
 	}
-	relGitFilePath := path.Join(generalAgentSkillWorkspaceDirName, cleanRelPath)
+	relGitFilePath := path.Join(generalAgentWorkspaceSkillDirName, cleanRelPath)
 
 	oldSnapshot, err := ws.repo.GetFileSnapshotAtIndex(relGitFilePath)
 	if err != nil {

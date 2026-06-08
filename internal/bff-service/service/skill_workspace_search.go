@@ -86,7 +86,7 @@ func (s *searcher) matchLine(line string) bool {
 	}
 	if s.wholeWord {
 		for _, word := range strings.FieldsFunc(searchLine, func(r rune) bool {
-			return !isSearchWordRune(r)
+			return !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_'
 		}) {
 			if word == searchKeyword {
 				return true
@@ -165,7 +165,10 @@ func (s *searcher) run() (*response.SkillWorkspaceSearchResp, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if !shouldIncludeFile(relPath, s.includePattern, s.excludePattern) {
+		if s.excludePattern != "" && matchPattern(relPath, s.excludePattern) {
+			return nil
+		}
+		if s.includePattern != "" && !matchPattern(relPath, s.includePattern) {
 			return nil
 		}
 		if info.Size() > maxFileSize {
@@ -239,11 +242,6 @@ func isLikelyBinaryFile(path string) (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-// isSearchWordRune 判断字符是否属于整词匹配的词字符。
-func isSearchWordRune(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_'
 }
 
 // truncateUTF8 按字节上限安全截断 UTF-8 字符串。

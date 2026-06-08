@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func findGeneratedSkillFrontMatter(customSkillID string) (*util.FrontMatter, error) {
+func findGeneratedSkillFrontMatter(customSkillID string) (*util.SkillFrontMatter, error) {
 	store, err := NewGeneralAgentSkillWorkspaceStore(customSkillID)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func findGeneratedSkillFrontMatter(customSkillID string) (*util.FrontMatter, err
 	}
 }
 
-func readGeneratedSkillFrontMatter(skillDir string) (*util.FrontMatter, error) {
+func readGeneratedSkillFrontMatter(skillDir string) (*util.SkillFrontMatter, error) {
 	data, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to read generated skill metadata %s: %v", skillDir, err))
@@ -102,15 +102,11 @@ func summarizeSkillFrontMatterForLog(content string) string {
 		lines[i] = strings.TrimSpace(line)
 	}
 	summary := strings.Join(lines, " | ")
-	return truncateSkillFrontMatterForLog(summary, 512)
-}
-
-func truncateSkillFrontMatterForLog(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
+	runes := []rune(summary)
+	if len(runes) > 512 {
+		return string(runes[:512]) + "...(truncated)"
 	}
-	return string(runes[:max]) + "...(truncated)"
+	return summary
 }
 
 func formatGeneratedSkillMetaError(err error) string {
