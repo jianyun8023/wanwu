@@ -1,20 +1,12 @@
 import concurrent.futures
 import io
 import json
-import logging
-import os
 import posixpath
-import textwrap
 
 import requests
-from docx import Document
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
 
 from callback.services import minio as minio_service
+from callback.utils.doc_converter import markdown_to_html, markdown_to_docx, markdown_to_pdf
 from configs.config import config
 from extensions.minio import minio_client
 from utils.build_prompt import build_docqa_prompt_from_search_list
@@ -65,8 +57,6 @@ def process_documents(query, file_urls):
 
 def generate_file_to_minio(formatted_markdown, filename, to_format="txt"):
 
-    pdfmetrics.registerFont(TTFont("SimHei", "callback/static/simhei.ttf"))
-
     with io.BytesIO() as file_buffer:
         # 1. 初始化变量
         full_filename = filename + ".txt"
@@ -74,41 +64,22 @@ def generate_file_to_minio(formatted_markdown, filename, to_format="txt"):
         # 2. 根据格式生成文件内容
         if to_format == "pdf":
             full_filename = filename + ".pdf"
-
-            c = canvas.Canvas(file_buffer, pagesize=A4)
-            width, height = A4
-            margin = 20 * mm
-            line_height = 18
-            max_width = width - 2 * margin
-
-            c.setFont("SimHei", 12)
-            y = height - margin
-
-            # 简单的换行估算
-            max_chars_per_line = int(
-                max_width // 6
-            )  # 粗略修正：中文字符宽，除以12可能太宽，视具体字号调整
-
-            wrapped_lines = []
-            for paragraph in formatted_markdown.splitlines():
-                wrapped_lines.extend(textwrap.wrap(paragraph, width=max_chars_per_line))
-                wrapped_lines.append("")
-
-            for line in wrapped_lines:
-                if y < margin:
-                    c.showPage()
-                    c.setFont("SimHei", 12)
-                    y = height - margin
-                c.drawString(margin, y, line)
-                y -= line_height
-
-            c.save()
+            pdf_bytes = markdown_to_pdf(formatted_markdown)
+            file_buffer.write(pdf_bytes)
 
         elif to_format == "docx":
             full_filename = filename + ".docx"
-            doc = Document()
-            doc.add_paragraph(formatted_markdown)
+            doc = markdown_to_docx(formatted_markdown)
             doc.save(file_buffer)
+
+        elif to_format == "md":
+            full_filename = filename + ".md"
+            file_buffer.write(formatted_markdown.encode("utf-8"))
+
+        elif to_format == "html":
+            full_filename = filename + ".html"
+            html_content = markdown_to_html(formatted_markdown)
+            file_buffer.write(html_content.encode("utf-8"))
 
         elif to_format == "txt":
             full_filename = filename + ".txt"
@@ -130,7 +101,7 @@ def parse_doc(file_url):
     解析单个文档
 
     参数:
-    file_url (str): 文件URL
+    file_url (str): 文档URL
     sentence_size (int): 句子大小
     overlap_size (float): 重叠比例
     user_token (str, optional): 用户token
