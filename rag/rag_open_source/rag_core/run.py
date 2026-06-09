@@ -21,7 +21,6 @@ import utils.knowledge_base_utils as kb_utils
 from utils.constant import CHUNK_SIZE
 import urllib.parse
 import urllib3
-from know_sse import get_query_dict_cache, query_rewrite
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from logging_config import init_logging
 from settings import MONGO_URL, USE_DATA_FLYWHEEL
@@ -31,6 +30,7 @@ from utils.http_util import validate_request
 from model_manager.model_config import get_model_configure
 from utils.otel import init_tracer
 from utils.trace import register_tracing
+from utils.tools import get_query_dict_cache, query_rewrite
 
 # 初始化 OpenTelemetry（必须在 Flask app 创建之前）
 init_tracer("rag-wanwu-core-service")
