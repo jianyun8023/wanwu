@@ -34,9 +34,8 @@ const (
 	generalAgentSkillChatNormalAgentID  = "Skill Chat Agent"
 	generalAgentSkillChatImportAgentID  = "Skill Import Agent"
 	generalAgentSkillChatPreviewAgentID = "Skill Preview Agent"
-
-	skillConversationAuthor = "conversation"
 )
+
 
 func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
 	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
@@ -71,7 +70,7 @@ func CreateGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string,
 	previewID := util.GenUUID()
 	customSkillResp, err := mcp.CustomSkillCreate(ctx.Request.Context(), &mcp_service.CustomSkillCreateReq{
 		Name:            req.Title,
-		Author:          skillConversationAuthor,
+		Author:          getUserNameById(ctx, userId),
 		WgaThreadId:     generalConversationResp.ThreadID,
 		PreviewThreadId: previewID,
 		Identity:        &mcp_service.Identity{UserId: userId, OrgId: orgId},
