@@ -50,7 +50,7 @@ func ConvertGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string
 
 	customSkillResp, err := mcp.CustomSkillCreate(ctx.Request.Context(), &mcp_service.CustomSkillCreateReq{
 		Name:            title,
-		Author:          getUserName(ctx.Request.Context(), userId),
+		Author:          getUserNameById(ctx, userId),
 		WgaThreadId:     threadResp.ThreadId,
 		PreviewThreadId: previewID,
 		Identity:        &mcp_service.Identity{UserId: userId, OrgId: orgId},

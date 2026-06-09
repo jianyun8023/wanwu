@@ -63,7 +63,7 @@ func ImportGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string,
 	customSkillResp, err := mcp.CustomSkillCreate(ctx.Request.Context(), &mcp_service.CustomSkillCreateReq{
 		Name:            gin_util.I18nKey(ctx, "wga_skill_import_title"),
 		Avatar:          req.Avatar.Key,
-		Author:          getUserName(ctx.Request.Context(), userId),
+		Author:          getUserNameById(ctx, userId),
 		WgaThreadId:     threadResp.ThreadId,
 		PreviewThreadId: previewID,
 		Identity:        &mcp_service.Identity{UserId: userId, OrgId: orgId},

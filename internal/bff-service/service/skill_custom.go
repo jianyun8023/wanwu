@@ -58,7 +58,7 @@ func CreateCustomSkill(ctx *gin.Context, userId, orgId string, avatarKey, zipUrl
 	createResp, err := mcp.CustomSkillCreate(ctx.Request.Context(), &mcp_service.CustomSkillCreateReq{
 		Name:     skillName,
 		Avatar:   avatarKey,
-		Author:   getUserName(ctx.Request.Context(), userId),
+		Author:   getUserNameById(ctx, userId),
 		Desc:     skillDesc,
 		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
 	})
