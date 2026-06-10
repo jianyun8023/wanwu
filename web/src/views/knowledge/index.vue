@@ -177,6 +177,9 @@ export default {
     },
     tabClick(status) {
       this.category = status;
+      this.$refs.searchInput.clearValue();
+      this.tagIds = [];
+      this.external = ALL;
       this.getTableData();
     },
     getList() {
