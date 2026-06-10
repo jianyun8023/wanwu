@@ -258,7 +258,7 @@
           <div class="page-container">
             <div class="right-page-content">
               <keep-alive :include="cachedViews">
-                <router-view></router-view>
+                <router-view :key="routerViewKey"></router-view>
               </keep-alive>
               <div id="container" class="qk-container"></div>
             </div>
@@ -409,6 +409,12 @@ export default {
     },
   },
   computed: {
+    // 共用组件的路由（如 /tool、/prompt、/mcpService）通过 routeType 区分实例，
+    // 避免 Vue 复用同一组件导致状态残留；其他路由返回 undefined 保持原行为
+    routerViewKey() {
+      const { routeType } = this.$route.meta || {};
+      return routeType || undefined;
+    },
     ...mapGetters('user', [
       'orgInfo',
       'userInfo',
@@ -513,12 +519,14 @@ export default {
     menuClick(item) {
       // 菜单切换时销毁所有缓存组件
       this.cachedViews = [];
-      if (item.redirect) {
-        item.redirect();
-        this.changeMenuIndex(item.index);
-      } else {
-        if (item.path) this.$router.push({ path: item.path });
-      }
+      this.$nextTick(() => {
+        if (item.redirect) {
+          item.redirect();
+          this.changeMenuIndex(item.index);
+        } else {
+          if (item.path) this.$router.push({ path: item.path });
+        }
+      });
     },
     getCurrentMenu() {
       const { path } = this.$route || {};

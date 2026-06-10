@@ -135,7 +135,7 @@ const constantRoutes = [
       {
         path: '/tool',
         component: resolve => require(['@/views/tool'], resolve),
-        meta: { perm: [PERMS.TOOL], routeType: TOOL },
+        meta: { perm: [PERMS.TOOL], routeType: TOOL, cacheName: 'Tool' },
       },
       {
         path: '/tool/detail/builtIn',
@@ -146,7 +146,7 @@ const constantRoutes = [
       {
         path: '/prompt',
         component: resolve => require(['@/views/tool'], resolve),
-        meta: { perm: [PERMS.PROMPT], routeType: PROMPT },
+        meta: { perm: [PERMS.PROMPT], routeType: PROMPT, cacheName: 'Tool' },
       },
       {
         path: '/promptEvaluate',
@@ -157,7 +157,7 @@ const constantRoutes = [
       {
         path: '/mcpService',
         component: resolve => require(['@/views/tool'], resolve),
-        meta: { perm: [PERMS.MCP_SERVICE], routeType: MCP },
+        meta: { perm: [PERMS.MCP_SERVICE], routeType: MCP, cacheName: 'Tool' },
       },
       {
         path: '/mcpService/detail/custom',
@@ -402,7 +402,7 @@ const constantRoutes = [
 // 判断是否有权限
 const hasPermission = (perm, route) => {
   if (!Array.isArray(perm)) return false;
-  if (route.meta && route.meta.perm) {
+  if (route.meta?.perm) {
     return route.meta.perm.some(role => perm.includes(role));
   } else {
     return true;
@@ -434,7 +434,7 @@ const baseConfig = {
   },
 };
 
-let router = new VueRouter({
+const router = new VueRouter({
   ...baseConfig,
   routes: filterAsyncRoutes(constantRoutes, orgPermission),
 });

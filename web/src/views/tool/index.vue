@@ -46,7 +46,7 @@ export default {
       deep: true,
     },
   },
-  mounted() {
+  activated() {
     this.changeRoute();
   },
   methods: {
