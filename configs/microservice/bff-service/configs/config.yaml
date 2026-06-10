@@ -276,7 +276,7 @@ workflow:
   copy_uri: /api/workflow_api/copy
   export_uri: /api/workflow_api/export
   import_uri: /api/workflow_api/import
-  convert_uri: /api/workflow_api/update_meta_by_wanwu
+  convert_uri: /api/workflow_api/convert_by_wanwu
   # schema
   list_schema_uri: /v1/workflow/list_schema_by_wanwu
   # run
