@@ -430,6 +430,43 @@ func gitDiscardWorkingTreeLocked(dir string, paths []string, subDir string) erro
 	return nil
 }
 
+// gitRestoreLocked 在调用方持锁时恢复指定子目录到 commit，同时覆盖暂存区和工作区。
+func gitRestoreLocked(dir string, commit string, subDir string) error {
+	if commit == "" {
+		return errors.New("commit is required")
+	}
+	if err := validateCommitRef(commit); err != nil {
+		return err
+	}
+	cleanSub, err := cleanSubDir(subDir)
+	if err != nil {
+		return fmt.Errorf("invalid subDir: %w", err)
+	}
+	pathspec := ""
+	if cleanSub != "" {
+		pathspec = cleanSub + "/"
+	}
+
+	args := []string{"restore", "--source=" + commit, "--staged", "--worktree", "--"}
+	if pathspec != "" {
+		args = append(args, pathspec)
+	}
+	if _, err := runGit(dir, args...); err != nil {
+		return fmt.Errorf("git restore failed: %w", err)
+	}
+
+	// 清理未跟踪文件和目录，使工作区完全恢复到目标 commit 的状态。
+	cleanArgs := []string{"clean", "-fd", "--"}
+	if pathspec != "" {
+		cleanArgs = append(cleanArgs, pathspec)
+	}
+	if _, err := runGit(dir, cleanArgs...); err != nil {
+		return fmt.Errorf("git clean failed: %w", err)
+	}
+
+	return nil
+}
+
 // gitCommitLocked 在调用方持锁时提交已暂存变更。
 func gitCommitLocked(dir, message string) (string, error) {
 	if _, err := runGit(dir, "commit", "-m", message); err != nil {
@@ -900,6 +937,14 @@ func GitReset(dir string, paths []string, subDir string) error {
 // GitResetLocked 在调用方持锁时取消暂存指定路径。
 func GitResetLocked(dir string, paths []string, subDir string) error {
 	return gitResetLocked(dir, paths, subDir)
+}
+
+// GitRestore 恢复指定仓库中的子目录到 commit，同时覆盖暂存区和工作区。
+func GitRestore(dir string, commit string, subDir string) error {
+	mu := getMu(dir)
+	mu.Lock()
+	defer mu.Unlock()
+	return gitRestoreLocked(dir, commit, subDir)
 }
 
 // GitDiscardWorkingTree 放弃指定仓库中的工作区更改。
