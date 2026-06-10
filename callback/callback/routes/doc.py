@@ -145,6 +145,8 @@ def generate_file_to_minio():
                   - docx
                   - pdf
                   - txt
+                  - md
+                  - html
                 description: 目标文件格式
               title:
                 type: string
