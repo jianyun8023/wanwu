@@ -264,6 +264,7 @@
         </el-main>
       </el-container>
     </el-container>
+    <AboutDialog ref="aboutDialog" />
   </div>
 </template>
 
@@ -283,11 +284,12 @@ import {
 } from '@/utils/util';
 import ChangeLang from '@/components/changeLang.vue';
 import ChangeOrg from '@/components/changeOrg.vue';
+import AboutDialog from '@/components/aboutDialog.vue';
 import { DOC_FIRST_KEY } from '@/views/docCenter/constants';
 
 export default {
   name: 'Layout',
-  components: { ChangeLang, ChangeOrg },
+  components: { ChangeLang, ChangeOrg, AboutDialog },
   data() {
     return {
       menuHover: false,
@@ -348,6 +350,9 @@ export default {
             name: this.$t('menu.about'),
             img: require('@/assets/imgs/about_icon.svg'),
             version: 'version',
+            redirect: () => {
+              this.$refs.aboutDialog && this.$refs.aboutDialog.openDialog();
+            },
           },
         ],
         [

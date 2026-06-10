@@ -53,6 +53,8 @@ export default {
   },
   about: {
     version: '版本',
+    currentVersion: '当前版本：',
+    log: '更新日志：',
   },
   aiAssistant: {
     serviceUnavailable: 'OpenClaw服务暂不可用',
