@@ -324,9 +324,13 @@ func PublishedWorkflowRun(ctx *gin.Context, userId, orgId string, req request.Wo
 	// Step 1: 触发异步执行（使用web的test_run接口），获取executeId
 	startTime := time.Now()
 	isSuccess := false
+	detachedCtx := trace_util.DetachContext(ctx.Request.Context())
 	defer func() {
 		costs := time.Since(startTime).Milliseconds()
-		RecordAppStatistic(ctx.Request.Context(), userId, orgId, req.WorkflowID, constant.AppTypeWorkflow, isSuccess, false, 0, int64(costs), constant.AppStatisticSourceWeb)
+		go func() {
+			defer util.PrintPanicStack()
+			RecordAppStatistic(detachedCtx, userId, orgId, req.WorkflowID, constant.AppTypeWorkflow, isSuccess, false, 0, int64(costs), constant.AppStatisticSourceWeb)
+		}()
 	}()
 
 	url, _ := net_url.JoinPath(config.Cfg().Workflow.Endpoint, config.Cfg().Workflow.WorkflowRunLatestVersionUri)

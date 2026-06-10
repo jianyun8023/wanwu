@@ -22,5 +22,6 @@ func AppRecord(ctx *gin.Context) {
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	service.RecordAppStatistic(ctx, req.UserID, req.OrgID, req.AppID, req.AppType, req.IsSuccess, req.IsStream, req.StreamCosts, 0, req.Source)
+	service.RecordAppStatistic(ctx.Request.Context(), req.UserID, req.OrgID, req.AppID, req.AppType, req.IsSuccess, req.IsStream, req.StreamCosts, 0, req.Source)
+	gin_util.Response(ctx, nil, nil)
 }

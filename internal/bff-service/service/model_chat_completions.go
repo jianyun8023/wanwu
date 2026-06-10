@@ -12,10 +12,13 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
 	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
+	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
 )
 
 func ModelChatCompletions(ctx *gin.Context, modelID string, req *mp_common.LLMReq, lineProcessor func(*mp_common.LLMResp) string) {
+	detachedCtx := trace_util.DetachContext(ctx.Request.Context())
 	// modelInfo by modelID
 	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: modelID})
 	if err != nil {
@@ -72,12 +75,18 @@ func ModelChatCompletions(ctx *gin.Context, modelID string, req *mp_common.LLMRe
 			ctx.JSON(status, data)
 
 			costs := int(time.Since(startTime).Milliseconds())
-			recordModelStatistic(ctx, modelInfo, true,
-				data.Usage.PromptTokens, data.Usage.CompletionTokens, data.Usage.TotalTokens, costs, 0, false)
+			go func() {
+				defer util.PrintPanicStack()
+				recordModelStatistic(detachedCtx, modelInfo, true,
+					data.Usage.PromptTokens, data.Usage.CompletionTokens, data.Usage.TotalTokens, costs, 0, false)
+			}()
 			return
 		}
 		// 非流式调用失败
-		recordModelStatistic(ctx, modelInfo, false, 0, 0, 0, 0, 0, false)
+		go func() {
+			defer util.PrintPanicStack()
+			recordModelStatistic(detachedCtx, modelInfo, false, 0, 0, 0, 0, 0, false)
+		}()
 		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("model %v chat completions err: invalid resp", modelInfo.ModelId)))
 		return
 	}
@@ -126,6 +135,9 @@ func ModelChatCompletions(ctx *gin.Context, modelID string, req *mp_common.LLMRe
 	}
 	ctx.Set(gin_util.STATUS, http.StatusOK)
 	ctx.Set(gin_util.RESULT, answer)
-	recordModelStatistic(ctx, modelInfo, true,
-		promptTokens, completionTokens, totalTokens, 0, firstTokenLatency, true)
+	go func() {
+		defer util.PrintPanicStack()
+		recordModelStatistic(detachedCtx, modelInfo, true,
+			promptTokens, completionTokens, totalTokens, 0, firstTokenLatency, true)
+	}()
 }
