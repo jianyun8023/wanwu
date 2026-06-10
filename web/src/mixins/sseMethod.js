@@ -9,6 +9,7 @@ import {
 import { mapActions, mapGetters } from 'vuex';
 import { i18n } from '@/lang';
 import StreamProcessor from '@/utils/streamProcessor.js';
+import { guid, getXClientId } from '@/utils/util';
 
 var originalFetch = window.fetch;
 
@@ -19,6 +20,7 @@ import { AGENT_MESSAGE_CONFIG } from '@/components/stream/constants';
 import { processToolResultBlocks } from '@/utils/toolResultProcessor.js';
 
 const AGENT_API_URL = `${USER_API}/assistant/stream`;
+const AGENT_CONNECT_API_URL = `${USER_API}/assistant/stream/connect`;
 const RAG_API_URL = `${USER_API}/rag/chat`;
 const EXPRIENCE_API_URL = `${USER_API}/model/experience/llm`;
 
@@ -1131,13 +1133,22 @@ export default {
       );
     },
 
+    getAgentStreamHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + this.token,
+        'x-user-id': this.userInfo.uid,
+        'x-org-id': this.userInfo.orgId,
+        'X-Client-ID': getXClientId(),
+      };
+    },
     doSend(params) {
       this.stopBtShow = true;
       this.isStoped = false;
       let _history = this.$refs['session-com'].getList();
       this.sendEventSource(this.inputVal, '', _history.length);
     },
-    sendEventSource(prompt, msgStr, lastIndex) {
+    sendEventSource(prompt, msgStr, lastIndex, options = {}) {
       console.log('####  sendEventSource', new Date().getTime());
       let sessionCom = this.sessionComRef || this.$refs['session-com'];
       if (!sessionCom) {
@@ -1151,9 +1162,11 @@ export default {
 
       this.sseResponse = {};
       this.setStoreSessionStatus(0);
-      this.clearInput();
+      if (options.clearInput !== false) {
+        this.clearInput();
+      }
 
-      let params = {
+      let params = options.pushHistoryData || {
         query: prompt,
         pending: true,
         responseLoading: true,
@@ -1161,7 +1174,9 @@ export default {
         fileList: this.fileList,
         pendingResponse: '',
       };
-      sessionCom.pushHistory(params);
+      if (!options.skipPushHistory) {
+        sessionCom.pushHistory(params);
+      }
 
       this._print = new Print({
         onPrintEnd: () => {
@@ -1172,7 +1187,11 @@ export default {
       let data = null;
       let headers = null;
       //判断是是不是openurl对话
-      if (this.type === 'agentChat') {
+      if (options.streamApi && options.streamData) {
+        this.sseApi = options.streamApi;
+        data = options.streamData;
+        headers = options.headers || this.getAgentStreamHeaders();
+      } else if (this.type === 'agentChat') {
         if (!this.isExplorePage()) {
           this.sseApi = `${AGENT_API_URL}/draft`;
         } else {
@@ -1183,12 +1202,7 @@ export default {
           prompt,
           systemPrompt: this.sseParams.systemPrompt, //提示词对比参数
         };
-        headers = {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + this.token,
-          'x-user-id': this.userInfo.uid,
-          'x-org-id': this.userInfo.orgId,
-        };
+        headers = this.getAgentStreamHeaders();
       } else {
         this.sseApi = `${OPENURL_API}/agent/${this.sseParams.assistantId}/stream`;
         data = {
@@ -1197,7 +1211,7 @@ export default {
           prompt,
         };
         headers = {
-          'X-Client-ID': this.getHeaderConfig().headers['X-Client-ID'],
+          'X-Client-ID': getXClientId(),
         };
       }
 
@@ -1206,9 +1220,12 @@ export default {
       this._subMainProcessorsMap = new Map(); // 子会话内部正文片段处理器 (Key: subId_order)
       this._mainProcessors = new Map(); // 每个 order 的主处理器
 
+      let hasStreamMessage = false;
+
       this.eventSource = this.fetchEventSource(this.sseApi, data, {
         headers,
-        ...(this.type === 'webChat' && { isOpenUrl: true }),
+        ...(this.type === 'webChat' &&
+          !options.streamApi && { isOpenUrl: true }),
         onopen: async e => {
           console.log('已建立SSE连接~', new Date().getTime());
           if (e.status !== 200) {
@@ -1237,12 +1254,14 @@ export default {
           if (e && e.data) {
             let data = JSON.parse(e.data);
             console.log('===>', new Date().getTime(), data);
+            hasStreamMessage = true;
             this.sseResponse = data;
+            const currentQuery = prompt || data.prompt || data.query || '';
             //待替换的数据，需要前端组装
             let commonData = {
               ...data,
               ...this.sseParams,
-              query: prompt,
+              query: currentQuery,
               fileList: this.fileList,
               response: '',
               filepath: data.file_url || '',
@@ -1644,6 +1663,18 @@ export default {
             this.setStoreSessionStatus(-1);
             const history = sessionCom.getSessionData()['history'] || [];
             const lastItem = history[lastIndex];
+            if (
+              options.removeEmptyOnClose &&
+              !hasStreamMessage &&
+              history.length - 1 === lastIndex
+            ) {
+              sessionCom.removeLastHistory();
+              this.echo = !(sessionCom.getSessionData()['history'] || [])
+                .length;
+              this.stopBtShow = false;
+              this.sseOnCloseCallBack && this.sseOnCloseCallBack();
+              return;
+            }
             if (lastItem && lastItem.responseLoading) {
               sessionCom.replaceLastData(lastIndex, {
                 ...lastItem,
@@ -1670,6 +1701,58 @@ export default {
       });
     },
     // 更新子会话的用户操作状态
+    connectEventSource({
+      assistantId,
+      conversationId,
+      query = '',
+      lastIndex,
+      fileList = [],
+    } = {}) {
+      if (!assistantId || !conversationId) return;
+      const sessionCom = this.sessionComRef || this.$refs['session-com'];
+      if (!sessionCom) {
+        console.warn('[sseMethod] session-com ref missing');
+        return;
+      }
+
+      this.stopBtShow = true;
+      this.isStoped = false;
+      this.echo = false;
+      this.fileList = fileList || [];
+      this.queryFilePath = '';
+      this.setSseParams({
+        assistantId,
+        conversationId,
+      });
+
+      const history = sessionCom.getSessionData()['history'] || [];
+      const targetIndex =
+        typeof lastIndex === 'number' ? lastIndex : history.length;
+      const shouldPushHistory = typeof lastIndex !== 'number';
+
+      this.sendEventSource(query, '', targetIndex, {
+        streamApi: AGENT_CONNECT_API_URL,
+        streamData: {
+          assistantId,
+          conversationId,
+        },
+        clearInput: false,
+        skipPushHistory: !shouldPushHistory,
+        removeEmptyOnClose: shouldPushHistory,
+        pushHistoryData: shouldPushHistory
+          ? {
+              query,
+              pending: true,
+              responseLoading: true,
+              requestFileUrls: [],
+              fileList: fileList || [],
+              pendingResponse: '',
+              subConversions: [],
+              messageSequence: [],
+            }
+          : null,
+      });
+    },
     setSubConversionUserToggle(id, isOpen) {
       if (this._subConversionsMap) {
         let subConversion = this._subConversionsMap.get(id);

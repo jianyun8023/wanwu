@@ -112,6 +112,7 @@ import {
   OpenurlConverHistory,
   getRecommendQuestionUrl,
   getConversationDraftHistory,
+  getPendingConversation,
   delConversationDraft,
   clearConversation,
   openurlConverDel,
@@ -176,6 +177,7 @@ export default {
         loading: false,
       },
       recommendTimer: null,
+      draftReconnectRequested: false,
     };
   },
   methods: {
@@ -795,11 +797,98 @@ export default {
             this.echo = true;
           }
           this.$refs['session-com'].replaceHistory(history);
+          this.$nextTick(() => {
+            this.connectDraftStream();
+          });
         }
       } catch (error) {
         this.$refs['session-com'].stopLoading();
         this.echo = true;
         throw error;
+      }
+    },
+    // 清空会话
+    // 格式化历史会话数据
+    formatUnderwayHistory(data) {
+      if (!data) return null;
+
+      const base = this.convertHistoryData([data])[0] || {};
+      const fileList =
+        data.requestFiles ||
+        data.fileList ||
+        data.fileInfo ||
+        base.fileList ||
+        [];
+
+      return {
+        ...base,
+        query: data.prompt || data.query || base.query || '',
+        conversationId: data.conversationId || base.conversationId || '',
+        detailId: data.detailId || base.detailId || data.id || '',
+        fileList,
+        requestFiles: fileList,
+        requestFileUrls: data.requestFileUrls || [],
+        response: '',
+        oriResponse: '',
+        pendingResponse: '',
+        responseLoading: true,
+        pending: true,
+        finish: 0,
+        searchList: [],
+        subConversions: [],
+        messageSequence: [],
+        responseFiles: [],
+        gen_file_url_list: [],
+        isOpen: true,
+        toolText: this.$t('agent.tooled'),
+        thinkText: this.$t('agent.thinked'),
+        showScrollBtn: null,
+      };
+    },
+    // 重连sse
+    async connectDraftStream() {
+      if (
+        this.draftReconnectRequested ||
+        this.type !== 'agentChat' ||
+        !this.editForm.assistantId
+      ) {
+        return;
+      }
+
+      this.draftReconnectRequested = true;
+      try {
+        const res = await getPendingConversation({
+          assistantId: this.editForm.assistantId,
+          draft: true,
+        });
+        if (
+          res.code !== 0 ||
+          !res.data ||
+          res.data.hasPendingConversation !== true
+        ) {
+          return;
+        }
+
+        const underwayHistory = this.formatUnderwayHistory(res.data);
+        if (!underwayHistory || !underwayHistory.conversationId) return;
+
+        const sessionCom = this.$refs['session-com'];
+        if (!sessionCom) return;
+
+        const history = sessionCom.getSessionData().history || [];
+        const lastIndex = history.length;
+        sessionCom.pushHistory(underwayHistory);
+        this.echo = false;
+
+        this.connectEventSource({
+          assistantId: this.editForm.assistantId,
+          conversationId: underwayHistory.conversationId,
+          query: underwayHistory.query,
+          lastIndex,
+          fileList: underwayHistory.fileList,
+        });
+      } catch (error) {
+        console.warn('[agent chat] get underway conversation failed', error);
       }
     },
     // 清空会话
@@ -901,6 +990,9 @@ export default {
         this._getConversationDraftHistory();
       }, 1000);
     }
+    setTimeout(() => {
+      console.log(this.getHeaderConfig);
+    }, 5000);
   },
   beforeDestroy() {
     this.stopEventSource();

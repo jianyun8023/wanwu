@@ -478,3 +478,32 @@ export const clearConversation = data => {
     data,
   });
 };
+
+/**
+ * 获取进行中的智能体会话详情
+ * @param {Object} params - 请求参数
+ * @param {string} params.assistantId - 智能体助手ID
+ * @param {string} params.conversationId - 会话ID
+ * @param {boolean} [params.draft] - 是否为草稿模式
+ */
+export const getPendingConversation = data => {
+  return service({
+    url: `${USER_API}/assistant/pending/conversation`,
+    method: 'post',
+    data,
+  });
+};
+
+/**
+ * 智能体流式问答手动停止
+ * @param {Object} data - 请求数据
+ * @param {string} data.assistantId - 智能体助手ID
+ * @param {string} data.conversationId - 会话ID
+ */
+export const cancelAgentStream = data => {
+  return service({
+    url: `${USER_API}/assistant/stream/cancel`,
+    method: 'post',
+    data,
+  });
+};
