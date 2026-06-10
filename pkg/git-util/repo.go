@@ -30,6 +30,7 @@ type Repo interface {
 	Status(subDir string) ([]GitStatusFile, error)
 	Add(paths []string, subDir string) error
 	Reset(paths []string, subDir string) error
+	Restore(commit string, subDir string) error
 	DiscardWorkingTree(paths []string, subDir string) error
 	Commit(message string) (string, error)
 	DiffWorkingTree(subDir, filePath string) (string, error)
@@ -111,6 +112,9 @@ func (r *repo) Add(paths []string, subDir string) error { return GitAdd(r.dir, p
 
 // Reset 取消暂存当前仓库中的路径。
 func (r *repo) Reset(paths []string, subDir string) error { return GitReset(r.dir, paths, subDir) }
+
+// Restore 恢复当前仓库中的子目录到指定 commit。
+func (r *repo) Restore(commit string, subDir string) error { return GitRestore(r.dir, commit, subDir) }
 
 // DiscardWorkingTree 放弃当前仓库工作区更改。
 func (r *repo) DiscardWorkingTree(paths []string, subDir string) error {

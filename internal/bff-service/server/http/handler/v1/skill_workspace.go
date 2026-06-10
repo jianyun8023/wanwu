@@ -301,6 +301,27 @@ func GitReset(ctx *gin.Context) {
 	gin_util.Response(ctx, nil, err)
 }
 
+// GitRestore 恢复整个 Skill 工作区到指定 commit。
+//
+//	@Tags			resource.skill
+//	@Summary		恢复Skill工作区到指定commit
+//	@Description	恢复整个Skill工作区到指定commit，同时覆盖暂存区和工作区，并清理未跟踪文件；不自动提交
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GitRestoreReq	true	"恢复参数"
+//	@Success		200		{object}	response.Response
+//	@Router			/agent/skill/workspace/git/restore [post]
+func GitRestore(ctx *gin.Context) {
+	userId, orgId := getUserID(ctx), getOrgID(ctx)
+	var req request.GitRestoreReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.GitRestore(ctx, userId, orgId, req)
+	gin_util.Response(ctx, nil, err)
+}
+
 // GitDiscardWorkingTree
 //
 //	@Tags			resource.skill

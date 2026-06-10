@@ -3068,6 +3068,17 @@ definitions:
     required:
     - customSkillId
     type: object
+  request.GitRestoreReq:
+    properties:
+      commit:
+        type: string
+      customSkillId:
+        description: Skill ID（request body）
+        type: string
+    required:
+    - commit
+    - customSkillId
+    type: object
   request.History:
     properties:
       needHistory:
@@ -10632,6 +10643,30 @@ paths:
       security:
       - JWT: []
       summary: 取消暂存Skill工作区文件
+      tags:
+      - resource.skill
+  /agent/skill/workspace/git/restore:
+    post:
+      consumes:
+      - application/json
+      description: 恢复整个Skill工作区到指定commit，同时覆盖暂存区和工作区，并清理未跟踪文件；不自动提交
+      parameters:
+      - description: 恢复参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GitRestoreReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 恢复Skill工作区到指定commit
       tags:
       - resource.skill
   /agent/skill/workspace/git/status:

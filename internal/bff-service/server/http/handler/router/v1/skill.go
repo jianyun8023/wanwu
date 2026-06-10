@@ -57,6 +57,7 @@ func registerAgentSkill(apiV1 *gin.RouterGroup) {
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/status", http.MethodGet, v1.GetGitStatus, "获取Skill工作区Git状态")
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/add", http.MethodPost, v1.GitAdd, "暂存Skill工作区文件")
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/reset", http.MethodPost, v1.GitReset, "取消暂存Skill工作区文件")
+	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/restore", http.MethodPost, v1.GitRestore, "恢复Skill工作区到指定commit")
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/discard", http.MethodPost, v1.GitDiscardWorkingTree, "放弃Skill工作区未暂存更改")
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/commit", http.MethodPost, v1.GitCommit, "提交Skill工作区变更")
 	mid.Sub("resource.skill").Reg(apiV1, "/agent/skill/workspace/git/diff-working", http.MethodGet, v1.GetGitDiffWorkingTree, "获取Skill工作区未暂存diff")

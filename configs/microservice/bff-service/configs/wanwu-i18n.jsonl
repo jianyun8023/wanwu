@@ -149,6 +149,7 @@
 {"code":110000,"key":"bff_skill_workspace_git_status_failed","langs":{"en":"git status failed","zh":"git状态查询失败"}}
 {"code":110000,"key":"bff_skill_workspace_git_add_failed","langs":{"en":"git add failed","zh":"git暂存失败"}}
 {"code":110000,"key":"bff_skill_workspace_git_reset_failed","langs":{"en":"git reset failed","zh":"git取消暂存失败"}}
+{"code":110000,"key":"bff_skill_workspace_git_restore_failed","langs":{"en":"git restore failed","zh":"git恢复失败"}}
 {"code":110000,"key":"bff_skill_workspace_git_commit_failed","langs":{"en":"git commit failed","zh":"git提交失败"}}
 {"code":110000,"key":"bff_skill_workspace_git_diff_failed","langs":{"en":"git diff failed","zh":"git差异查询失败"}}
 {"code":110000,"key":"bff_skill_workspace_git_diff_staged_failed","langs":{"en":"git diff --cached failed","zh":"git已暂存差异查询失败"}}

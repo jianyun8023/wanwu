@@ -262,6 +262,21 @@ func GitReset(ctx *gin.Context, userId, orgId string, req request.GitResetReq) e
 	return nil
 }
 
+// GitRestore 恢复整个 Skill 工作区到指定 commit。
+func GitRestore(ctx *gin.Context, userId, orgId string, req request.GitRestoreReq) error {
+	log.Infof("[Workspace] GitRestore user=%s org=%s skill=%s commit=%s", userId, orgId, req.CustomSkillID, req.Commit)
+	ws, err := resolveInitializedSkillWorkspace(ctx, userId, orgId, req.CustomSkillID)
+	if err != nil {
+		return err
+	}
+
+	if err := ws.repo.Restore(req.Commit, generalAgentWorkspaceSkillDirName); err != nil {
+		log.Errorf("[Workspace] GitRestore skill=%s commit=%s err=%v", req.CustomSkillID, req.Commit, err)
+		return grpc_util.ErrorStatusWithKey(errs.Code_BFFGeneral, "bff_skill_workspace_git_restore_failed")
+	}
+	return nil
+}
+
 // GitDiscardWorkingTree 放弃未暂存的工作区变更。
 func GitDiscardWorkingTree(ctx *gin.Context, userId, orgId string, req request.GitDiscardReq) error {
 	log.Infof("[Workspace] GitDiscard user=%s org=%s skill=%s paths=%v", userId, orgId, req.CustomSkillID, req.Paths)

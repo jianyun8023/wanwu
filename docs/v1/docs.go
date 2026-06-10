@@ -1833,6 +1833,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/agent/skill/workspace/git/restore": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "恢复整个Skill工作区到指定commit，同时覆盖暂存区和工作区，并清理未跟踪文件；不自动提交",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resource.skill"
+                ],
+                "summary": "恢复Skill工作区到指定commit",
+                "parameters": [
+                    {
+                        "description": "恢复参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GitRestoreReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/agent/skill/workspace/git/status": {
             "get": {
                 "security": [
@@ -24383,6 +24422,22 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "request.GitRestoreReq": {
+            "type": "object",
+            "required": [
+                "commit",
+                "customSkillId"
+            ],
+            "properties": {
+                "commit": {
+                    "type": "string"
+                },
+                "customSkillId": {
+                    "description": "Skill ID（request body）",
+                    "type": "string"
                 }
             }
         },

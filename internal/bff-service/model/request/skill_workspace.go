@@ -242,6 +242,11 @@ type GitResetReq struct {
 	Paths         []string `json:"paths"`
 }
 
+type GitRestoreReq struct {
+	CustomSkillID string `json:"customSkillId" validate:"required"` // Skill ID（request body）
+	Commit        string `json:"commit" validate:"required"`
+}
+
 type GitDiscardReq struct {
 	CustomSkillID string   `json:"customSkillId" validate:"required"`
 	Paths         []string `json:"paths"`
@@ -282,6 +287,17 @@ func (r *GitResetReq) Check() error {
 		if err := checkRelPath(p); err != nil {
 			return fmt.Errorf("path %q: %w", p, err)
 		}
+	}
+	return nil
+}
+
+// Check 校验 Git 恢复请求。
+func (r *GitRestoreReq) Check() error {
+	if r.Commit == "" {
+		return fmt.Errorf("commit is required")
+	}
+	if err := validateGitRef(r.Commit); err != nil {
+		return fmt.Errorf("invalid commit: %v", err)
 	}
 	return nil
 }
