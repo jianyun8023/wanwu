@@ -32279,6 +32279,9 @@ const docTemplate = `{
         "response.PublishedSkillDetail": {
             "type": "object",
             "properties": {
+                "acquiredCount": {
+                    "type": "integer"
+                },
                 "author": {
                     "type": "string"
                 },
@@ -32287,6 +32290,9 @@ const docTemplate = `{
                 },
                 "desc": {
                     "type": "string"
+                },
+                "downloadCount": {
+                    "type": "integer"
                 },
                 "isPublished": {
                     "type": "boolean"
@@ -32323,6 +32329,9 @@ const docTemplate = `{
         "response.PublishedSkillInfo": {
             "type": "object",
             "properties": {
+                "acquiredCount": {
+                    "type": "integer"
+                },
                 "author": {
                     "type": "string"
                 },
@@ -32331,6 +32340,9 @@ const docTemplate = `{
                 },
                 "desc": {
                     "type": "string"
+                },
+                "downloadCount": {
+                    "type": "integer"
                 },
                 "isPublished": {
                     "type": "boolean"

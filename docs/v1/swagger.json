@@ -32271,6 +32271,9 @@
         "response.PublishedSkillDetail": {
             "type": "object",
             "properties": {
+                "acquiredCount": {
+                    "type": "integer"
+                },
                 "author": {
                     "type": "string"
                 },
@@ -32279,6 +32282,9 @@
                 },
                 "desc": {
                     "type": "string"
+                },
+                "downloadCount": {
+                    "type": "integer"
                 },
                 "isPublished": {
                     "type": "boolean"
@@ -32315,6 +32321,9 @@
         "response.PublishedSkillInfo": {
             "type": "object",
             "properties": {
+                "acquiredCount": {
+                    "type": "integer"
+                },
                 "author": {
                     "type": "string"
                 },
@@ -32323,6 +32332,9 @@
                 },
                 "desc": {
                     "type": "string"
+                },
+                "downloadCount": {
+                    "type": "integer"
                 },
                 "isPublished": {
                     "type": "boolean"

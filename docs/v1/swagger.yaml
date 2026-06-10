@@ -8358,12 +8358,16 @@ definitions:
     type: object
   response.PublishedSkillDetail:
     properties:
+      acquiredCount:
+        type: integer
       author:
         type: string
       avatar:
         $ref: '#/definitions/request.Avatar'
       desc:
         type: string
+      downloadCount:
+        type: integer
       isPublished:
         type: boolean
       name:
@@ -8387,12 +8391,16 @@ definitions:
     type: object
   response.PublishedSkillInfo:
     properties:
+      acquiredCount:
+        type: integer
       author:
         type: string
       avatar:
         $ref: '#/definitions/request.Avatar'
       desc:
         type: string
+      downloadCount:
+        type: integer
       isPublished:
         type: boolean
       name:
