@@ -499,6 +499,7 @@ export const getPendingConversation = data => {
  * @param {Object} data - 请求数据
  * @param {string} data.assistantId - 智能体助手ID
  * @param {string} data.conversationId - 会话ID
+ * @param {boolean} [params.draft] - 是否为草稿模式
  */
 export const cancelAgentStream = data => {
   return service({

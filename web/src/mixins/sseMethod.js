@@ -18,6 +18,7 @@ import $ from './jquery.min.js';
 import { OPENURL_API, USER_API } from '@/utils/requestConstants';
 import { AGENT_MESSAGE_CONFIG } from '@/components/stream/constants';
 import { processToolResultBlocks } from '@/utils/toolResultProcessor.js';
+import { cancelAgentStream } from '@/api/agent';
 
 const AGENT_API_URL = `${USER_API}/assistant/stream`;
 const AGENT_CONNECT_API_URL = `${USER_API}/assistant/stream/connect`;
@@ -55,6 +56,11 @@ export default {
       fileInfoList: [], // 上传后的文件信息（fileId, fileName, fileUrl等）
       instanceSessionStatus: -1,
       sessionComRef: null,
+      activeAgentStreamParams: {
+        assistantId: '',
+        conversationId: '',
+        draft: false,
+      },
       _subConversionsMap: null, // 子会话存储 Map
       _subConversionProcessors: null, // 子会话处理器 Map
       _subMainProcessorsMap: null, // 子会话内部正文片段处理器 Map (Key: subId_order)
@@ -1142,6 +1148,55 @@ export default {
         'X-Client-ID': getXClientId(),
       };
     },
+    setActiveAgentStreamParams(params = {}) {
+      const assistantId =
+        params.assistantId || this.activeAgentStreamParams.assistantId || '';
+      const conversationId =
+        params.conversationId ||
+        this.activeAgentStreamParams.conversationId ||
+        '';
+      const draft =
+        params.draft !== undefined
+          ? params.draft
+          : this.activeAgentStreamParams.draft || false;
+
+      this.activeAgentStreamParams = {
+        assistantId,
+        conversationId,
+        draft,
+      };
+    },
+    clearActiveAgentStreamParams() {
+      this.activeAgentStreamParams = {
+        assistantId: '',
+        conversationId: '',
+        draft: false,
+      };
+    },
+    cancelCurrentAgentStream() {
+      if (this.type !== 'agentChat') return;
+
+      const { assistantId, conversationId, draft } =
+        this.activeAgentStreamParams;
+
+      if (!assistantId || (!draft && !conversationId)) return;
+
+      const params = {
+        assistantId,
+      };
+
+      if (draft) {
+        params.draft = true;
+      }
+
+      if (conversationId) {
+        params.conversationId = conversationId;
+      }
+
+      cancelAgentStream(params).catch(error => {
+        console.warn('[sseMethod] cancel agent stream failed', error);
+      });
+    },
     doSend(params) {
       this.stopBtShow = true;
       this.isStoped = false;
@@ -1220,6 +1275,17 @@ export default {
       this._subMainProcessorsMap = new Map(); // 子会话内部正文片段处理器 (Key: subId_order)
       this._mainProcessors = new Map(); // 每个 order 的主处理器
 
+      if (this.type === 'agentChat') {
+        const isDraftStream =
+          this.chatType === 'test' || this.sseApi === `${AGENT_API_URL}/draft`;
+
+        this.setActiveAgentStreamParams({
+          assistantId: data.assistantId || this.sseParams.assistantId,
+          conversationId: data.conversationId || this.sseParams.conversationId,
+          draft: isDraftStream,
+        });
+      }
+
       let hasStreamMessage = false;
 
       this.eventSource = this.fetchEventSource(this.sseApi, data, {
@@ -1256,6 +1322,12 @@ export default {
             console.log('===>', new Date().getTime(), data);
             hasStreamMessage = true;
             this.sseResponse = data;
+            if (this.type === 'agentChat' && data.conversationId) {
+              this.setActiveAgentStreamParams({
+                assistantId: data.assistantId,
+                conversationId: data.conversationId,
+              });
+            }
             const currentQuery = prompt || data.prompt || data.query || '';
             //待替换的数据，需要前端组装
             let commonData = {
@@ -1673,6 +1745,7 @@ export default {
                 .length;
               this.stopBtShow = false;
               this.sseOnCloseCallBack && this.sseOnCloseCallBack();
+              this.clearActiveAgentStreamParams();
               return;
             }
             if (lastItem && lastItem.responseLoading) {
@@ -1682,6 +1755,7 @@ export default {
               });
             }
             this.sseOnCloseCallBack && this.sseOnCloseCallBack();
+            this.clearActiveAgentStreamParams();
           };
           // 打字机还在跑（printStatus===1）或队列未排空时，挂载 onPrintEnd 延迟执行
           if (
@@ -2041,6 +2115,7 @@ export default {
     preStop() {
       // 立即置 -1：隐藏停止按钮，避免重复点击触发多次 abort
       this.setStoreSessionStatus(-1);
+      this.cancelCurrentAgentStream();
       // 立刻同步断流 + 停掉两个打字机，不等 sseOnCloseCallBack 的异步链路。
       // 这样"点一次停止，字立刻停"：在 reasoning 阶段也不会被残余帧拉回。
       this.ctrlAbort && this.ctrlAbort.abort();
@@ -2088,6 +2163,7 @@ export default {
       }
       //获取已经拿到的全部回答,一次性回显出来
       this.sseOnCloseCallBack(true);
+      this.clearActiveAgentStreamParams();
     },
     sseOnCloseCallBack(isStoped) {
       this.stopEventSource();
