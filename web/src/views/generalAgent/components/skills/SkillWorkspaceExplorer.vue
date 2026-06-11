@@ -371,6 +371,17 @@
           :class="{ active: activeGitDiffId === commitDiffId(commit) }"
           @click="selectGitCommit(commit)"
         >
+          <el-button
+            class="commit-restore-btn"
+            type="text"
+            :title="$t('generalAgent.skill.skillWorkBench.git.restore')"
+            :aria-label="$t('generalAgent.skill.skillWorkBench.git.restore')"
+            :loading="restoringCommitHash === commit.hash"
+            :disabled="!!restoringCommitHash"
+            @click.stop="restoreGitCommit(commit)"
+          >
+            <svg-icon class-name="restore-icon" icon-class="history" />
+          </el-button>
           <div class="commit-message">{{ commit.message }}</div>
           <div class="commit-meta">
             <span class="commit-hash">{{ commit.hash.substring(0, 7) }}</span>
@@ -402,6 +413,7 @@ import {
   downloadSkillWorkspace,
   deleteSkillWorkspaceFile,
 } from '@/api/skillResource/skillWorkSpace';
+import { postSkillWorkspaceGitRestore } from '@/api/generalAgent';
 import { getFileIcon } from '@/utils/fileIcons';
 import { resDownloadFile } from '@/utils/util';
 
@@ -450,6 +462,7 @@ export default {
       groupExpanded: { unstaged: true, staged: true },
       downloadingPaths: {},
       discardingPaths: {},
+      restoringCommitHash: '',
     };
   },
   computed: {
@@ -570,8 +583,7 @@ export default {
       }
     },
     refreshGit() {
-      this.fetchGitLog();
-      this.fetchGitStatus();
+      return Promise.all([this.fetchGitLog(), this.fetchGitStatus()]);
     },
     async doSearch() {
       if (!this.searchKeyword.trim()) return;
@@ -744,6 +756,55 @@ export default {
           this.$t('generalAgent.skill.skillWorkBench.git.commitFailed'),
         );
         console.error('gitCommit error', e);
+      }
+    },
+    async restoreGitCommit(commit) {
+      if (
+        !this.customSkillId ||
+        !commit ||
+        !commit.hash ||
+        this.restoringCommitHash
+      ) {
+        return;
+      }
+
+      try {
+        await this.$confirm(
+          this.$t('generalAgent.skill.skillWorkBench.git.restoreConfirm'),
+          this.$t('common.confirm.title'),
+          {
+            confirmButtonText: this.$t('common.button.confirm'),
+            cancelButtonText: this.$t('common.button.cancel'),
+            type: 'warning',
+          },
+        );
+      } catch (e) {
+        return;
+      }
+
+      this.restoringCommitHash = commit.hash;
+      try {
+        const res = await postSkillWorkspaceGitRestore(
+          this.customSkillId,
+          commit.hash,
+        );
+        if (res.code !== 0) {
+          this.$message.error(
+            res.msg ||
+              this.$t('generalAgent.skill.skillWorkBench.git.restoreFailed'),
+          );
+          return;
+        }
+
+        this.$message.success(this.$t('common.message.success'));
+        this.$emit('workspace-restored');
+      } catch (e) {
+        this.$message.error(
+          this.$t('generalAgent.skill.skillWorkBench.git.restoreFailed'),
+        );
+        console.error('restoreGitCommit error', e);
+      } finally {
+        this.restoringCommitHash = '';
       }
     },
     async selectWorkingFile(file, staged) {
@@ -1302,7 +1363,9 @@ export default {
   }
 
   .git-commit-item {
+    position: relative;
     padding: 8px 12px;
+    padding-right: 36px;
     cursor: pointer;
     border-bottom: 1px solid #f0f0f0;
 
@@ -1312,6 +1375,30 @@ export default {
     &.active {
       background: rgba(89, 131, 255, 0.08);
       box-shadow: inset 0 0 0 1px rgba(89, 131, 255, 0.16);
+    }
+
+    ::v-deep(.commit-restore-btn) {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      color: #8a8f99 !important;
+      border-radius: 3px;
+      span {
+        color: #8a8f99 !important;
+      }
+
+      &:hover {
+        color: #333 !important;
+        background: #e0e0e0 !important;
+      }
+
+      .restore-icon {
+        width: 14px;
+        height: 14px;
+      }
     }
 
     .commit-message {
