@@ -26,6 +26,7 @@ func (c *Client) CreateSensitiveWordTable(ctx context.Context, userId, orgId, ta
 	err := sqlopt.SQLOptions(
 		sqlopt.WithOrgID(orgId),
 		sqlopt.WithUserID(userId),
+		sqlopt.WithTableType(tableType),
 		sqlopt.WithName(tableName),
 	).Apply(c.db.WithContext(ctx)).First(&model.SensitiveWordTable{}).Error
 	if err == nil {
@@ -49,8 +50,19 @@ func (c *Client) CreateSensitiveWordTable(ctx context.Context, userId, orgId, ta
 }
 
 func (c *Client) UpdateSensitiveWordTable(ctx context.Context, tableId uint32, tableName, remark string) *errs.Status {
+	var currentTable model.SensitiveWordTable
+	if err := sqlopt.WithID(tableId).Apply(c.db.WithContext(ctx)).First(&currentTable).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return toErrStatus("app_safety_sensitive_table_not_found", util.Int2Str(tableId))
+		}
+		return toErrStatus("app_safety_sensitive_table_get", util.Int2Str(tableId), err.Error())
+	}
+
 	var existingTable model.SensitiveWordTable
 	err := sqlopt.SQLOptions(
+		sqlopt.WithOrgID(currentTable.OrgID),
+		sqlopt.WithUserID(currentTable.UserID),
+		sqlopt.WithTableType(currentTable.TableType),
 		sqlopt.WithName(tableName),
 	).Apply(c.db.WithContext(ctx)).First(&existingTable).Error
 	if err == nil && existingTable.ID != tableId {
