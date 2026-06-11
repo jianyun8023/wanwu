@@ -20,7 +20,7 @@ import (
 
 const (
 	headlessServiceSchema = "dns:///"
-	maxMsgSize            = 1024 * 1024 * 4 // 4M
+	maxMsgSize            = 1024 * 1024 * 1024 * 4 // 4G
 )
 
 func NewGrpcTracerServer(interceptors []grpc.UnaryServerInterceptor, streamInterceptors []grpc.StreamServerInterceptor) *grpc.Server {
