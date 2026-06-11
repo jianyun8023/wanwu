@@ -180,6 +180,7 @@ export default {
 
       downloadApi({ skillId: info.skillId }).then(response => {
         resDownloadFile(response, `${info.name}.zip`);
+        this.$set(info, 'downloadCount', (Number(info.downloadCount) || 0) + 1);
       });
     },
     handleSendToResource(info) {

@@ -370,6 +370,8 @@ export default {
     builtin: '内置',
     shared: '共享',
     mine: '我发布的',
+    sharedCount: '发送量',
+    downloadCount: '下载量',
   },
   uploadDialog: {
     title: '文件上传',
