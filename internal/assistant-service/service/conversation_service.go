@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/UnicomAI/wanwu/pkg/redis"
 	"net/http"
 	"sort"
 	"time"
@@ -18,8 +19,7 @@ import (
 )
 
 const (
-	esTimeout         = 1 * time.Minute
-	errorDefaultOrder = 999
+	esTimeout = 1 * time.Minute
 )
 
 type ConversationParams struct {
@@ -50,19 +50,13 @@ func (cp *ConversationProcessor) Process(ctx context.Context, req *ConversationP
 	var conversationResp = conversation.CreateConversationResp()
 	defer func() {
 		if err != nil {
-			log.Errorf("[Conversation] err: %v", err)
 			//错误信息通知
 			_ = cp.SSEWriter.WriteLine(assistant_service.AssistantConversionStreamResp{
 				Content: buildErrMsg(err),
 			}, false, nil, nil)
-			conversationResp.WriteError("智能体处理异常，请稍后重试", err.Error(), errorDefaultOrder)
+			//处理异常
+			processError(ctx, req, conversationResp, err)
 		}
-		if ctx.Err() != nil {
-			err = ctx.Err()
-			log.Errorf("[Conversation] context err: %v", err)
-		}
-		//todo delete
-		log.Infof("[Conversation] fullResponse: %s", conversationResp.Response())
 		//保存会话
 		saveConversation(ctx, req, conversationResp, req.DetailId)
 	}()
@@ -99,6 +93,19 @@ func (cp *ConversationProcessor) conversationLineBuilder(conversationResp *conve
 	}
 }
 
+// 处理会话异常
+func processError(ctx context.Context, req *ConversationParams, conversationResp *conversation.ConversationResp, err error) {
+	log.Errorf("[Conversation] err: %v", err)
+	//错误会话异常
+	//判断异常是不是敏感词
+	sensitiveMsg := redis.GetSensitiveConversation(req.ConversationId, req.DetailId)
+	if len(sensitiveMsg) > 0 {
+		conversationResp.SensitiveResponse(sensitiveMsg)
+	} else {
+		conversationResp.ErrorResponse(err)
+	}
+}
+
 // 构建错误信息,todo 后续考虑创建枚举明细错误信息
 func buildErrMsg(err error) string {
 	var agentChatResp = &AgentChatResp{
@@ -117,6 +124,14 @@ func buildErrMsg(err error) string {
 
 // 使用独立上下文保存对话的辅助函数
 func saveConversation(originalCtx context.Context, req *ConversationParams, conversationResp *conversation.ConversationResp, detailId string) {
+	//增加日志
+	if originalCtx.Err() != nil {
+		err := originalCtx.Err()
+		log.Errorf("[Conversation] context err: %v", err)
+	}
+	//todo delete
+	log.Infof("[Conversation] fullResponse: %s", conversationResp.Response())
+
 	if len(req.ConversationId) == 0 {
 		return
 	}
@@ -160,6 +175,13 @@ func saveConversationDetailToES(ctx context.Context, req *ConversationParams, co
 }
 
 func buildConversationDetail(req *ConversationParams, conversationResp *conversation.ConversationResp, nowMilli int64, detailId string) *model.ConversationDetails {
+	if len(conversationResp.SensitiveMessage) > 0 {
+		conversationResp.CurrentData = conversationResp.SensitiveMessage
+	}
+	err := conversation.FinishConversationResp(conversationResp)
+	if err != nil {
+		log.Errorf("FinishConversationResp error: %v", err)
+	}
 	return &model.ConversationDetails{
 		Id:                        detailId,
 		AssistantId:               req.AssistantId,

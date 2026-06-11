@@ -20,7 +20,6 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	sse_util "github.com/UnicomAI/wanwu/pkg/sse-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
-	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -197,7 +196,6 @@ func (s *Service) GetConversationDetailList(ctx context.Context, req *assistant_
 }
 
 func (s *Service) AssistantConversionStream(req *assistant_service.AssistantConversionStreamReq, stream assistant_service.AssistantService_AssistantConversionStreamServer) error {
-	req.DetailId = uuid.New().String()
 	//会话处理
 	conversationProcessor := &service.ConversationProcessor{
 		SSEWriter: sse_util.NewGrpcSSEWriter(stream, "AssistantConversionStreamNew", nil),

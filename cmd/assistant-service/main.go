@@ -63,6 +63,10 @@ func main() {
 		log.Fatalf("init redis err: %v", err)
 	}
 
+	if err := redis.InitAssistant(ctx, config.Cfg().Redis); err != nil {
+		log.Fatalf("init assistant redis err: %v", err)
+	}
+
 	if err := es.InitAssistant(ctx, config.Cfg().ES); err != nil {
 		log.Fatalf("init es err: %v", err)
 	}
@@ -115,6 +119,7 @@ func main() {
 
 	s.Stop()
 	redis.StopSys()
+	redis.StopAssistant()
 	es.StopAssistant()
 }
 

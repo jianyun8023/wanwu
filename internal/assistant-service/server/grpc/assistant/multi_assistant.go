@@ -19,7 +19,6 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	sse_util "github.com/UnicomAI/wanwu/pkg/sse-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	empty "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -48,7 +47,6 @@ func (s *Service) GetMultiAssistantById(ctx context.Context, req *assistant_serv
 }
 
 func (s *Service) MultiAssistantConversionStream(req *assistant_service.MultiAssistantConversionStreamReq, stream grpc.ServerStreamingServer[assistant_service.AssistantConversionStreamResp]) error {
-	req.DetailId = uuid.New().String()
 	//会话处理
 	conversationProcessor := &service.ConversationProcessor{
 		SSEWriter: sse_util.NewGrpcSSEWriter(stream, "MultiAssistantConversionStreamNew", nil),
