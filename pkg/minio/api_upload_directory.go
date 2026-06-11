@@ -3,6 +3,7 @@ package minio
 import (
 	"context"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -14,7 +15,9 @@ import (
 type DirUploadFile struct {
 	RelativePath string // 相对于解压根目录的路径
 	ObjectName   string // MinIO 中的 objectName
-	FilePath     string // MinIO 完整访问路径
+	ObjectPath   string // MinIO 中的完整路径（包含 bucketName）
+	MinioUrl     string // 内部 MinIO 下载地址
+	DownloadUrl  string // 外部下载地址（如果 DownloadURL 配置了外部访问地址）
 	IsDir        bool   // 是否为目录
 	Size         int64  // 文件大小（目录为0）
 }
@@ -49,13 +52,13 @@ func UploadDirectory(ctx context.Context, bucketName string, prefix string, loca
 		baseName = filepath.Base(localDir)
 	}
 
-	err := filepath.Walk(localDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(localDir, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// 计算相对路径
-		relPath, err := filepath.Rel(localDir, path)
+		relPath, err := filepath.Rel(localDir, filePath)
 		if err != nil {
 			return err
 		}
@@ -86,16 +89,18 @@ func UploadDirectory(ctx context.Context, bucketName string, prefix string, loca
 		// 根据模式拼接对象名
 		var objectName string
 		if skipBase {
-			objectName = prefix + relPath
+			objectName = path.Join(prefix, relPath)
 		} else {
-			objectName = prefix + baseName + "/" + relPath
+			objectName = path.Join(prefix, baseName, relPath)
 		}
 
 		if info.IsDir() {
 			files = append(files, DirUploadFile{
 				RelativePath: relPath,
 				ObjectName:   objectName,
-				FilePath:     buildFilePath(bucketName, objectName),
+				ObjectPath:   path.Join(bucketName, objectName),
+				MinioUrl:     "",
+				DownloadUrl:  "",
 				IsDir:        true,
 				Size:         0,
 			})
@@ -103,27 +108,29 @@ func UploadDirectory(ctx context.Context, bucketName string, prefix string, loca
 		}
 
 		// 上传文件
-		file, err := os.Open(path)
+		file, err := os.Open(filePath)
 		if err != nil {
-			log.Errorf("open file %s error: %v", path, err)
+			log.Errorf("open file %s error: %v", filePath, err)
 			return err
 		}
 
-		_, size, uploadErr := UploadFile(ctx, bucketName, filepath.Dir(objectName), filepath.Base(objectName), file, info.Size())
+		_, size, uploadErr := UploadFile(ctx, bucketName, path.Dir(objectName), path.Base(objectName), file, info.Size())
 		closeErr := file.Close()
 
 		if uploadErr != nil {
-			log.Errorf("upload file %s to minio error: %v", path, uploadErr)
+			log.Errorf("upload file %s to minio error: %v", filePath, uploadErr)
 			return uploadErr
 		}
 		if closeErr != nil {
-			log.Errorf("close file %s error: %v", path, closeErr)
+			log.Errorf("close file %s error: %v", filePath, closeErr)
 		}
 
 		files = append(files, DirUploadFile{
 			RelativePath: relPath,
 			ObjectName:   objectName,
-			FilePath:     buildFilePath(bucketName, objectName),
+			ObjectPath:   path.Join(bucketName, objectName),
+			MinioUrl:     buildMinioUrl(bucketName, objectName),
+			DownloadUrl:  buildDownloadUrl(bucketName, objectName),
 			IsDir:        false,
 			Size:         size,
 		})

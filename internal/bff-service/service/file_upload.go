@@ -337,8 +337,7 @@ func UnarchiveFile(ctx *gin.Context, r *request.UnarchiveFileReq) (*response.Una
 	}
 
 	// 4. 构建目录树和统计
-	downloadURLBase := config.Cfg().Minio.DownloadURL
-	children := buildUnarchiveFileTree(unarchivedFiles, downloadURLBase, uploadPrefix)
+	children := buildUnarchiveFileTree(unarchivedFiles)
 
 	var totalSize int64
 	var fileCount int
@@ -358,7 +357,8 @@ func UnarchiveFile(ctx *gin.Context, r *request.UnarchiveFileReq) (*response.Una
 }
 
 // buildUnarchiveFileTree 从扁平文件列表构建目录树结构
-func buildUnarchiveFileTree(files []minio.DirUploadFile, downloadURLBase string, uploadPrefix string) []response.UnarchiveFileNode {
+// 输入由 UploadDirectory 返回，filepath.Walk 保证目录条目先于其子文件出现，且每个目录/文件均有独立条目
+func buildUnarchiveFileTree(files []minio.DirUploadFile) []response.UnarchiveFileNode {
 	root := &response.UnarchiveFileNode{
 		Children: make([]response.UnarchiveFileNode, 0),
 	}
@@ -372,9 +372,6 @@ func buildUnarchiveFileTree(files []minio.DirUploadFile, downloadURLBase string,
 				continue
 			}
 
-			isLast := i == len(parts)-1
-			isDir := f.IsDir || !isLast
-
 			// 在当前节点的子节点中查找
 			found := false
 			for idx := range current.Children {
@@ -387,37 +384,29 @@ func buildUnarchiveFileTree(files []minio.DirUploadFile, downloadURLBase string,
 
 			if !found {
 				node := response.UnarchiveFileNode{
-					Name:         part,
-					RelativePath: strings.Join(parts[:i+1], "/"),
-					ObjectPath:   path.Join(uploadPrefix, strings.Join(parts[:i+1], "/")),
-					Type:         "directory",
-					Children:     make([]response.UnarchiveFileNode, 0),
+					Name:     part,
+					Type:     "directory",
+					Children: make([]response.UnarchiveFileNode, 0),
 				}
-				if !isDir {
-					node.Type = "file"
-					node.Size = f.Size
-					node.MinioUrl = f.FilePath
-					node.DownloadUrl = buildDownloadURL(f.ObjectName, downloadURLBase)
-					// 文件节点：ObjectPath 直接使用 ObjectName，因为它已包含正确的完整路径
-					// （当 skipBase=false 时 ObjectName 包含 baseName 层，而 uploadPrefix+relativePath 不包含）
-					node.ObjectPath = f.ObjectName
+				if i == len(parts)-1 {
+					node.RelativePath = f.RelativePath
+					node.ObjectPath = f.ObjectPath
+					if !f.IsDir {
+						node.Type = "file"
+						node.Size = f.Size
+						node.MinioUrl = f.MinioUrl
+						node.DownloadUrl = f.DownloadUrl
+					}
+				} else {
+					node.RelativePath = strings.Join(parts[:i+1], "/")
 				}
 				current.Children = append(current.Children, node)
 				current = &current.Children[len(current.Children)-1]
-			} else if isLast && !f.IsDir {
-				// 更新已存在节点的文件信息
-				current.Type = "file"
-				current.Size = f.Size
-				current.MinioUrl = f.FilePath
-				current.DownloadUrl = buildDownloadURL(f.ObjectName, downloadURLBase)
-				current.ObjectPath = f.ObjectName
 			}
 		}
 	}
 
-	// 排序子节点：目录在前，文件在后；同类按名称排序
 	sortUnarchiveNodes(root)
-
 	return root.Children
 }
 
@@ -584,19 +573,6 @@ func directUploadFile(ctx *gin.Context, r *request.DirectUploadFilesReq, file *m
 		FileSize: file.Size,
 		FileId:   fileName,
 	}, nil
-}
-
-// buildDownloadURL 根据 objectName 构建外部下载地址
-func buildDownloadURL(objectName string, downloadURLBase string) string {
-	if downloadURLBase == "" || objectName == "" {
-		return ""
-	}
-	objectPath := minio.BucketFileUpload + "/" + objectName
-	downloadURL, err := url.JoinPath(downloadURLBase, objectPath)
-	if err != nil {
-		return ""
-	}
-	return downloadURL
 }
 
 // sortUnarchiveNodes 递归排序目录树节点
