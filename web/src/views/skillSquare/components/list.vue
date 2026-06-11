@@ -28,19 +28,17 @@
                         "
                         placement="top"
                       >
-                        <div
-                          class="card-btn"
-                          @click.stop="handleSendToResource(info)"
-                        >
+                        <div class="card-btn">
+                          <span>
+                            {{ formatCount(info.acquiredCount, 2, false) }}
+                          </span>
                           <i
                             :class="[
                               'el-icon-s-promotion',
                               { 'is-disabled': info.isShared },
                             ]"
+                            @click.stop="handleSendToResource(info)"
                           ></i>
-                          <span>
-                            ({{ formatCount(info.acquiredCount, 2, false) }})
-                          </span>
                         </div>
                       </el-tooltip>
 
@@ -48,14 +46,14 @@
                         :content="$t('tempSquare.download')"
                         placement="top"
                       >
-                        <div
-                          class="card-btn"
-                          @click.stop="handleDownload(info)"
-                        >
-                          <i class="el-icon-download"></i>
+                        <div class="card-btn">
                           <span>
-                            ({{ formatCount(info.downloadCount, 2, false) }})
+                            {{ formatCount(info.downloadCount, 2, false) }}
                           </span>
+                          <i
+                            class="el-icon-download"
+                            @click.stop="handleDownload(info)"
+                          ></i>
                         </div>
                       </el-tooltip>
                     </div>
@@ -66,11 +64,14 @@
                         :content="$t('skillSpace.sharedCount')"
                         placement="top"
                       >
-                        <div class="card-btn" @click.stop="() => {}">
-                          <i :class="['el-icon-s-promotion']"></i>
+                        <div class="card-btn">
                           <span>
-                            ({{ formatCount(info.acquiredCount, 2, false) }})
+                            {{ formatCount(info.acquiredCount, 2, false) }}
                           </span>
+                          <i
+                            :class="['el-icon-s-promotion']"
+                            @click.stop="() => {}"
+                          ></i>
                         </div>
                       </el-tooltip>
 
@@ -78,11 +79,14 @@
                         :content="$t('skillSpace.downloadCount')"
                         placement="top"
                       >
-                        <div class="card-btn" @click.stop="() => {}">
-                          <i class="el-icon-download"></i>
+                        <div class="card-btn">
                           <span>
-                            ({{ formatCount(info.downloadCount, 2, false) }})
+                            {{ formatCount(info.downloadCount, 2, false) }}
                           </span>
+                          <i
+                            class="el-icon-download"
+                            @click.stop="() => {}"
+                          ></i>
                         </div>
                       </el-tooltip>
                     </div>
@@ -208,7 +212,7 @@ export default {
     }
     .card-btn {
       display: inline-flex;
-      gap: 4px;
+      gap: 2px;
       align-items: center;
     }
   }
