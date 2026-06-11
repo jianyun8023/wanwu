@@ -18,7 +18,7 @@ import $ from './jquery.min.js';
 import { OPENURL_API, USER_API } from '@/utils/requestConstants';
 import { AGENT_MESSAGE_CONFIG } from '@/components/stream/constants';
 import { processToolResultBlocks } from '@/utils/toolResultProcessor.js';
-import { cancelAgentStream } from '@/api/agent';
+import { cancelAgentStream, cancelOpenurlAgentStream } from '@/api/agent';
 
 const AGENT_API_URL = `${USER_API}/assistant/stream`;
 const AGENT_CONNECT_API_URL = `${USER_API}/assistant/stream/connect`;
@@ -1173,8 +1173,8 @@ export default {
         draft: false,
       };
     },
-    cancelCurrentAgentStream() {
-      if (this.type !== 'agentChat') return;
+    async cancelCurrentAgentStream() {
+      if (!['agentChat', 'webChat'].includes(this.type)) return;
 
       const { assistantId, conversationId, draft } =
         this.activeAgentStreamParams;
@@ -1193,9 +1193,28 @@ export default {
         params.conversationId = conversationId;
       }
 
-      cancelAgentStream(params).catch(error => {
-        console.warn('[sseMethod] cancel agent stream failed', error);
-      });
+      const config =
+        this.type === 'webChat'
+          ? {
+              headers: {
+                'X-Client-ID': getXClientId(),
+              },
+              isOpenUrl: true,
+            }
+          : {};
+      try {
+        this.type === 'webChat'
+          ? await cancelOpenurlAgentStream(
+              params.assistantId,
+              {
+                conversationId: params.conversationId,
+              },
+              config,
+            )
+          : await cancelAgentStream(params, config);
+      } catch (error) {
+        console.error(error);
+      }
     },
     doSend(params) {
       this.stopBtShow = true;
@@ -1275,9 +1294,11 @@ export default {
       this._subMainProcessorsMap = new Map(); // 子会话内部正文片段处理器 (Key: subId_order)
       this._mainProcessors = new Map(); // 每个 order 的主处理器
 
-      if (this.type === 'agentChat') {
+      if (['agentChat', 'webChat'].includes(this.type)) {
         const isDraftStream =
-          this.chatType === 'test' || this.sseApi === `${AGENT_API_URL}/draft`;
+          this.type === 'agentChat' &&
+          (this.chatType === 'test' ||
+            this.sseApi === `${AGENT_API_URL}/draft`);
 
         this.setActiveAgentStreamParams({
           assistantId: data.assistantId || this.sseParams.assistantId,
@@ -1322,9 +1343,13 @@ export default {
             console.log('===>', new Date().getTime(), data);
             hasStreamMessage = true;
             this.sseResponse = data;
-            if (this.type === 'agentChat' && data.conversationId) {
+            if (
+              ['agentChat', 'webChat'].includes(this.type) &&
+              data.conversationId
+            ) {
               this.setActiveAgentStreamParams({
-                assistantId: data.assistantId,
+                assistantId:
+                  this.type === 'webChat' ? undefined : data.assistantId,
                 conversationId: data.conversationId,
               });
             }
@@ -1781,6 +1806,7 @@ export default {
       query = '',
       lastIndex,
       fileList = [],
+      headers = null,
     } = {}) {
       if (!assistantId || !conversationId) return;
       const sessionCom = this.sessionComRef || this.$refs['session-com'];
@@ -1803,14 +1829,19 @@ export default {
       const targetIndex =
         typeof lastIndex === 'number' ? lastIndex : history.length;
       const shouldPushHistory = typeof lastIndex !== 'number';
+      const connectApi =
+        this.type === 'webChat'
+          ? `${OPENURL_API}/agent/${assistantId}/stream/connect`
+          : AGENT_CONNECT_API_URL;
 
       this.sendEventSource(query, '', targetIndex, {
-        streamApi: AGENT_CONNECT_API_URL,
+        streamApi: connectApi,
         streamData: {
           assistantId,
           conversationId,
         },
         clearInput: false,
+        headers,
         skipPushHistory: !shouldPushHistory,
         removeEmptyOnClose: shouldPushHistory,
         pushHistoryData: shouldPushHistory

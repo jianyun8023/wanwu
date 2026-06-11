@@ -101,6 +101,7 @@ import {
   parseSub,
   convertLatexSyntax,
   parseSubConversation,
+  getXClientId,
 } from '@/utils/util.js';
 import { processToolResultBlocks } from '@/utils/toolResultProcessor.js';
 import {
@@ -113,6 +114,7 @@ import {
   getRecommendQuestionUrl,
   getConversationDraftHistory,
   getPendingConversation,
+  getOpenurlPendingConversation,
   delConversationDraft,
   clearConversation,
   openurlConverDel,
@@ -146,6 +148,10 @@ export default {
     appUrlInfo: {
       type: Object,
       default: null,
+    },
+    assistantId: {
+      type: String,
+      default: '',
     },
   },
   components: {
@@ -181,6 +187,45 @@ export default {
     };
   },
   methods: {
+    getOpenurlStreamHeaders() {
+      return {
+        'X-Client-ID': getXClientId(),
+      };
+    },
+    getOpenurlRequestConfig() {
+      return {
+        headers: this.getOpenurlStreamHeaders(),
+        isOpenUrl: true,
+      };
+    },
+    getStreamAssistantId() {
+      if (this.type === 'webChat') {
+        return (
+          this.assistantId ||
+          this.$route.params.id ||
+          this.$route.query.id ||
+          this.editForm.assistantId
+        );
+      }
+      return this.editForm.assistantId;
+    },
+    disconnectCurrentStreamForNavigation() {
+      if (this.recommendTimer) {
+        clearInterval(this.recommendTimer);
+        this.recommendTimer = null;
+      }
+      if (this.recommendConfig.loading) {
+        this.recommendConfig.reqController.abort();
+        this.recommendConfig.reqController = new AbortController();
+        this.recommendConfig.loading = false;
+      }
+      this.stopEventSource();
+      this._print && this._print.stop();
+      this._reasoningPrint && this._reasoningPrint.stop();
+      this.clearActiveAgentStreamParams && this.clearActiveAgentStreamParams();
+      this.setStoreSessionStatus(-1);
+      this.stopBtShow = false;
+    },
     createConversion() {
       if (this.echo) {
         this.$message({
@@ -192,10 +237,7 @@ export default {
         });
         return;
       }
-      if (this.recommendTimer) {
-        clearInterval(this.recommendTimer);
-        this.recommendTimer = null;
-      }
+      this.disconnectCurrentStreamForNavigation();
       this.conversationId = '';
       this.echo = true;
       this.clearHistory();
@@ -203,15 +245,7 @@ export default {
     },
     //切换对话
     conversationClick(n) {
-      if (this.sessionStatus === 0) {
-        return;
-      } else {
-        if (this.recommendTimer) {
-          clearInterval(this.recommendTimer);
-          this.recommendTimer = null;
-        }
-        this.stopBtShow = false;
-      }
+      this.disconnectCurrentStreamForNavigation();
 
       this.$emit('setHistoryStatus');
       this.amswerNum = 0;
@@ -234,7 +268,7 @@ export default {
         const config = this.getHeaderConfig();
         res = await OpenurlConverHistory(
           { conversationId: id },
-          this.editForm.assistantId,
+          this.getStreamAssistantId(),
           config,
         );
       }
@@ -243,6 +277,12 @@ export default {
         let history = this.convertHistoryData(res.data.list);
 
         this.$refs['session-com'].replaceHistory(history);
+        this.$nextTick(() => {
+          this.connectPendingStream({
+            conversationId: id,
+            draft: false,
+          });
+        });
       }
     },
     //删除对话
@@ -257,7 +297,7 @@ export default {
         const config = this.getHeaderConfig();
         res = await delOpenurlConversation(
           { conversationId: n.conversationId },
-          this.editForm.assistantId,
+          this.getStreamAssistantId(),
           config,
         );
       }
@@ -306,7 +346,7 @@ export default {
           const config = this.getHeaderConfig();
           res = await openurlConversation(
             { prompt: this.inputVal },
-            this.editForm.assistantId,
+            this.getStreamAssistantId(),
             config,
           );
         }
@@ -369,7 +409,7 @@ export default {
       this.setSseParams({
         conversationId: this.conversationId,
         fileInfo: fileId,
-        assistantId: this.editForm.assistantId,
+        assistantId: this.getStreamAssistantId(),
       });
       this.doSend();
       this.echo = false;
@@ -426,7 +466,7 @@ export default {
 
       const params = {
         query: query,
-        assistantId: this.editForm.assistantId,
+        assistantId: this.getStreamAssistantId(),
         conversationId: this.conversationId,
         trial: this.chatType === 'test' ? true : false,
       };
@@ -798,7 +838,7 @@ export default {
           }
           this.$refs['session-com'].replaceHistory(history);
           this.$nextTick(() => {
-            this.connectDraftStream();
+            this.connectPendingStream({ draft: true });
           });
         }
       } catch (error) {
@@ -846,21 +886,43 @@ export default {
       };
     },
     // 重连sse
-    async connectDraftStream() {
+    async connectPendingStream({ conversationId = '', draft = false } = {}) {
+      const assistantId = this.getStreamAssistantId();
       if (
-        this.draftReconnectRequested ||
-        this.type !== 'agentChat' ||
-        !this.editForm.assistantId
+        !['agentChat', 'webChat'].includes(this.type) ||
+        (draft && this.draftReconnectRequested) ||
+        !assistantId
       ) {
         return;
       }
 
-      this.draftReconnectRequested = true;
+      if (!draft && !conversationId) return;
+      if (draft) {
+        this.draftReconnectRequested = true;
+      }
+
       try {
-        const res = await getPendingConversation({
-          assistantId: this.editForm.assistantId,
-          draft: true,
-        });
+        const requestData = {
+          assistantId,
+          draft,
+        };
+        if (!draft) {
+          requestData.conversationId = conversationId;
+        }
+
+        const requestConfig =
+          this.type === 'webChat' ? this.getOpenurlRequestConfig() : {};
+
+        const res =
+          this.type === 'webChat'
+            ? await getOpenurlPendingConversation(
+                requestData.assistantId,
+                {
+                  conversationId: requestData.conversationId,
+                },
+                requestConfig,
+              )
+            : await getPendingConversation(requestData, requestConfig);
         if (
           res.code !== 0 ||
           !res.data ||
@@ -869,7 +931,10 @@ export default {
           return;
         }
 
-        const underwayHistory = this.formatUnderwayHistory(res.data);
+        const underwayHistory = this.formatUnderwayHistory({
+          ...res.data,
+          conversationId: res.data.conversationId || conversationId,
+        });
         if (!underwayHistory || !underwayHistory.conversationId) return;
 
         const sessionCom = this.$refs['session-com'];
@@ -881,15 +946,20 @@ export default {
         this.echo = false;
 
         this.connectEventSource({
-          assistantId: this.editForm.assistantId,
+          assistantId,
           conversationId: underwayHistory.conversationId,
           query: underwayHistory.query,
           lastIndex,
           fileList: underwayHistory.fileList,
+          headers:
+            this.type === 'webChat' ? this.getOpenurlStreamHeaders() : null,
         });
       } catch (error) {
         console.warn('[agent chat] get underway conversation failed', error);
       }
+    },
+    connectDraftStream() {
+      return this.connectPendingStream({ draft: true });
     },
     // 清空会话
     async handleClearHistory() {
@@ -909,7 +979,7 @@ export default {
             {
               conversationId: this.conversationId,
             },
-            this.editForm.assistantId,
+            this.getStreamAssistantId(),
             this.getHeaderConfig(),
           );
         } else {
@@ -948,7 +1018,7 @@ export default {
               conversationId: this.conversationId,
               detailId: qaId,
             },
-            this.editForm.assistantId,
+            this.getStreamAssistantId(),
             this.getHeaderConfig(),
           );
         } else {

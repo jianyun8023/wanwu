@@ -16,7 +16,6 @@
       :isButton="true"
       :asideWidth="asideWidth"
       @handleBtnClick="handleBtnClick"
-      :isBtnDisabled="sessionStatus === 0"
       :class="[chatType === 'webChat' ? 'chatBg' : '']"
       :showAside="showAside"
     >
@@ -26,11 +25,7 @@
             <div
               v-for="(n, i) in historyList"
               class="appList"
-              :class="[
-                'appList',
-                { disabled: sessionStatus === 0 },
-                { active: n.active },
-              ]"
+              :class="['appList', { active: n.active }]"
               @click="historyClick(n)"
               @touchstart="historyClick(n)"
               @mouseenter="mouseEnter(n)"
@@ -55,6 +50,7 @@
           <Chat
             :chatType="'chat'"
             :editForm="editForm"
+            :assistantId="assistantId"
             :appUrlInfo="appUrlInfo"
             :type="chatType"
             ref="agentChat"
