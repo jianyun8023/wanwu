@@ -176,6 +176,11 @@ func NewRunner(sb sandbox.Sandbox, opt wga_sandbox_option.RunOption) runner.Runn
 // 4. 创建 opencode session
 // 注意：沙箱环境已在 Manager.Create 时通过 Prepare 初始化，此处不再调用
 func (r *Runner) BeforeRun(ctx context.Context) error {
+	// 恢复 trace 上下文
+	if r.opt.TraceContext != nil {
+		ctx = trace_util.InjectTraceHeaders(ctx, r.opt.TraceContext)
+	}
+
 	if err := r.setupConfig(ctx); err != nil {
 		return err
 	}
@@ -204,6 +209,11 @@ func (r *Runner) BeforeRun(ctx context.Context) error {
 // Run 执行智能体任务，返回 JSON 格式事件流。
 // 通过 SSE 连接接收 opencode 事件，过滤并转换为 JSON 格式输出。
 func (r *Runner) Run(ctx context.Context) (<-chan string, error) {
+	// 恢复 trace 上下文，确保 HTTP 请求传播 traceparent 头
+	if r.opt.TraceContext != nil {
+		ctx = trace_util.InjectTraceHeaders(ctx, r.opt.TraceContext)
+	}
+
 	sseCh, err := r.connectSSE(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect SSE: %w", err)
@@ -247,7 +257,23 @@ func (r *Runner) setupConfig(ctx context.Context) error {
 		return fmt.Errorf("failed to create .opencode directory: %w", err)
 	}
 
-	content, err := renderConfig(r.opt.ModelConfig, r.opt.MCPs, r.opt.EnableHumanInTheLoop)
+	// 如果存在 trace 上下文，将 traceId/spanId 编码到 baseURL 中
+	// 这样 opencode 进程调用模型 API 时，URL 会变成
+	// {baseURL}/trace/{traceId}/span/{spanId}/chat/completions
+	// BFF 侧新增带 /trace/:traceId/span/:spanId/ 参数的路由来接收这种请求
+	modelConfig := r.opt.ModelConfig
+	if r.opt.TraceContext != nil {
+		if tp, ok := r.opt.TraceContext["traceparent"]; ok {
+			parts := strings.Split(tp, "-")
+			if len(parts) == 4 {
+				traceID := parts[1]
+				spanID := parts[2]
+				modelConfig.BaseURL = modelConfig.BaseURL + "/trace/" + traceID + "/span/" + spanID
+			}
+		}
+	}
+
+	content, err := renderConfig(modelConfig, r.opt.MCPs, r.opt.EnableHumanInTheLoop)
 	if err != nil {
 		return fmt.Errorf("failed to render config: %w", err)
 	}
@@ -274,10 +300,11 @@ func (r *Runner) setupSkills(ctx context.Context) error {
 			return fmt.Errorf("failed to copy skill %s to workspace: %w", dirName, err)
 		}
 
+		skillDir := ".opencode/skills/" + dirName
+		skillPath := fmt.Sprintf("%s/SKILL.md", skillDir)
+
 		// 追加变量信息到 SKILL.md
 		if len(skill.Variables) > 0 {
-			skillDir := ".opencode/skills/" + dirName
-			skillPath := fmt.Sprintf("%s/SKILL.md", skillDir)
 			varsContent := formatVariablesContent(skill.Variables)
 			encoded := base64.StdEncoding.EncodeToString([]byte(varsContent))
 			cmd := fmt.Sprintf("echo '%s' | base64 -d >> \"%s\"", encoded, skillPath)
@@ -285,6 +312,7 @@ func (r *Runner) setupSkills(ctx context.Context) error {
 				return fmt.Errorf("failed to update SKILL.md for skill %s: %w", dirName, err)
 			}
 		}
+
 	}
 
 	return nil
@@ -345,6 +373,19 @@ func (r *Runner) setupTool(ctx context.Context, tool wga_sandbox_option.Tool) er
 		}
 	}
 
+	// 追加 trace 上下文提示到 SKILL.md（引导 LLM 在 curl 调用中注入 trace 头）
+	if r.opt.TraceContext != nil {
+		if _, ok := r.opt.TraceContext["traceparent"]; ok {
+			skillDir := ".opencode/skills/" + skillName
+			skillPath := fmt.Sprintf("%s/SKILL.md", skillDir)
+			traceContent := formatTraceContextContent(r.opt.TraceContext)
+			encoded := base64.StdEncoding.EncodeToString([]byte(traceContent))
+			cmd := fmt.Sprintf("echo '%s' | base64 -d >> \"%s\"", encoded, skillPath)
+			if _, err := r.sb.ExecuteSync(ctx, cmd); err != nil {
+				return fmt.Errorf("failed to update SKILL.md trace context for tool %s: %w", tool.Name, err)
+			}
+		}
+	}
 	return nil
 }
 
@@ -1186,5 +1227,40 @@ func formatVariablesContent(variables []wga_sandbox_option.SkillVariable) string
 		}
 	}
 	buf.WriteString("\n")
+	return buf.String()
+}
+
+// formatTraceContextContent 格式化 trace 上下文信息为 Markdown 格式。
+// 追加到 SKILL.md 末尾，引导 LLM 在构造 curl 命令时注入 trace 头。
+func formatTraceContextContent(traceCtx map[string]string) string {
+	var buf strings.Builder
+	buf.WriteString("\n## Trace Context\n\n")
+	buf.WriteString("**You MUST include the following headers in every HTTP request to any external API to maintain distributed tracing. Do NOT omit them:**\n")
+	if tp, ok := traceCtx["traceparent"]; ok {
+		fmt.Fprintf(&buf, "- `traceparent: %s`\n", tp)
+	}
+	if ts, ok := traceCtx["tracestate"]; ok && ts != "" {
+		fmt.Fprintf(&buf, "- `tracestate: %s`\n", ts)
+	}
+	if bg, ok := traceCtx["baggage"]; ok && bg != "" {
+		fmt.Fprintf(&buf, "- `baggage: %s`\n", bg)
+	}
+	buf.WriteString("\n")
+	buf.WriteString("Example curl command with trace headers:\n")
+	buf.WriteString("```bash\n")
+	// 直接使用具体的 trace 值（不再依赖环境变量）
+	curlArgs := []string{`curl`}
+	if tp, ok := traceCtx["traceparent"]; ok {
+		curlArgs = append(curlArgs, fmt.Sprintf(`-H "traceparent: %s"`, tp))
+	}
+	if ts, ok := traceCtx["tracestate"]; ok && ts != "" {
+		curlArgs = append(curlArgs, fmt.Sprintf(`-H "tracestate: %s"`, ts))
+	}
+	if bg, ok := traceCtx["baggage"]; ok && bg != "" {
+		curlArgs = append(curlArgs, fmt.Sprintf(`-H "baggage: %s"`, bg))
+	}
+	curlArgs = append(curlArgs, "...")
+	buf.WriteString(strings.Join(curlArgs, " "))
+	buf.WriteString("\n```\n")
 	return buf.String()
 }

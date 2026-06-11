@@ -17,6 +17,8 @@ func Register(callbackAPI *gin.RouterGroup) {
 	// model
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId", http.MethodGet, callback.GetModelById, "根据modelId获取模型")
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId/chat/completions", http.MethodPost, callback.ModelChatCompletions, "Model Chat Completions")
+	// 带 trace 上下文的模型代理路由（sandbox 内 opencode/eino-agent 通过 URL 路径传递 trace 信息）
+	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId/trace/:traceId/span/:spanId/chat/completions", http.MethodPost, callback.ModelChatCompletionsWithTrace, "Model Chat Completions with Trace")
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId/embeddings", http.MethodPost, callback.ModelEmbeddings, "Model Embeddings")
 	mid.Sub("callback").Reg(callbackAPI, "/model/:modelId/multimodal-embeddings", http.MethodPost, callback.ModelMultiModalEmbeddings, "Model multimodal-Embeddings")
 

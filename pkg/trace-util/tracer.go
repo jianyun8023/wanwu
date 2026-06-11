@@ -25,9 +25,8 @@ import (
 )
 
 const (
-	TraceUserPrefix = "trace_user:"
-
-	envJaegerEnable       = "JAEGER_ENABLE"
+	TraceUserPrefix       = "trace_user:"
+	TraceJaegerEnable     = "JAEGER_ENABLE"
 	envJaegerOTLPEndpoint = "JAEGER_OTLP_ENDPOINT"
 )
 
@@ -41,7 +40,7 @@ type Tracer struct {
 // When JAEGER_ENABLE is unset or false: no exporter, spans are discarded (backward compatible).
 // When JAEGER_ENABLE=true + JAEGER_OTLP_ENDPOINT: exports spans via OTLP HTTP to Jaeger.
 func InitTracer(serviceName string) error {
-	enabled, _ := strconv.ParseBool(os.Getenv(envJaegerEnable))
+	enabled, _ := strconv.ParseBool(os.Getenv(TraceJaegerEnable))
 
 	var tp *sdktrace.TracerProvider
 	if enabled {

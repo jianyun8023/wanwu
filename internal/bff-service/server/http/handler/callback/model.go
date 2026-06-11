@@ -58,6 +58,28 @@ func GetModelById(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
+// ModelChatCompletionsWithTrace 处理带 trace 上下文的模型代理请求。
+//
+// URL 中的 :traceId 和 :spanId 由 sandbox 内 opencode/eino-agent 调用时填入。
+// TraceFromURLMiddleware 已在 otelgin 之前将此信息提取到 traceparent Header，
+// 因此 otelgin 已创建了正确父子关系的 span，本 handler 只需直接委托。
+//
+//	@Tags		callback
+//	@Summary	Model Chat Completions with Trace
+//	@Accept		json
+//	@Produce	json
+//	@Param		modelId	 path	string				true	"模型ID"
+//	@Param		traceId	 path	string				true	"Trace ID"
+//	@Param		spanId	 path	string				true	"Span ID"
+//	@Param		data		 body	mp_common.LLMReq{}	true	"请求参数"
+//	@Success	200		     {object} mp_common.LLMResp{}
+//	@Router		/model/{modelId}/trace/{traceId}/span/{spanId}/chat/completions [post]
+func ModelChatCompletionsWithTrace(ctx *gin.Context) {
+	// trace 上下文的提取和 span 父子关系由 TraceFromURLMiddleware + otelgin 完成，
+	// 此处不需要再做任何 trace 操作，直接委托给现有逻辑即可。
+	ModelChatCompletions(ctx)
+}
+
 // ModelChatCompletions
 //
 //	@Tags		callback
