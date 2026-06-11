@@ -1,6 +1,6 @@
 server:
   grpc-endpoint: 0.0.0.0:8889
-  max-recv-msg-size: 4194304 # 1024 * 1024 * 4 = 4M
+  max-recv-msg-size: 4294967296 # 1024 * 1024 * 1024 * 4 = 4G
 
 # logger configuration
 log:
