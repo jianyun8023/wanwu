@@ -70,7 +70,7 @@ func LoginByEmail(ctx *gin.Context) {
 //	@Router		/base/captcha [get]
 func GetCaptcha(ctx *gin.Context) {
 	resp, err := service.GetCaptcha(ctx,
-		util.MD5([]byte(ctx.ClientIP()+ctx.GetHeader("User-Agent")+ctx.GetHeader("Date"))))
+		util.MD5([]byte(ctx.ClientIP()+ctx.GetHeader("User-Agent")+ctx.GetHeader("Date")+ctx.GetHeader(gin_util.X_CLIENT_ID))))
 	gin_util.Response(ctx, resp, err)
 }
 
