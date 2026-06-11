@@ -16,6 +16,7 @@ type QAKnowledgeInfo struct {
 	Description    string         `json:"description"`    // 问答库描述
 	EmbeddingModel *ModelInfo     `json:"embeddingModel"` // emb模型信息
 	Avatar         request.Avatar `json:"avatar"`         // 头像
+	PermissionType int32          `json:"permissionType"` // 当前用户对该问答库的权限类型 -1:无权限 0:查看 10:编辑 20:授权 30:系统管理授权
 }
 
 type KnowledgeQAPairImportTipResp struct {

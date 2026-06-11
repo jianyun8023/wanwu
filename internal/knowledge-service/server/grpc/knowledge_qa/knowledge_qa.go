@@ -103,6 +103,11 @@ func (s *Service) GetQAPairList(ctx context.Context, req *knowledgebase_qa_servi
 		log.Errorf("select QA knowledge failed err: (%v) req:(%v)", err, req)
 		return nil, util.ErrCode(errs.Code_KnowledgeQABaseSelectFailed)
 	}
+	// 查询当前用户对该问答库的权限类型，无记录时默认查看权限(0)
+	permissionType := int32(model.PermissionTypeView)
+	if permission, perErr := orm.SelectUserKnowledgePermission(ctx, req.UserId, req.OrgId, req.KnowledgeId); perErr == nil {
+		permissionType = int32(permission.PermissionType)
+	}
 	qaPairIdList := make([]string, 0)
 	//查找元数据值所对应的文档列表
 	if req.MetaValue != "" {
@@ -112,7 +117,7 @@ func (s *Service) GetQAPairList(ctx context.Context, req *knowledgebase_qa_servi
 			return nil, util.ErrCode(errs.Code_KnowledgeMetaFetchFailed)
 		}
 		if len(qaPairIdList) == 0 {
-			return buildQAPairListResp(nil, knowledge, nil, 0, req.PageSize, req.PageNum), nil
+			return buildQAPairListResp(nil, knowledge, nil, 0, req.PageSize, req.PageNum, permissionType), nil
 		}
 	}
 	list, total, err := orm.GetQAPairList(ctx, "", "", req.KnowledgeId,
@@ -130,7 +135,7 @@ func (s *Service) GetQAPairList(ctx context.Context, req *knowledgebase_qa_servi
 	if err != nil {
 		return nil, util.ErrCode(errs.Code_KnowledgeMetaFetchFailed)
 	}
-	return buildQAPairListResp(list, knowledge, docMetaList, total, req.PageSize, req.PageNum), nil
+	return buildQAPairListResp(list, knowledge, docMetaList, total, req.PageSize, req.PageNum, permissionType), nil
 }
 
 func (s *Service) GetQAPairInfo(ctx context.Context, req *knowledgebase_qa_service.GetQAPairInfoReq) (*knowledgebase_qa_service.QAPairInfo, error) {
@@ -513,7 +518,7 @@ func buildQAPairExportTask(req *knowledgebase_qa_service.ExportQAPairReq) (*mode
 }
 
 // buildQAPairListResp 构造问答库问答对列表
-func buildQAPairListResp(list []*model.KnowledgeQAPair, knowledge *model.KnowledgeBase, docMetaList []*model.KnowledgeDocMeta, total int64, pageSize int32, pageNum int32) *knowledgebase_qa_service.GetQAPairListResp {
+func buildQAPairListResp(list []*model.KnowledgeQAPair, knowledge *model.KnowledgeBase, docMetaList []*model.KnowledgeDocMeta, total int64, pageSize int32, pageNum int32, permissionType int32) *knowledgebase_qa_service.GetQAPairListResp {
 	var retList = make([]*knowledgebase_qa_service.QAPairInfo, 0)
 	metaMap := buildQAPairMetaMap(docMetaList)
 	if len(list) > 0 {
@@ -548,6 +553,7 @@ func buildQAPairListResp(list []*model.KnowledgeQAPair, knowledge *model.Knowled
 			EmbeddingModelId: embeddingModelInfo.ModelId,
 			AvatarPath:       knowledge.AvatarPath,
 			Category:         int32(knowledge.Category),
+			PermissionType:   permissionType,
 		},
 	}
 }
