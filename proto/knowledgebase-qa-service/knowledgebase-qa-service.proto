@@ -96,6 +96,7 @@ message KnowledgeInfo{
   string embeddingModelId = 4;//emb模型id
   string avatarPath = 5;//头像路径
   int32 category = 6;//知识库分类 0:知识库 1:问答库 2:多模态知识库
+  int32 permissionType = 7;//当前用户对该问答库的权限类型 -1:无权限 0:查看 10:编辑 20:授权 30:系统管理授权
 }
 
 message QAPairInfo{

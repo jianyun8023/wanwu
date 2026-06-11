@@ -131,6 +131,7 @@ func GetKnowledgeQAPairList(ctx *gin.Context, userId, orgId string, r *request.K
 			Description:    knowledgeInfo.Description,
 			EmbeddingModel: embModelInfo,
 			Avatar:         cacheKnowledgeAvatar(ctx, knowledgeInfo.AvatarPath, knowledgeInfo.Category),
+			PermissionType: knowledgeInfo.PermissionType,
 		},
 	}, nil
 }
