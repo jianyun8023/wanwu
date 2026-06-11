@@ -171,6 +171,7 @@ type RunOption struct {
 	EnableHumanInTheLoopCustom bool // 是否允许用户自定义回答
 	SkipCleanup                bool
 	AgentName                  string
+	TraceContext               map[string]string // W3C trace 传播头（traceparent, tracestate, baggage），用于跨进程 trace 传播
 }
 
 func (o *RunOption) Apply(opts ...Option) error {
@@ -397,6 +398,14 @@ func WithEnableHumanInTheLoop(enable bool, enableCustom ...bool) Option {
 		if len(enableCustom) > 0 {
 			opts.EnableHumanInTheLoopCustom = enableCustom[0]
 		}
+		return nil
+	})
+}
+
+// WithTraceContext 设置 W3C trace 传播头，用于跨进程（如 sandbox 容器）trace 上下文传播。
+func WithTraceContext(headers map[string]string) Option {
+	return OptionFunc(func(opts *RunOption) error {
+		opts.TraceContext = headers
 		return nil
 	})
 }

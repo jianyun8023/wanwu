@@ -46,6 +46,11 @@ func NewRunner(sb sandbox.Sandbox, req wga_sandbox_option.RunOption, agentType s
 // 2. 复制 skills 到 skills 目录
 // 3. 复制输入文件到 input 目录
 func (r *Runner) BeforeRun(ctx context.Context) error {
+	// 恢复 trace 上下文，确保 HTTP 请求传播 traceparent 头
+	if r.req.TraceContext != nil {
+		ctx = trace_util.InjectTraceHeaders(ctx, r.req.TraceContext)
+	}
+
 	log.Infof("%s BeforeRun - req.Skills count: %d", r.logPrefix, len(r.req.Skills))
 	for i, skill := range r.req.Skills {
 		log.Infof("%s BeforeRun - skill[%d]: Dir=%s", r.logPrefix, i, skill.Dir)
@@ -94,6 +99,11 @@ func (r *Runner) BeforeRun(ctx context.Context) error {
 
 // 执行 eino-agent 任务，通过 HTTP API 调用，返回 SSE 事件流
 func (r *Runner) Run(ctx context.Context) (<-chan string, error) {
+	// 恢复 trace 上下文，确保 HTTP 请求传播 traceparent 头
+	if r.req.TraceContext != nil {
+		ctx = trace_util.InjectTraceHeaders(ctx, r.req.TraceContext)
+	}
+
 	sseCh, err := r.connectSSE(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect SSE: %w", err)
@@ -135,11 +145,36 @@ func (r *Runner) setupEnv(ctx context.Context) error {
 	if r.req.ModelConfig.APIKey != "" {
 		lines = append(lines, fmt.Sprintf("OPENAI_API_KEY=%s", r.req.ModelConfig.APIKey))
 	}
-	if r.req.ModelConfig.BaseURL != "" {
-		lines = append(lines, fmt.Sprintf("OPENAI_BASE_URL=%s", r.req.ModelConfig.BaseURL))
+
+	baseURL := r.req.ModelConfig.BaseURL
+	// 如果存在 trace 上下文，将 traceId/spanId 编码到 baseURL 中
+	// BFF 侧新增带 /trace/:traceId/span/:spanId/ 参数的路由来接收这种请求
+	if r.req.TraceContext != nil {
+		if tp, ok := r.req.TraceContext["traceparent"]; ok {
+			parts := strings.Split(tp, "-")
+			if len(parts) == 4 {
+				baseURL = baseURL + "/trace/" + parts[1] + "/span/" + parts[2]
+			}
+		}
+	}
+	if baseURL != "" {
+		lines = append(lines, fmt.Sprintf("OPENAI_BASE_URL=%s", baseURL))
 	}
 	if r.req.ModelConfig.Model != "" {
 		lines = append(lines, fmt.Sprintf("OPENAI_MODEL_ID=%s", r.req.ModelConfig.Model))
+	}
+
+	// 追加 trace 上下文环境变量，供 sandbox 内 bash 进程（curl 调用）使用
+	if r.req.TraceContext != nil {
+		if tp, ok := r.req.TraceContext["traceparent"]; ok {
+			lines = append(lines, fmt.Sprintf("TRACEPARENT=%s", tp))
+		}
+		if ts, ok := r.req.TraceContext["tracestate"]; ok && ts != "" {
+			lines = append(lines, fmt.Sprintf("TRACESTATE=%s", ts))
+		}
+		if bg, ok := r.req.TraceContext["baggage"]; ok && bg != "" {
+			lines = append(lines, fmt.Sprintf("BAGGAGE=%s", bg))
+		}
 	}
 
 	content := strings.Join(lines, "\n") + "\n"

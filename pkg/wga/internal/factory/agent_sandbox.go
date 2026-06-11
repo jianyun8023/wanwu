@@ -4,12 +4,15 @@ import (
 	"context"
 
 	openapi3_util "github.com/UnicomAI/wanwu/pkg/openapi3-util"
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	wga_sandbox "github.com/UnicomAI/wanwu/pkg/wga-sandbox"
 	wga_sandbox_converter "github.com/UnicomAI/wanwu/pkg/wga-sandbox/wga-sandbox-converter"
 	wga_sandbox_option "github.com/UnicomAI/wanwu/pkg/wga-sandbox/wga-sandbox-option"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/config"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/option"
 	"github.com/cloudwego/eino/adk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // sandboxAgent 在沙箱容器中执行的智能体。
@@ -34,17 +37,29 @@ func (a *sandboxAgent) Description(_ context.Context) string {
 }
 
 func (a *sandboxAgent) Run(ctx context.Context, agentInput *adk.AgentInput, _ ...adk.AgentRunOption) *adk.AsyncIterator[*adk.AgentEvent] {
+	// 创建 sandbox 执行 span
+	ctx, span := trace_util.StartAgentSpan(ctx, "sandbox", a.cfg.Name, a.cfg.ID)
+	span.SetAttributes(attribute.String("wga.agent.type", "sandbox"))
+
 	sandboxOpts, err := a.buildSandboxOpts(ctx, agentInput.Messages)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		span.End()
 		return wga_sandbox_converter.ConvertToEinoIteratorWithError(ctx, wga_sandbox_option.RunnerTypeOpencode, err)
 	}
 
 	_, outputCh, err := wga_sandbox.Run(ctx, sandboxOpts...)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		span.End()
 		return wga_sandbox_converter.ConvertToEinoIteratorWithError(ctx, wga_sandbox_option.RunnerTypeOpencode, err)
 	}
 
-	return wga_sandbox_converter.ConvertToEinoIterator(ctx, wga_sandbox_option.RunnerTypeOpencode, outputCh)
+	// 包装迭代器：在迭代结束时自动结束 sandbox span
+	iter := wga_sandbox_converter.ConvertToEinoIterator(ctx, wga_sandbox_option.RunnerTypeOpencode, outputCh)
+	return trace_util.WrapIteratorWithSpan(iter, span)
 }
 
 func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Message) ([]wga_sandbox_option.Option, error) {
@@ -184,6 +199,11 @@ func (a *sandboxAgent) buildSandboxOpts(ctx context.Context, messages []adk.Mess
 	// 传递 SystemMessageStrategy 到 wga-sandbox
 	if a.options.SystemMessageStrategy == option.SystemMessageStrategyMerge {
 		opts = append(opts, wga_sandbox_option.WithSystemMessageStrategy(wga_sandbox_option.SystemMessageStrategyMerge))
+	}
+
+	// 传递 trace 上下文到 sandbox 容器，实现跨进程 trace 传播
+	if traceHeaders := trace_util.ExtractTraceHeaders(ctx); len(traceHeaders) > 0 {
+		opts = append(opts, wga_sandbox_option.WithTraceContext(traceHeaders))
 	}
 
 	return opts, nil
