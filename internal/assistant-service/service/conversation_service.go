@@ -15,7 +15,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/es"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	sse_util "github.com/UnicomAI/wanwu/pkg/sse-util"
-	"go.opentelemetry.io/otel/trace"
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 )
 
 const (
@@ -135,22 +135,10 @@ func saveConversation(originalCtx context.Context, req *ConversationParams, conv
 	if len(req.ConversationId) == 0 {
 		return
 	}
-	// 如果原始上下文已取消，创建一个新的独立上下文，保留 trace 链路
-	if originalCtx.Err() != nil {
-		spanCtx := trace.SpanContextFromContext(originalCtx)
-		ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
-		ctx, cancel := context.WithTimeout(ctx, esTimeout)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(trace_util.DetachContext(originalCtx), esTimeout)
+	defer cancel()
 
-		if err := saveConversationDetailToES(ctx, req, conversationResp, detailId); err != nil {
-			log.Errorf("保存聊天记录到ES失败，assistantId: %s, conversationId: %s, error: %v",
-				req.AssistantId, req.ConversationId, err)
-		}
-		return
-	}
-
-	// 原始上下文未取消时，继续使用它
-	if err := saveConversationDetailToES(originalCtx, req, conversationResp, detailId); err != nil {
+	if err := saveConversationDetailToES(ctx, req, conversationResp, detailId); err != nil {
 		log.Errorf("保存聊天记录到ES失败，assistantId: %s, conversationId: %s, error: %v",
 			req.AssistantId, req.ConversationId, err)
 	}

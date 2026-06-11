@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	app_service "github.com/UnicomAI/wanwu/api/proto/app-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
@@ -184,9 +186,9 @@ func GetStatisticAPIKeySelect(ctx *gin.Context, filter request.StatisticFilter, 
 	}, nil
 }
 
-func RecordAPIKeyCall(ctx *gin.Context, userId, orgId, apiKeyId, methodPath string,
+func RecordAPIKeyCall(ctx context.Context, userId, orgId, apiKeyId, methodPath string,
 	callTime int64, httpStatus string, isStream bool, streamCosts, nonStreamCosts int64, requestBody, responseBody string) {
-	_, err := app.RecordAPIKeyStatistic(ctx.Request.Context(), &app_service.RecordAPIKeyStatisticReq{
+	_, err := app.RecordAPIKeyStatistic(ctx, &app_service.RecordAPIKeyStatisticReq{
 		UserId:         userId,
 		OrgId:          orgId,
 		ApiKeyId:       apiKeyId,
