@@ -101,6 +101,11 @@ func BuildSensitiveDict(ctx *gin.Context, personalTableIds []string, enable bool
 
 // ProcessSensitiveWords 中间处理函数，负责敏感词检测并返回处理后的通道
 func ProcessSensitiveWords(ctx *gin.Context, rawCh <-chan string, matchDicts []ahocorasick.DictConfig, chatSrv chatService) <-chan string {
+	return ProcessSensitiveWordsWithCallback(ctx, rawCh, matchDicts, chatSrv, nil)
+}
+
+// ProcessSensitiveWordsWithCallback 中间处理函数，负责敏感词检测并返回处理后的通道
+func ProcessSensitiveWordsWithCallback(ctx *gin.Context, rawCh <-chan string, matchDicts []ahocorasick.DictConfig, chatSrv chatService, callback func(string, string)) <-chan string {
 	// 无敏感词字典时直接返回原始通道，跳过检测
 	if len(matchDicts) == 0 {
 		return rawCh
@@ -134,11 +139,17 @@ func ProcessSensitiveWords(ctx *gin.Context, rawCh <-chan string, matchDicts []a
 				if matchResults[0].Reply != "" {
 					for _, sensitiveMsg := range chatSrv.buildSensitiveResp(id, matchResults[0].Reply) {
 						outputCh <- sensitiveMsg
+						if callback != nil {
+							callback(currId, sensitiveMsg)
+						}
 						return
 					}
 				}
 				for _, sensitiveMsg := range chatSrv.buildSensitiveResp(id, gin_util.I18nKey(ctx, "bff_sensitive_check_resp_default_reply")) {
 					outputCh <- sensitiveMsg
+					if callback != nil {
+						callback(currId, sensitiveMsg)
+					}
 					return
 				}
 			}

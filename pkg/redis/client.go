@@ -86,6 +86,14 @@ func (c *client) Cli() *redis.Client {
 
 // --- Generic ---
 
+func (c *client) SetEx(ctx context.Context, key string, value interface{}, expire time.Duration) (string, error) {
+	return c.cli.SetEx(ctx, key, value, expire).Result()
+}
+
+func (c *client) Get(ctx context.Context, key string) (string, error) {
+	return c.cli.Get(ctx, key).Result()
+}
+
 func (c *client) Del(ctx context.Context, key string) error {
 	return c.cli.Del(ctx, key).Err()
 }

@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/UnicomAI/wanwu/pkg/redis"
+	"github.com/google/uuid"
 	"io"
 	"strings"
 	"time"
@@ -88,6 +90,7 @@ func CallAssistantConversationStream(ctx *gin.Context, userId, orgId string, req
 	}
 
 	agentReq := &assistant_service.AssistantConversionStreamReq{
+		DetailId:       uuid.New().String(),
 		AssistantId:    req.AssistantId,
 		ConversationId: req.ConversationId,
 		FileInfo:       transFileInfo(req.FileInfo),
@@ -128,7 +131,10 @@ func CallAssistantConversationStream(ctx *gin.Context, userId, orgId string, req
 		}
 	}()
 	// 敏感词过滤(必须过滤，全局敏感词)
-	outputCh := ProcessSensitiveWords(ctx, rawCh, matchDicts, &agentSensitiveService{})
+	outputCh := ProcessSensitiveWordsWithCallback(ctx, rawCh, matchDicts, &agentSensitiveService{}, func(messageId string, sensitiveMsg string) {
+		//敏感词存入redis
+		redis.StoreSensitiveConversation(agentReq.ConversationId, agentReq.DetailId, sensitiveMsg)
+	})
 	return outputCh, nil
 }
 
@@ -402,5 +408,6 @@ func buildMultiAssistantConversionStreamReq(req *assistant_service.AssistantConv
 		SystemPrompt:   req.SystemPrompt,
 		Identity:       req.Identity,
 		Draft:          req.Draft,
+		DetailId:       req.DetailId,
 	}
 }

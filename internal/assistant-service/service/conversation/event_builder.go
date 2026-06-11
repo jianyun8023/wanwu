@@ -8,6 +8,10 @@ import (
 	"github.com/UnicomAI/wanwu/internal/assistant-service/client/model"
 )
 
+const (
+	errorDefaultOrder = 999
+)
+
 type SubEventStatus int
 
 const (
@@ -35,6 +39,8 @@ type ConversationResp struct {
 	SearchList           *string
 	ConversationEventMap map[string]*ConversationResp
 	ResponseFiles        []*model.AgentFile
+	CurrentData          string
+	SensitiveMessage     string
 	Error                error
 }
 
@@ -88,6 +94,15 @@ func (cr *ConversationResp) Response() string {
 	return conversationResponse
 }
 
+func (cr *ConversationResp) SensitiveResponse(sensitiveResponse string) {
+	if len(sensitiveResponse) > 0 {
+		cr.SensitiveMessage = sensitiveResponse
+	}
+}
+
+func (cr *ConversationResp) ErrorResponse(err error) {
+	cr.Error = err
+}
 func (cr *ConversationResp) ResponseList() []*model.ConversationResponse {
 	var conversationResponse = cr.FullResponse.String()
 	if cr.Error != nil {
@@ -136,6 +151,29 @@ func InitBuilder(eventBuilder EventBuilder) {
 }
 
 func BuildConversationResp(conversationResp *ConversationResp, strLine string) error {
+	if strLine == "\n" {
+		return nil
+	}
+	var lastData = conversationResp.CurrentData
+	conversationResp.CurrentData = strLine
+	if len(lastData) == 0 {
+		return nil
+	}
+	return buildConversationResp(conversationResp, lastData)
+}
+
+func FinishConversationResp(conversationResp *ConversationResp) error {
+	if len(conversationResp.CurrentData) > 0 {
+		err := buildConversationResp(conversationResp, conversationResp.CurrentData)
+		return err
+	}
+	if conversationResp.Error != nil {
+		conversationResp.WriteError("智能体处理异常，请稍后重试", conversationResp.Error.Error(), errorDefaultOrder)
+	}
+	return nil
+}
+
+func buildConversationResp(conversationResp *ConversationResp, strLine string) error {
 	conversation, searchResult, agentChatResp := processAgentResp(strLine)
 	if agentChatResp == nil {
 		return nil
