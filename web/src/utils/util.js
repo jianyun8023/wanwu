@@ -701,8 +701,6 @@ export function formatDuration(ms) {
  * @returns {string} 格式化后的数字字符串。
  */
 export function formatCount(num, fixed = 2, strictFixed = true) {
-  console.log(strictFixed);
-
   if (typeof num !== 'number' || Number.isNaN(num)) {
     return '0';
   }

@@ -193,6 +193,11 @@ export default {
         if (res.code === 0) {
           this.$message.success(this.$t('common.info.send'));
           info.isShared = true;
+          this.$set(
+            info,
+            'acquiredCount',
+            (Number(info.acquiredCount) || 0) + 1,
+          );
         }
       });
     },
