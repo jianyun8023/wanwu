@@ -14,15 +14,15 @@ cd "$PROJECT_ROOT"
 
 TARGET="./docker-compose.ontology.yaml"
 
-DC_APP_YML="./configs/microservice/ontology/vega-server/data-connection/application.yml"
-DC_PRIV="./configs/microservice/ontology/vega-server/data-connection/private_key.pem"
-DC_PUB="./configs/microservice/ontology/vega-server/data-connection/public_key.pem"
-GW_PRIV="./configs/microservice/ontology/vega-server/vega-gateway-pro/private_key.pem"
-WEB_KEY="./configs/microservice/ontology/vega-server/web/public-key.js"
-STATE_JSON="./configs/microservice/ontology/vega-server/wga-sandbox-ontology/state.json"
+BASE="./configs/microservice/ontology/vega-server"
+DC_APP_YML="${BASE}/data-connection/application.yml"
+PRIV="${BASE}/private_key.pem"
+PUB="${BASE}/public_key.pem"
+WEB_KEY="${BASE}/public-key.js"
+STATE_JSON="${BASE}/state.json"
 
 MISSING=()
-for f in "$DC_APP_YML" "$DC_PRIV" "$DC_PUB" "$GW_PRIV" "$WEB_KEY" "$STATE_JSON"; do
+for f in "$DC_APP_YML" "$PRIV" "$PUB" "$WEB_KEY" "$STATE_JSON"; do
   [ ! -s "$f" ] && MISSING+=("$f")
 done
 if [ ${#MISSING[@]} -gt 0 ]; then
@@ -49,12 +49,12 @@ VEGA_GATEWAY_PRO_MOUNTS=()
 WEB_MOUNTS=()
 WGA_SANDBOX_MOUNTS=()
 
-[ -s "$DC_APP_YML" ] && DATA_CONNECTION_MOUNTS+=("./configs/microservice/ontology/vega-server/data-connection/application.yml:/opt/data-connection/config/application.yml:ro")
-[ -s "$DC_PRIV" ]    && DATA_CONNECTION_MOUNTS+=("./configs/microservice/ontology/vega-server/data-connection/private_key.pem:/opt/vega/config/private_key.pem:ro")
-[ -s "$DC_PUB" ]     && DATA_CONNECTION_MOUNTS+=("./configs/microservice/ontology/vega-server/data-connection/public_key.pem:/opt/vega/config/public_key.pem:ro")
-[ -s "$GW_PRIV" ]    && VEGA_GATEWAY_PRO_MOUNTS+=("./configs/microservice/ontology/vega-server/vega-gateway-pro/private_key.pem:/opt/vega-gateway-pro/config/private_key.pem:ro")
-[ -s "$WEB_KEY" ]    && WEB_MOUNTS+=("./configs/microservice/ontology/vega-server/web/public-key.js:/usr/share/nginx/html/vega/config/public-key.js:ro")
-[ -s "$STATE_JSON" ] && WGA_SANDBOX_MOUNTS+=("./configs/microservice/ontology/vega-server/wga-sandbox-ontology/state.json:/root/.ontology/state.json:ro")
+[ -s "$DC_APP_YML" ] && DATA_CONNECTION_MOUNTS+=("${DC_APP_YML}:/opt/data-connection/config/application.yml:ro")
+[ -s "$PRIV" ]      && DATA_CONNECTION_MOUNTS+=("${PRIV}:/opt/vega/config/private_key.pem:ro")
+[ -s "$PUB" ]       && DATA_CONNECTION_MOUNTS+=("${PUB}:/opt/vega/config/public_key.pem:ro")
+[ -s "$PRIV" ]      && VEGA_GATEWAY_PRO_MOUNTS+=("${PRIV}:/opt/vega-gateway-pro/config/private_key.pem:ro")
+[ -s "$WEB_KEY" ]   && WEB_MOUNTS+=("${WEB_KEY}:/usr/share/nginx/html/vega/config/public-key.js:ro")
+[ -s "$STATE_JSON" ] && WGA_SANDBOX_MOUNTS+=("${STATE_JSON}:/root/.ontology/state.json:ro")
 
 inject_service() {
   local svc="$1"; shift
@@ -198,11 +198,10 @@ warn_orphan() {
   fi
 }
 
-warn_orphan "$DC_APP_YML" "./configs/microservice/ontology/vega-server/data-connection/application.yml:"
-warn_orphan "$DC_PRIV"    "./configs/microservice/ontology/vega-server/data-connection/private_key.pem:"
-warn_orphan "$DC_PUB"     "./configs/microservice/ontology/vega-server/data-connection/public_key.pem:"
-warn_orphan "$GW_PRIV"    "./configs/microservice/ontology/vega-server/vega-gateway-pro/private_key.pem:"
-warn_orphan "$WEB_KEY"    "./configs/microservice/ontology/vega-server/web/public-key.js:"
-warn_orphan "$STATE_JSON" "./configs/microservice/ontology/vega-server/wga-sandbox-ontology/state.json:"
+warn_orphan "$DC_APP_YML" "${DC_APP_YML}:"
+warn_orphan "$PRIV"      "${PRIV}:/opt/vega/config/private_key.pem:"
+warn_orphan "$PUB"       "${PUB}:/opt/vega/config/public_key.pem:"
+warn_orphan "$WEB_KEY"   "${WEB_KEY}:/usr/share/nginx/html/vega/config/public-key.js:"
+warn_orphan "$STATE_JSON" "${STATE_JSON}:/root/.ontology/state.json:"
 
 echo "Done."

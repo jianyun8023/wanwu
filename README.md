@@ -359,11 +359,6 @@ The platform has been successfully applied in multiple industries such as **fina
     node configs/microservice/ontology/vega-server/generate-public-key-js.js
     ```
 
-    2.3 Inject the generated key/public-key mounts into `docker-compose.ontology.yaml`
-    ```bash
-    ./configs/microservice/ontology/vega-server/gen-compose-override.sh
-    ```
-
 3. Copy environment variable file (before first run or after system upgrade)
 
     ```bash

@@ -354,10 +354,6 @@ UniClaw下载地址：https://maas.ai-yuanjing.com/app/uniclaw/uniclaw-official.
     node configs/microservice/ontology/vega-server/generate-public-key-js.js
     ```
 
-    2.3 把新生成的密钥/公钥挂载注入 `docker-compose.ontology.yaml`
-    ```bash
-    ./configs/microservice/ontology/vega-server/gen-compose-override.sh
-    ```
 
 3. 拷贝环境变量文件（首次运行前或系统升级后）
 
