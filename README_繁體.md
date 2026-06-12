@@ -74,7 +74,7 @@
 - **視覺化編排：**低程式碼拖曳畫布，內建條件分支、API、大模型、知識庫、程式碼、MCP 等豐富節點，支援端到端流程除錯與效能分析，讓 AI 嚴格按照商業規矩辦事。
 - **零程式碼編排閉環：**業界首創支援在智慧體開發中零程式碼呼叫 Skill，從「意圖辨識」到「技能執行」完美閉環；彈性呼叫內建工具、MCP、工作流等，秒讀百頁文件，統一工作區展示成果。
 
-#### 4️⃣ GUI 智慧體：搞定各類應用系統，無 API 也能直接操作
+#### 4️⃣ GUI 智慧體：搞定各類應用系統，無 API 也能直接操作 ([客戶端下載地址](https://pan.baidu.com/s/1xqQcjwAbrd1YVS2XHG81rw?pwd=ae86))
 
 <p align="center">
   <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
@@ -460,10 +460,11 @@ UniClaw 下載位址：https://maas.ai-yuanjing.com/app/uniclaw/uniclaw-official
 
 - [x] 通用智能體
 - [x] Skills
+- [x] Trace追蹤
 - [ ] 支援資料庫導入知識庫
-- [ ] A2A協議
 - [ ] 智能體和模型測評
-- [ ] Trace追蹤
+- [ ] 長期記憶
+- [ ] A2A協議
 
 ------
 

@@ -70,7 +70,7 @@
 针对合同审核、报销审批等复杂业务，通过低代码方式规范AI的执行路径，确保交付稳定可靠。
 - **可视化编排**：低代码拖拽画布，内置条件分支、API、大模型、知识库、代码、MCP等丰富节点，支持端到端流程调试与性能分析，让AI严格按照业务规矩办事。
 - **零代码编排闭环**：行业内首个支持在智能体开发中零代码调用Skill，从“意图识别”到“技能执行”完美闭环；灵活调用内置工具、MCP、工作流等，秒读百页文档，统一工作区展示成果。
-#### 4️⃣ GUI智能体：搞定各类应用系统，无API也能直接操作
+#### 4️⃣ GUI智能体：搞定各类应用系统，无API也能直接操作 ([客户端下载地址](https://pan.baidu.com/s/1xqQcjwAbrd1YVS2XHG81rw?pwd=ae86))
 
 <p align="center">
   <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
@@ -79,6 +79,7 @@
 面对老旧系统或无API场景，赋予AI“看”与“点”的能力，彻底消除系统集成壁垒。
 - **界面级交互**：无需对接底层API，AI直接操作应用界面完成任务。
 - **[沙箱支持](https://github.com/UnicomAI/wanwu/blob/main/configs/microservice/bff-service/static/manual/8.%E9%80%9A%E7%94%A8%E6%99%BA%E8%83%BD%E4%BD%93%2F%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8A%A9%E6%89%8B-OPENCLAW%2F%E5%A6%82%E4%BD%95%E5%9C%A8%E4%B8%87%E6%82%9F%E4%B8%AD%E6%8E%A5%E5%85%A5OpenClaw%E6%9C%BA%E5%99%A8%E4%BA%BA.md)**：为每一个“机器人”提供独立Docker容器部署选项，安全执行界面操作。
+
 #### 5️⃣ 通用智能体+Skill开发：搞定交互系统，一句话串起所有能力
 
 <p align="center">
@@ -458,11 +459,11 @@ UniClaw下载地址：https://maas.ai-yuanjing.com/app/uniclaw/uniclaw-official.
 
 - [x] 通用智能体
 - [x] Skills
+- [x] Trace追踪
 - [ ] 支持数据库导入知识库
-- [ ] A2A协议
 - [ ] 智能体和模型测评
-- [ ] Trace追踪
 - [ ] 长期记忆
+- [ ] A2A协议
 
 ------
 

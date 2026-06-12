@@ -78,7 +78,7 @@ For contract review, expense approval, and other complex workflows, standardizes
 - **Visual orchestration:** Low‑code drag‑and‑drop canvas with built‑in conditional branches, APIs, LLMs, knowledge bases, code, MCP, etc. Supports end‑to‑end debugging and performance analysis.
 - **Zero‑code orchestration closed‑loop:** Industry‑first zero‑code Skill invocation in agent development, closing the loop from intent recognition to skill execution. Flexibly calls built‑in tools, MCP, workflows, etc., parses hundreds of pages in seconds, and displays results in a unified workspace.
 
-#### 4️⃣ GUI Agent
+#### 4️⃣ GUI Agent ([Download Client](https://pan.baidu.com/s/1xqQcjwAbrd1YVS2XHG81rw?pwd=ae86))
 
 <p align="center">
   <img width="900" alt="gui" src="https://github.com/user-attachments/assets/0576488a-9f55-49fa-8b21-b7810ac3faac" />
@@ -455,10 +455,11 @@ The F1 score serving as the comprehensive evaluation metric (the harmonic mean o
 
 - [x] General Agent
 - [x] Skills
+- [x] Trace Tracking
 - [ ] Support importing databases into knowledge base
-- [ ] A2A Protocol
 - [ ] Agent and Model Evaluation
-- [ ] Trace Tracking
+- [ ] Long-term Memory
+- [ ] A2A Protocol
 
 ------
 
