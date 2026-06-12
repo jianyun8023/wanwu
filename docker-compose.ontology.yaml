@@ -55,6 +55,10 @@ services:
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
+    volumes:
+      - ./configs/microservice/ontology/vega-server/data-connection/application.yml:/opt/data-connection/config/application.yml:ro
+      - ./configs/microservice/ontology/vega-server/private_key.pem:/opt/vega/config/private_key.pem:ro
+      - ./configs/microservice/ontology/vega-server/public_key.pem:/opt/vega/config/public_key.pem:ro
 
   # Vega Gateway - API网关
   vega-gateway:
@@ -110,6 +114,8 @@ services:
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
+    volumes:
+      - ./configs/microservice/ontology/vega-server/private_key.pem:/opt/vega-gateway-pro/config/private_key.pem:ro
 
   # Vega Backend - 后端服务
   vega-backend:
@@ -144,6 +150,8 @@ services:
       - UNIQUERY_PORT=13011
     # ports:
     #   - "13014:13014"
+    volumes:
+      - ./configs/microservice/ontology/vega-server/private_key.pem:/opt/vega-backend/config/private_key.pem:ro
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
@@ -359,6 +367,8 @@ services:
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
+    volumes:
+      - ./configs/microservice/ontology/vega-server/public-key.js:/usr/share/nginx/html/vega/config/public-key.js:ro
 
   agent:
     image: ${WANWU_ONTOLOGY_VEGA_AGENT_IMAGE}
@@ -436,6 +446,7 @@ services:
       - ./configs/microservice/bff-service/configs/agent-skills/ontology/smart-data-collection:/home/root/.claude/skills/smart-data-collection
       # --- ontology: other ---
       - ./configs/microservice/bff-service/configs/agent-skills/ontology/yj-ocr:/home/root/.claude/skills/yj-ocr
+      - ./configs/microservice/ontology/vega-server/state.json:/root/.ontology/state.json:ro
     environment:
       USER: root
       OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: 600000
