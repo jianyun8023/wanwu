@@ -2006,6 +2006,7 @@ export default {
     sidebar: {
       newChat: '新建对话',
       loading: '加载中...',
+      noMore: 'No more',
     },
     header: {
       welcomeTitle: '你好，我是万悟',
