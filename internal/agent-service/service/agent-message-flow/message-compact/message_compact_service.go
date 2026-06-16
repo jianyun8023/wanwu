@@ -8,7 +8,14 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-func Compact(messages []*schema.Message, userOtherMessages []*schema.Message, tokenLimit int) (retMessages []*schema.Message) {
+func Compact(multiAgent bool, messages []*schema.Message, userOtherMessages []*schema.Message, tokenLimit int) (retMessages []*schema.Message) {
+	if multiAgent {
+		//添加 用户消息
+		retMessages = append(retMessages, messages...)
+		//添加 用户其他消息
+		retMessages = append(retMessages, userOtherMessages...)
+		return
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			var dataMessages []*schema.Message
