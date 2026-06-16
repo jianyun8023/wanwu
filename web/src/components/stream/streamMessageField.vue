@@ -20,8 +20,8 @@
       v-loading="loading"
       ref="timeScroll"
       @click="handleGlobalClick"
-      @mouseover="handleAgentCitationHover"
-      @mouseout="handleAgentCitationLeave"
+      @mouseover="handleCitationHover"
+      @mouseout="handleCitationLeave"
       :style="{ 'max-height': historyBoxHeight }"
     >
       <div v-for="(n, i) in session_data.history" :key="`${i}sdhs`">
@@ -553,8 +553,6 @@
                   <div
                     class="answer-content no-order-chunk-answer"
                     :class="{ 'rag-answer': chatType === 'rag' }"
-                    @mouseover="onRagAnswerHover($event)"
-                    @mouseout="onRagAnswerLeave($event)"
                     @click="$refs.imagePreview.handleImageClick($event)"
                   >
                     <div
@@ -584,8 +582,6 @@
                     hideDs: !n.isOpen,
                     'rag-answer': chatType === 'rag',
                   }"
-                  @mouseover="onRagAnswerHover($event)"
-                  @mouseout="onRagAnswerLeave($event)"
                   @click="$refs.imagePreview.handleImageClick($event)"
                 >
                   <div
@@ -967,7 +963,7 @@ export default {
       // 复制提示计时器map
       copyTimerMap: new Map(),
       historyBoxHeight: '', // 动态历史会话容器高度
-      // RAG 答案区：citation hover 气泡
+      // 引用角标 hover 气泡（RAG / Agent 复用）
       ragCitationTip: {
         visible: false,
         x: 0,
@@ -1021,7 +1017,7 @@ export default {
     smoothscroll.polyfill();
     document.addEventListener('click', this.handleCitationClick);
     addEventListener('resize', this.handleWindowResize);
-    // 兜底：外层 wheel / resize 时立即隐藏 RAG 引用气泡（避免 fixed 定位错位）
+    // 兜底：外层 wheel / resize 时立即隐藏引用气泡（避免 fixed 定位错位）
     addEventListener('wheel', this.onWindowWheelHideTip, {
       passive: true,
     });
@@ -1056,7 +1052,7 @@ export default {
       clearTimeout(timerId);
     });
     this.copyTimerMap.clear();
-    // 清除 RAG 引用角标 hover tooltip 的延迟隐藏计时器
+    // 清除引用角标 hover tooltip 的延迟隐藏计时器
     if (this._ragCitationTipHideTimer) {
       clearTimeout(this._ragCitationTipHideTimer);
       this._ragCitationTipHideTimer = null;
@@ -1369,7 +1365,7 @@ export default {
       container.addEventListener('scroll', this.handleScroll);
     },
     handleScroll(e) {
-      // 滚动时立即隐藏 RAG 引用气泡：popover 用 fixed 定位 + viewport 坐标，
+      // 滚动时立即隐藏引用气泡：popover 用 fixed 定位 + viewport 坐标，
       // 滚动时 citation 已经移位，气泡停在原地会严重错位。
       this.hideRagCitationTip();
       const container = document.getElementById(this.scrollContainerId);
@@ -1842,18 +1838,19 @@ export default {
       });
     },
     /**
-     * 智能体引用角标悬浮入口。
-     * 通过历史容器的事件委托命中 .citation，再从 Vue 状态中解析对应来源，
+     * 引用角标悬浮入口。
+     * 通过历史容器的事件委托命中 .citation，再按 chatType 从 Vue 状态中解析对应来源，
+     * 避免把标题和片段内容重复塞入 data-* 属性。
      *
      * @param {MouseEvent} e - 容器 mouseover 事件
      */
-    handleAgentCitationHover(e) {
-      if (this.chatType !== 'agent') return;
+    handleCitationHover(e) {
+      if (!['agent', 'rag'].includes(this.chatType)) return;
       const target =
         e.target && e.target.closest ? e.target.closest('.citation') : null;
       if (!target) return;
 
-      const tipData = this.resolveAgentCitationTipData(target);
+      const tipData = this.resolveCitationTipData(target);
       if (!tipData) {
         this.hideRagCitationTip();
         return;
@@ -1862,14 +1859,14 @@ export default {
       this.showCitationTip(target, tipData);
     },
     /**
-     * 智能体引用角标移出入口。
+     * 引用角标移出入口。
      * 鼠标在多个引用角标之间移动时不立即隐藏，交给下一个 hover 覆盖；
      * 真正离开引用角标后隐藏当前气泡。
      *
      * @param {MouseEvent} e - 容器 mouseout 事件
      */
-    handleAgentCitationLeave(e) {
-      if (this.chatType !== 'agent') return;
+    handleCitationLeave(e) {
+      if (!['agent', 'rag'].includes(this.chatType)) return;
       const target =
         e.target && e.target.closest ? e.target.closest('.citation') : null;
       if (!target) return;
@@ -1879,6 +1876,63 @@ export default {
         return;
       }
       this.hideRagCitationTip();
+    },
+    /**
+     * 按当前会话类型分发引用 tooltip 数据解析逻辑。
+     *
+     * @param {HTMLElement} citationTarget - 被悬浮的 .citation 元素
+     * @returns {{number: string, title: string, snippet: string} | null}
+     */
+    resolveCitationTipData(citationTarget) {
+      if (this.chatType === 'rag') {
+        return this.resolveRagCitationTipData(citationTarget);
+      }
+      if (this.chatType === 'agent') {
+        return this.resolveAgentCitationTipData(citationTarget);
+      }
+      return null;
+    },
+    /**
+     * 根据 RAG 引用角标解析 tooltip 展示数据。
+     * RAG 角标只保留消息索引和引用序号，标题/片段从当前 historyItem.searchList 中按序号读取。
+     *
+     * @param {HTMLElement} citationTarget - 被悬浮的 .citation 元素
+     * @returns {{number: string, title: string, snippet: string} | null}
+     */
+    resolveRagCitationTipData(citationTarget) {
+      const parentsIndex = Number(citationTarget.dataset.parentsIndex);
+      const citationIndex = Number(citationTarget.textContent.trim());
+      if (
+        !Number.isInteger(parentsIndex) ||
+        !citationIndex ||
+        citationIndex < 1
+      ) {
+        return null;
+      }
+
+      const historyItem = this.session_data.history[parentsIndex];
+      const source =
+        historyItem &&
+        historyItem.searchList &&
+        historyItem.searchList[citationIndex - 1];
+      if (!source) return null;
+
+      return {
+        number: citationTarget.textContent.trim(),
+        title: this.cleanCitationTipText(
+          source.title ||
+            source.file_name ||
+            source.fileName ||
+            source.user_kb_name ||
+            source.link ||
+            '',
+          80,
+        ),
+        snippet: this.cleanCitationTipText(
+          source.snippet || source.content || '',
+          160,
+        ),
+      };
     },
     /**
      * 根据智能体引用角标解析 tooltip 展示数据。
@@ -2019,60 +2073,8 @@ export default {
         arrowOffset,
       };
     },
-    onRagAnswerHover(e) {
-      const target =
-        e.target && e.target.closest ? e.target.closest('.citation') : null;
-      if (!target) return;
-      if (this._ragCitationTipHideTimer) {
-        clearTimeout(this._ragCitationTipHideTimer);
-        this._ragCitationTipHideTimer = null;
-      }
-      const title = target.dataset.title || '';
-      const snippet = target.dataset.snippet || '';
-      const number = target.textContent.trim();
-      const rect = target.getBoundingClientRect();
-      // 用 viewport 坐标 + position:fixed，规避 overflow 父节点的裁切
-      const TIP_HEIGHT = 140;
-      const MARGIN = 8;
-      const TIP_WIDTH = Math.min(320, innerWidth - MARGIN * 2);
-      const TIP_HALF_WIDTH = TIP_WIDTH / 2; // popover width / 2
-      const placement = rect.top < TIP_HEIGHT + MARGIN ? 'bottom' : 'top';
-      // x 居中于 citation，再 clamp 到 viewport 左右边界内
-      const rawX = rect.left + rect.width / 2;
-      let x = rawX;
-      x = Math.min(
-        Math.max(x, TIP_HALF_WIDTH + MARGIN),
-        innerWidth - TIP_HALF_WIDTH - MARGIN,
-      );
-      const y = placement === 'top' ? rect.top - MARGIN : rect.bottom + MARGIN;
-      const arrowOffset = rawX - x;
-      this.ragCitationTip = {
-        visible: true,
-        x,
-        y,
-        placement,
-        title,
-        snippet,
-        number,
-        arrowOffset,
-      };
-    },
     /**
-     * RAG 回答区鼠标悬停：命中 .citation → 弹 hover 气泡（标题 + snippet + 跳转提示）
-     */
-    onRagAnswerLeave(e) {
-      // 设计决定：popover 纯跟随 citation hover，鼠标不在角标上立即隐藏。
-      // 不再允许"从 citation 滑到 popover 上继续悬停"——因为那会让滚动时
-      // popover 留在原地（fixed 定位 + 原 citation 已滚出视口），体验割裂。
-      const related = e.relatedTarget;
-      if (related && related.closest && related.closest('.citation')) {
-        // 在两个 citation 之间滑动：交给下一个 citation 的 mouseover 覆盖
-        return;
-      }
-      this.hideRagCitationTip();
-    },
-    /**
-     * 立即隐藏 RAG 引用气泡并清掉未触发的定时器。
+     * 立即隐藏引用气泡并清掉未触发的定时器。
      * 在 mouseleave / 容器滚动 / 窗口 resize / 整页 wheel 等时机都被调用。
      */
     onWindowWheelHideTip() {
