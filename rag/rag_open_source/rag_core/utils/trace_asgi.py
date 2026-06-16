@@ -90,8 +90,12 @@ class FirstChunkSpanMiddleware:
                     and message.get("type") == "http.response.body"
                     and message.get("body")):
                 state["done"] = True
-                # 建一个 span 即时结束，时长覆盖 请求开始 -> 首分片
-                self._tracer.start_span("http first_chunk", start_time=start_ns).end()
+                # 建一个 span 即时结束，时长覆盖 请求开始 -> 首分片。
+                # 任何埋点异常都不得影响流式响应本身，故 try 兜底。
+                try:
+                    self._tracer.start_span("http first_output", start_time=start_ns).end()
+                except Exception:
+                    logger.exception("FirstChunkSpanMiddleware create span failed (response untouched)")
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
