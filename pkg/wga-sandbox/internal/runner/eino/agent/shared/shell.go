@@ -20,8 +20,8 @@ const (
 	commandTimeout = 5 * time.Minute
 )
 
-// ShellOnlyBackend 实现 filesystem.Backend 接口，
-// 仅提供 shell 命令执行能力，文件操作方法返回 not implemented。
+// ShellOnlyBackend 仅提供 shell 命令执行能力。
+// 不实现 filesystem.Backend 的其他文件操作方法，因为 bash 工具只调用 Execute。
 type ShellOnlyBackend struct {
 	maxOutputSize  int
 	commandTimeout time.Duration
@@ -36,32 +36,8 @@ func NewShellOnlyBackend(workDir string) *ShellOnlyBackend {
 	}
 }
 
-// --- filesystem.Backend 空实现 ---
-func (b *ShellOnlyBackend) LsInfo(_ context.Context, _ *filesystem.LsInfoRequest) ([]filesystem.FileInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (b *ShellOnlyBackend) Read(_ context.Context, _ *filesystem.ReadRequest) (string, error) {
-	return "", fmt.Errorf("not implemented")
-}
-
-func (b *ShellOnlyBackend) GrepRaw(_ context.Context, _ *filesystem.GrepRequest) ([]filesystem.GrepMatch, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (b *ShellOnlyBackend) GlobInfo(_ context.Context, _ *filesystem.GlobInfoRequest) ([]filesystem.FileInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (b *ShellOnlyBackend) Write(_ context.Context, _ *filesystem.WriteRequest) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (b *ShellOnlyBackend) Edit(_ context.Context, _ *filesystem.EditRequest) error {
-	return fmt.Errorf("not implemented")
-}
-
 // --- 安全规则 ---
+
 var dangerousPatterns = []*regexp.Regexp{
 	// 系统级破坏命令
 	regexp.MustCompile(`(?i)\brm\s+(-[a-z]*f|-[a-z]*r|--force|--recursive)\b`),
@@ -87,7 +63,12 @@ var sensitivePathPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`/var/lib/(mysql|postgresql)`),
 }
 
-var allowedWorkspacePattern = regexp.MustCompile(`/home/root/workspace/[a-zA-Z0-9_-]+/workspace`)
+var (
+	allowedWorkspacePattern = regexp.MustCompile(`/home/root/workspace/[a-zA-Z0-9_-]+/workspace`)
+	pathTraversalPattern    = regexp.MustCompile(`\.\./`)
+	symlinkPattern          = regexp.MustCompile(`(?i)\bln\s+-[a-z]*s`)
+	homeDirPattern          = regexp.MustCompile(`/home/[^/]+`)
+)
 
 func validateCommand(command string) error {
 	for _, pattern := range dangerousPatterns {
@@ -111,19 +92,15 @@ func validateCommand(command string) error {
 		if strings.Contains(command, "/root/") {
 			return fmt.Errorf("安全拦截：检测到对敏感路径 [/root/] 的访问尝试，仅允许操作工作目录")
 		}
-		if matched := regexp.MustCompile(`/home/[^/]+`).FindString(command); matched != "" {
+		if matched := homeDirPattern.FindString(command); matched != "" {
 			return fmt.Errorf("安全拦截：检测到对敏感路径 [%s] 的访问尝试，仅允许操作工作目录", matched)
 		}
 	}
 
-	if strings.Contains(command, "..") {
-		pathTraversal := regexp.MustCompile(`\.\./`)
-		if pathTraversal.MatchString(command) {
-			return fmt.Errorf("安全拦截：检测到路径穿越尝试（../），已拒绝执行")
-		}
+	if strings.Contains(command, "..") && pathTraversalPattern.MatchString(command) {
+		return fmt.Errorf("安全拦截：检测到路径穿越尝试（../），已拒绝执行")
 	}
 
-	symlinkPattern := regexp.MustCompile(`(?i)\bln\s+-[a-z]*s`)
 	if symlinkPattern.MatchString(command) {
 		for _, pattern := range sensitivePathPatterns {
 			if matched := pattern.FindString(command); matched != "" {
@@ -135,35 +112,7 @@ func validateCommand(command string) error {
 	return nil
 }
 
-// var pythonCmdPattern = regexp.MustCompile(`(?i)(^|&&\s*|\|\|\s*|;\s*)(python3?|pip3?)\b`)
-// var apkAddPyPattern = regexp.MustCompile(`(?i)\bapk\s+add\s+[^\n]*\bpy3?-`)
-
-// // pip和python命令在Python虚拟环境中执行
-// func wrapWithVenv(command, workDir string) string {
-// 	venvDir := filepath.Join(workDir, ".venv")
-// 	// 追加pip国内源配置（阿里云）
-// 	pipConfigCmd := `pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
-//                      pip config set global.trusted-host mirrors.aliyun.com`
-
-// 	return fmt.Sprintf(
-// 		`if [ ! -d "%s" ]; then
-// 			[ ! -x "$(command -v python3)" ] && echo "ERROR: python3未安装" && exit 1
-// 			if ! python3 -m venv "%s" >/dev/null 2>&1; then
-// 				if command -v apt-get >/dev/null; then
-// 					apt-get update -qq >/dev/null 2>&1 && \
-// 					DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-venv >/dev/null 2>&1;
-// 				elif command -v apk >/dev/null; then
-// 					apk add --no-cache python3-venv >/dev/null 2>&1;
-// 				fi;
-// 				python3 -m venv "%s" >/dev/null 2>&1 || { echo "ERROR: 创建虚拟环境失败"; exit 1; };
-// 			fi;
-// 		fi && . "%s/bin/activate" && %s && %s`,
-// 		venvDir, venvDir, venvDir, venvDir, pipConfigCmd, command, // 先配置pip源，再执行原命令
-// 	)
-// }
-
-// --- Execute ---
-
+// Execute 执行 shell 命令，附带安全校验、超时、输出截断与退出码处理。
 func (b *ShellOnlyBackend) Execute(ctx context.Context, req *filesystem.ExecuteRequest) (*filesystem.ExecuteResponse, error) {
 	if err := validateCommand(req.Command); err != nil {
 		exitCode := 1
@@ -173,30 +122,14 @@ func (b *ShellOnlyBackend) Execute(ctx context.Context, req *filesystem.ExecuteR
 		}, nil
 	}
 
-	command := req.Command
-
-	// 不启用虚拟环境
-	// if pythonCmdPattern.MatchString(command) {
-	// 	command = wrapWithVenv(command, b.workDir)
-	// 	log.Printf("[Execute] Python 命令已自动改写为虚拟环境执行: %s", command)
-	// }
-
-	// if apkAddPyPattern.MatchString(command) {
-	// 	exitCode := 1
-	// 	return &filesystem.ExecuteResponse{
-	// 		Output:   "安全拦截：禁止通过 apk 安装 Python 依赖包（py3-*），请使用 pip install 安装。",
-	// 		ExitCode: &exitCode,
-	// 	}, nil
-	// }
-
 	execCtx, cancel := context.WithTimeout(ctx, b.commandTimeout)
 	defer cancel()
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(execCtx, "cmd", "/C", command)
+		cmd = exec.CommandContext(execCtx, "cmd", "/C", req.Command)
 	} else {
-		cmd = exec.CommandContext(execCtx, "sh", "-c", command)
+		cmd = exec.CommandContext(execCtx, "sh", "-c", req.Command)
 	}
 
 	if b.workDir != "" {
@@ -235,11 +168,11 @@ func (b *ShellOnlyBackend) Execute(ctx context.Context, req *filesystem.ExecuteR
 
 	exitCode := 0
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr != nil {
-			exitCode = exitErr.ExitCode()
-		} else {
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
 			return nil, err
 		}
+		exitCode = exitErr.ExitCode()
 	}
 
 	return &filesystem.ExecuteResponse{
