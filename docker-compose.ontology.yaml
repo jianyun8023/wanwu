@@ -3,9 +3,9 @@ services:
   # ------ mysql init ------
 
   mysql-setup-ontology:
-    # depends_on:
-    #   mysql:
-    #     condition: service_healthy
+    depends_on:
+      mysql:
+        condition: service_healthy
     restart: on-failure
     image: ${WANWU_MYSQL_IMAGE}
     container_name: ${WANWU_MYSQL_HOST}-setup-ontology
@@ -48,10 +48,10 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
-      # kafka:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
@@ -155,14 +155,14 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
-      # kafka:
-      #   condition: service_healthy
-      # es:
-      #   condition: service_healthy
-      # redis:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      es:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
@@ -199,10 +199,10 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
-      # kafka:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
@@ -243,12 +243,12 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
-      # kafka:
-      #   condition: service_healthy
-      # es:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      es:
+        condition: service_healthy
       mdl-data-model:
         condition: service_started
     networks:
@@ -294,12 +294,12 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
-      # kafka:
-      #   condition: service_healthy
-      # es:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      es:
+        condition: service_healthy
       mdl-data-model:
         condition: service_started
       mdl-uniquery:
@@ -391,8 +391,8 @@ services:
     depends_on:
       mysql-setup-ontology:
         condition: service_completed_successfully
-      # mysql:
-      #   condition: service_healthy
+      mysql:
+        condition: service_healthy
     networks:
       - ${WANWU_DOCKER_NETWORK}
     restart: always
