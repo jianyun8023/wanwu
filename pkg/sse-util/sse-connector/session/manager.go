@@ -2,13 +2,14 @@ package session
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/store"
 	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
-	"sync"
-	"time"
 )
 
 // Subscriber 订阅者，代表一个 SSE 连接

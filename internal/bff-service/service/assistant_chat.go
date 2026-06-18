@@ -3,15 +3,16 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/pkg/redis"
 	sse_connector "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector"
 	sse_model "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/store"
 	"github.com/google/uuid"
-	"io"
-	"strings"
-	"time"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"

@@ -3,16 +3,17 @@
 // 基于 opencode >= v1.4.11 的 SSE 事件格式实现，兼容 v1.14.51、v1.15.13、v1.16.2。
 //
 // 版本基线说明：
-//   v1.1.65 仅支持 BusEvent 单格式 SSE（src/server/routes/global.ts 仅使用
-//   BusEvent.payloads()）。v1.4.11 引入 BusEvent/SyncEvent 双格式（参见 e8f0faee），
-//   SSE schema 变为 z.union([BusEvent.payloads(), SyncEvent.payloads()])，奠定了
-//   当前 SSE 事件解析的架构基础。后续版本增量添加事件和字段，线上格式始终向后兼容：
-//   - v1.14.51：BusEvent payload 新增 id 字段（上升标识符），GlobalBus 新增 project 字段，
-//     引入 session.next.* 细粒度事件（实验性标志，默认关闭）
-//   - v1.15.13：引入 EventV2 核心系统（packages/core/src/event.ts），EventV2Bridge
-//     通过 legacy Bus/SyncEvent 间接输出，线上格式不变
-//   - v1.16.2：EventV2Bridge 直接输出至 GlobalBus，session.next.* 事件默认开启，
-//     线上 BusEvent/SyncEvent 格式仍不变
+//
+//	v1.1.65 仅支持 BusEvent 单格式 SSE（src/server/routes/global.ts 仅使用
+//	BusEvent.payloads()）。v1.4.11 引入 BusEvent/SyncEvent 双格式（参见 e8f0faee），
+//	SSE schema 变为 z.union([BusEvent.payloads(), SyncEvent.payloads()])，奠定了
+//	当前 SSE 事件解析的架构基础。后续版本增量添加事件和字段，线上格式始终向后兼容：
+//	- v1.14.51：BusEvent payload 新增 id 字段（上升标识符），GlobalBus 新增 project 字段，
+//	  引入 session.next.* 细粒度事件（实验性标志，默认关闭）
+//	- v1.15.13：引入 EventV2 核心系统（packages/core/src/event.ts），EventV2Bridge
+//	  通过 legacy Bus/SyncEvent 间接输出，线上格式不变
+//	- v1.16.2：EventV2Bridge 直接输出至 GlobalBus，session.next.* 事件默认开启，
+//	  线上 BusEvent/SyncEvent 格式仍不变
 //
 // 通过 SSE 连接接收 opencode 事件流，转换为统一的 JSON 格式输出。
 //

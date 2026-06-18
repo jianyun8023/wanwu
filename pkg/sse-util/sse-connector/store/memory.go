@@ -1,8 +1,9 @@
 package store
 
 import (
-	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 	"sync"
+
+	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 )
 
 // todo 目前只是用数组存储，需要压测并考虑性能问题

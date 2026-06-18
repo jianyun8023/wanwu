@@ -3,13 +3,14 @@ package sse_connector
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/UnicomAI/wanwu/pkg/log"
 	safe_go_util "github.com/UnicomAI/wanwu/pkg/safe-go-util"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/session"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/store"
-	"strings"
-	"time"
 )
 
 const (
