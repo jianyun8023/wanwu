@@ -563,7 +563,7 @@ export default {
       imgUpload: '点击图标上传，可上传 .png、.jpg、.jpeg文件',
       bgSizeLimit: '背景图大小不能超过1MB',
       logoSizeLimit: '图标大小不能超过100KB',
-      labelIcon: '显示在浏览器标签页上的图标',
+      labelIcon: '显示在浏览器标签页及侧边导航栏收缩后的图标',
       logo: '显示在平台左上方的LOGO',
       oneColor: '单色',
       linearColor: '渐变',
