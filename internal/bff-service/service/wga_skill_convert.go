@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	app_service "github.com/UnicomAI/wanwu/api/proto/app-service"
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
+	"github.com/UnicomAI/wanwu/pkg/constant"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
@@ -27,6 +29,19 @@ func ConvertGeneralAgentSkillConversation(ctx *gin.Context, userId, orgId string
 	}
 
 	sourceType := strings.TrimSpace(strings.ToLower(req.Type))
+
+	// 检查应用是否已发布
+	switch sourceType {
+	case constant.AppTypeAgent, constant.AppTypeWorkflow, constant.AppTypeRag:
+		_, err := app.GetAppInfo(ctx.Request.Context(), &app_service.GetAppInfoReq{
+			AppId:   req.ID,
+			AppType: sourceType,
+		})
+		if err != nil {
+			return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("%s(%s) not published", sourceType, req.ID))
+		}
+	}
+
 	title := generalAgentSkillConvertTitle(ctx, sourceType)
 	previewID := util.GenUUID()
 
