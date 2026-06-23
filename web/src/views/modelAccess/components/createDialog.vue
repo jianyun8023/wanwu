@@ -353,9 +353,19 @@
         </el-form-item>
         <el-form-item
           v-if="createForm.modelType === llm"
-          :label="$t('modelAccess.table.think')"
           prop="thinkingSupport"
         >
+          <template slot="label">
+            <span style="font-size: inherit">
+              {{ $t('modelAccess.table.think') }}
+            </span>
+            <el-tooltip
+              :content="$t('modelAccess.table.thinkTips')"
+              placement="top"
+            >
+              <i class="el-icon-question thinking-tips-icon" />
+            </el-tooltip>
+          </template>
           <el-select
             v-model="createForm.thinkingSupport"
             :placeholder="$t('common.select.placeholder')"
@@ -971,6 +981,11 @@ export default {
   .embedding-tip {
     color: #f56c6c;
     line-height: 16px;
+  }
+  .thinking-tips-icon {
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 14px;
   }
   .thinking-link-test {
     display: flex;

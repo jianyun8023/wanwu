@@ -663,6 +663,7 @@ export default {
       maxPicLimit: '最大图片限制',
       maxAudioLimit: '最大音频限制',
       think: '深度思考开关',
+      thinkTips: '模型是否支持关闭深度思考过程',
     },
     supportFileType: {
       pic: '图片',
