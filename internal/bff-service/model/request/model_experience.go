@@ -17,6 +17,16 @@ func (o *ModelExperienceLlmRequest) Check() error {
 	return nil
 }
 
+type ModelExperienceLlmConnectRequest struct {
+	SessionId string `json:"sessionId" form:"sessionId" validate:"required"` // 会话 ID
+	CommonCheck
+}
+
+type ModelExperienceLlmCancelRequest struct {
+	SessionId string `json:"sessionId" form:"sessionId" validate:"required"` // 会话 ID
+	CommonCheck
+}
+
 type ModelExperienceDialogRequest struct {
 	ModelId      string      `json:"modelId" validate:"required"`   // 模型
 	SessionId    string      `json:"sessionId" validate:"required"` // 会话 ID

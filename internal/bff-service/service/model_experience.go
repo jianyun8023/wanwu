@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	sse_util "github.com/UnicomAI/wanwu/pkg/sse-util"
+	sse_connector "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector"
+	sse_model "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
+	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/store"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -23,13 +27,17 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/log"
 	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
 	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
-	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/gin-gonic/gin"
 )
 
-func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.ModelExperienceLlmRequest) {
-	detachedCtx := trace_util.DetachContext(ctx.Request.Context())
+func ModelExperienceLLM(ctx *gin.Context, userId, orgId, clientId string, req *request.ModelExperienceLlmRequest) {
+
+	// 创建 SSE Session 用于断点续传（仅当 clientId 存在时）
+	session := &sse_model.Session{ConversationID: req.SessionId, ClientID: clientId}
+	sseSessionManager := sse_connector.NewSSESession(ctx, session, store.NewMemoryStore())
+	bgCtx := sseSessionManager.GetBgContext()
+
 	// 敏感词检测 - 输入检测
 	matchDicts, err := BuildSensitiveDict(ctx, nil, false)
 	if err != nil {
@@ -50,7 +58,7 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 		return
 	}
 	// model info
-	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: req.ModelId})
+	modelInfo, err := model.GetModel(bgCtx, &model_service.GetModelReq{ModelId: req.ModelId})
 	if err != nil {
 		gin_util.Response(ctx, nil, err)
 		return
@@ -73,14 +81,14 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 			gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "model does not support vision"))
 			return
 		}
-		if err := validateModelExperienceImageFiles(ctx.Request.Context(), modelInfo, req.FileInfo); err != nil {
+		if err := validateModelExperienceImageFiles(bgCtx, modelInfo, req.FileInfo); err != nil {
 			gin_util.Response(ctx, nil, err)
 			return
 		}
 	}
 
 	// dialog records
-	recordsResp, err := model.GetModelExperienceDialogRecords(ctx, &model_service.GetModelExperienceDialogRecordsReq{
+	recordsResp, err := model.GetModelExperienceDialogRecords(bgCtx, &model_service.GetModelExperienceDialogRecordsReq{
 		UserId: userId,
 		OrgId:  orgId,
 		// 常规模型对话记录（非模型对比时），modelExperienceId与sessionId非空
@@ -107,7 +115,7 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 		}
 		messages = append(messages, mp_common.OpenAIReqMsg{
 			Role:    mp_common.MsgRole(record.Role),
-			Content: buildModelExperienceMultimodalContent(ctx.Request.Context(), content, fileInfo),
+			Content: buildModelExperienceMultimodalContent(bgCtx, content, fileInfo),
 		})
 	}
 	// 添加当前用户消息（支持多模态）
@@ -117,7 +125,7 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 	}
 	userMsg := mp_common.OpenAIReqMsg{
 		Role:    mp_common.MsgRoleUser,
-		Content: buildModelExperienceMultimodalContent(ctx.Request.Context(), req.Content, currentUserFileInfo),
+		Content: buildModelExperienceMultimodalContent(bgCtx, req.Content, currentUserFileInfo),
 	}
 
 	messages = append(messages, userMsg)
@@ -165,18 +173,18 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, err.Error()))
 		return
 	}
-	_, sseCh, err := iLLM.ChatCompletions(trace_util.DetachContext(ctx.Request.Context()), iLLMReq)
+	_, sseCh, err := iLLM.ChatCompletions(bgCtx, iLLMReq)
 	if err != nil {
 		go func() {
 			defer util.PrintPanicStack()
-			recordModelStatistic(detachedCtx, modelInfo, false, 0, 0, 0, 0, 0, false)
+			recordModelStatistic(bgCtx, modelInfo, false, 0, 0, 0, 0, 0, false)
 		}()
 		gin_util.Response(ctx, nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, err.Error()))
 		return
 	}
 
 	// save query
-	if _, err := model.SaveModelExperienceDialogRecord(ctx.Request.Context(), &model_service.SaveModelExperienceDialogRecordReq{
+	if _, err := model.SaveModelExperienceDialogRecord(bgCtx, &model_service.SaveModelExperienceDialogRecordReq{
 		UserId:            userId,
 		OrgId:             orgId,
 		ModelExperienceId: req.ModelExperienceId,
@@ -231,15 +239,20 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 			default:
 			}
 		}
-		recordModelStatistic(detachedCtx, modelInfo, true,
+		recordModelStatistic(bgCtx, modelInfo, true,
 			promptTokens, completionTokens, totalTokens, 0, firstTokenLatency, true)
 	}()
 
 	// 敏感词过滤（必须过滤，全局敏感词）
-	outputCh := ProcessSensitiveWords(ctx, rawCh, matchDicts, &modelExperienceSensitiveService{})
-
+	outputCh := ProcessSensitiveWordsWithCallback(ctx, rawCh, matchDicts, &modelExperienceSensitiveService{}, func(messageId string, sensitiveMsg string) {
+		//触发sse cancel
+		_ = sseSessionManager.Cancel()
+	})
 	// 从过滤后的 channel 写入 SSE 并累加 answer
 	for dataStr := range outputCh {
+
+		_ = sseSessionManager.Publish(&sse_model.Message{Data: dataStr}, modelExperienceSSECompactProcessor())
+
 		if _, err = ctx.Writer.Write([]byte(dataStr)); err != nil {
 			log.Errorf("model experience write sse err: %v", err)
 		}
@@ -263,24 +276,70 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId string, req *request.Mod
 			}
 		}
 	}
-	// save answer
-	if _, err := model.SaveModelExperienceDialogRecord(ctx.Request.Context(), &model_service.SaveModelExperienceDialogRecordReq{
-		UserId:            userId,
-		OrgId:             orgId,
-		ModelExperienceId: req.ModelExperienceId,
-		ModelId:           req.ModelId,
-		SessionId:         req.SessionId,
-		OriginalContent:   answer,
-		ReasoningContent:  reasonContent,
-		Role:              string(mp_common.MsgRoleAssistant),
-	}); err != nil {
-		log.Errorf("model experience save record err: %v", err)
-		return
-	}
+
+	defer func() {
+		// 如果没有累积任何内容，不保存
+		if answer == "" && reasonContent == "" {
+			return
+		}
+		saveCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if _, err := model.SaveModelExperienceDialogRecord(saveCtx, &model_service.SaveModelExperienceDialogRecordReq{
+			UserId:            userId,
+			OrgId:             orgId,
+			ModelExperienceId: req.ModelExperienceId,
+			ModelId:           req.ModelId,
+			SessionId:         req.SessionId,
+			OriginalContent:   answer,
+			ReasoningContent:  reasonContent,
+			Role:              string(mp_common.MsgRoleAssistant),
+		}); err != nil {
+			log.Errorf("model experience save record err: %v", err)
+		}
+
+		if err1 := sse_connector.Close(session); err1 != nil {
+			log.Errorf("[ModelExperience] %v session %v user %v org %v session finish err: %v", req.ModelExperienceId, req.SessionId, userId, orgId, err1)
+		}
+
+	}()
 
 	ctx.Set(gin_util.STATUS, http.StatusOK)
 	ctx.Set(gin_util.RESULT, answer)
 
+}
+
+func ModelExperienceLLMConnect(ctx *gin.Context, userId, orgId, clientId string, req request.ModelExperienceLlmConnectRequest) error {
+	chatCh, err := sse_connector.Connect[string](ctx, &sse_model.Session{ConversationID: req.SessionId, ClientID: clientId}, func(data *sse_model.Message) string {
+		return data.Data.(string)
+	})
+	if err != nil {
+		log.Infof("ModelExperienceLLMConnect session not found, sessionId: %s, treat as empty: %v", req.SessionId, err)
+		//gin_util.Response(ctx, nil, nil)
+		return nil
+	}
+	// 流式返回结果，模型体验的 SSE 数据已经是 data: {...}\n\n 格式，直接透传即可
+	_ = sse_util.NewSSEWriter(ctx, fmt.Sprintf("[ModelExperience] session %v user %v org %v recv", req.SessionId, userId, orgId), sse_util.DONE_MSG).
+		WriteStream(chatCh, nil, buildModelExperienceRespLineProcessor(), nil)
+	return nil
+}
+
+// buildModelExperienceRespLineProcessor 构造模型体验对话结果行处理器
+// 模型体验的 SSE 数据已经是 data: {...}\n\n 格式，直接透传即可
+func buildModelExperienceRespLineProcessor() func(sse_util.SSEWriterClient[string], string, interface{}) (string, bool, error) {
+	return func(c sse_util.SSEWriterClient[string], lineText string, params interface{}) (string, bool, error) {
+		if strings.HasPrefix(lineText, "error:") {
+			errorText := fmt.Sprintf("data: {\"code\": -1, \"message\": \"%s\"}\n\n", strings.TrimPrefix(lineText, "error:"))
+			return errorText, false, nil
+		}
+		if strings.HasPrefix(lineText, "data:") {
+			return lineText + "\n\n", false, nil
+		}
+		return "data:" + lineText + "\n\n", false, nil
+	}
+}
+
+func ModelExperienceLLMCancel(req request.ModelExperienceLlmCancelRequest, clientId string) error {
+	return sse_connector.Close(&sse_model.Session{ConversationID: req.SessionId, ClientID: clientId})
 }
 
 func SaveModelExperienceDialog(ctx *gin.Context, userId, orgId string, req *request.ModelExperienceDialogRequest) (*response.ModelExperienceDialog, error) {
@@ -589,4 +648,52 @@ func buildModelExperienceMultimodalContent(ctx context.Context, content string, 
 		return content
 	}
 	return contents
+}
+
+// modelExperienceSSECompactProcessor 构造 SSE 消息合并处理器
+// 用于合并 LLM 流式响应的 delta 消息，减少内存存储
+func modelExperienceSSECompactProcessor() func(currentMsg *sse_model.Message, lastMsg *sse_model.Message) (bool, *sse_model.Message) {
+	return func(currentMsg *sse_model.Message, lastMsg *sse_model.Message) (bool, *sse_model.Message) {
+		// 无效消息（如SSE空行）不存储，避免阻断合并链
+		currentMsgDataTrim := strings.TrimSpace(currentMsg.Data.(string))
+		if currentMsgDataTrim == "" {
+			if lastMsg != nil {
+				return false, lastMsg // currentMsg不入缓存，lastMsg覆盖最新数据
+			}
+			return true, currentMsg
+		}
+		// 判断是否需要合并
+		noneProcess, lastMsgData, currentMsgData := modelExperienceNoneCompactMessage(currentMsg, lastMsg)
+		if noneProcess {
+			return true, currentMsg
+		}
+		//开始合并
+		compact := lastMsgData.Compact(currentMsgData)
+		if compact != nil { //合并成功
+			resp, err := response.MarshalModelExperienceResp(compact)
+			if err != nil {
+				log.Errorf("marshal agent resp error %v", err)
+				return true, currentMsg
+			}
+			lastMsg.Data = resp
+			return false, lastMsg
+		}
+		return true, currentMsg
+	}
+}
+
+// modelExperienceNoneCompactMessage 判断是否需要合并
+func modelExperienceNoneCompactMessage(currentMsg *sse_model.Message, lastMsg *sse_model.Message) (bool, *response.ModelExperienceResp, *response.ModelExperienceResp) {
+
+	lastMsgData, err1 := response.UnmarshalModelExperienceResp(lastMsg.Data.(string))
+	if err1 != nil {
+		log.Errorf("unmarshal modelExperience resp %s error %v", lastMsg.Data.(string), err1)
+		return true, nil, nil
+	}
+	currentMsgData, err2 := response.UnmarshalModelExperienceResp(currentMsg.Data.(string))
+	if err2 != nil {
+		log.Errorf("unmarshal modelExperience resp %s error %v", currentMsg.Data.(string), err2)
+		return true, nil, nil
+	}
+	return false, lastMsgData, currentMsgData
 }

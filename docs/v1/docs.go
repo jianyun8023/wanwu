@@ -13800,7 +13800,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int32",
                         "description": "模型体验对话ID",
                         "name": "modelExperienceId",
                         "in": "query",
@@ -14734,6 +14733,84 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/request.ImportOrUpdateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/model/experience/llm/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "模型体验流式问答手动停止",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model.experience"
+                ],
+                "summary": "模型体验流式问答手动停止",
+                "parameters": [
+                    {
+                        "description": "模型体验流式问答手动停止参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ModelExperienceLlmCancelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/model/experience/llm/connect": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "模型体验流式问答断开后重连",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model.experience"
+                ],
+                "summary": "模型体验流式问答断开后重连",
+                "parameters": [
+                    {
+                        "description": "模型体验流式重连",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ModelExperienceLlmConnectRequest"
                         }
                     }
                 ],
@@ -25831,6 +25908,30 @@ const docTemplate = `{
                 },
                 "title": {
                     "description": "对话标题",
+                    "type": "string"
+                }
+            }
+        },
+        "request.ModelExperienceLlmCancelRequest": {
+            "type": "object",
+            "required": [
+                "sessionId"
+            ],
+            "properties": {
+                "sessionId": {
+                    "description": "会话 ID",
+                    "type": "string"
+                }
+            }
+        },
+        "request.ModelExperienceLlmConnectRequest": {
+            "type": "object",
+            "required": [
+                "sessionId"
+            ],
+            "properties": {
+                "sessionId": {
+                    "description": "会话 ID",
                     "type": "string"
                 }
             }
