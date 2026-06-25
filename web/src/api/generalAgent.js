@@ -589,6 +589,67 @@ export const getGeneralAgentSkillPreviewConversationDetail = params => {
 };
 
 /**
+ * 手动中断 Skill 对话流
+ * 左侧/中间编辑主会话传 threadId；右侧预览会话传 previewId，二者按场景二选一。
+ * @param {string} threadId - 编辑主会话 ID（主会话停止时必填）
+ * @param {string} previewId - 右侧预览会话 ID（预览停止时必填）
+ */
+export const cancelGeneralAgentSkillConversation = data => {
+  return service({
+    url: `${BASE_URL}/skill/conversation/cancel`,
+    method: 'post',
+    data,
+  });
+};
+
+/**
+ * 重连 Skill 对话流（断线保持）
+ * 连接中断后服务端仍继续运行，通过本接口重连恢复实时流。
+ * 左侧/中间编辑主会话传 threadId；右侧预览会话传 previewId，二者按场景二选一。
+ * @param {string} threadId - 编辑主会话 ID（主会话重连时必填）
+ * @param {string} previewId - 右侧预览会话 ID（预览重连时必填）
+ * @param {function} onMessage - 消息回调
+ * @param {function} onError - 错误回调
+ * @param {function} onOpen - 连接建立回调
+ * @param {AbortSignal} signal - 取消信号
+ * @param {number} timeout - 超时时间（毫秒），默认 5 分钟
+ */
+export const connectGeneralAgentSkillConversation = async ({
+  previewId,
+  threadId,
+  onMessage,
+  onError,
+  onOpen,
+  signal,
+  timeout,
+}) => {
+  return streamSSE({
+    url: `${location.origin}${BASE_URL}/skill/conversation/connect`,
+    body: { previewId, threadId },
+    onMessage,
+    onError,
+    onOpen,
+    signal,
+    timeout,
+  });
+};
+
+/**
+ * 查询 Skill 会话是否有运行中的对话（断线保持）
+ * 左侧/中间编辑主会话传 threadId；右侧预览会话传 previewId，二者按场景二选一。
+ * @param {string} threadId - 编辑主会话 ID（查询主会话 pending 时必填）
+ * @param {string} previewId - 右侧预览会话 ID（查询预览 pending 时必填）
+ * @returns {Promise} data.hasPendingConversation 为 true 时需调用 connectGeneralAgentSkillConversation 重连
+ */
+export const getGeneralAgentSkillConversationPending = params => {
+  return service({
+    url: `${BASE_URL}/skill/conversation/pending`,
+    method: 'get',
+    params,
+  });
+};
+
+/**
  * 一键转化为 Skill 专用对话
  * @param {Object} data - 请求数据
  * @param {string} data.id - 待转化资源 ID（必填）

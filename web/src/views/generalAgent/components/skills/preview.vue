@@ -145,7 +145,10 @@ import MessageItem from '../MessageItem.vue';
 
 import GAFileUpload from '../GAFileUpload.vue';
 import {
+  cancelGeneralAgentSkillConversation,
   chatGeneralAgentSkillConversation,
+  connectGeneralAgentSkillConversation,
+  getGeneralAgentSkillConversationPending,
   getGeneralAgentSkillPreviewConversationDetail,
 } from '@/api/generalAgent';
 
@@ -155,7 +158,10 @@ import messageManager from '../../mixins/messageManager';
 import fileManager from '../../mixins/fileManager';
 import scrollController from '../../mixins/scrollController';
 import skillManager from '../../mixins/skillManager';
-import { aggregateEventsToMessages } from '../../utils/message-aggregator';
+import {
+  aggregateEventsToMessages,
+  aggregateInputMessagesToUserMessages,
+} from '../../utils/message-aggregator';
 
 export default {
   name: 'PreviewChat',
@@ -255,6 +261,117 @@ export default {
       } finally {
         this.isLoadingHistory = false;
       }
+
+      await this.checkAndResumePending(previewId);
+    },
+
+    // 添加pending态预览会话的输入消息
+    appendPendingInputMessages(threadId, inputMessages) {
+      const pendingMessages =
+        aggregateInputMessagesToUserMessages(inputMessages);
+      if (!pendingMessages.length) return;
+
+      const messages = this.ensureMessageList(threadId);
+      const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
+      const existingKeys = new Set(
+        messages.map(msg => this.getPendingMessageDedupKey(msg)),
+      );
+
+      pendingMessages.forEach(message => {
+        const key = this.getPendingMessageDedupKey(message);
+        if (
+          (message.id && existingIds.has(message.id)) ||
+          existingKeys.has(key)
+        ) {
+          return;
+        }
+        messages.push(message);
+        if (message.id) existingIds.add(message.id);
+        existingKeys.add(key);
+      });
+    },
+    // 获取pending态预览会话的输入消息的去重key
+    getPendingMessageDedupKey(message) {
+      const files = (message.files || []).map(file => ({
+        fileName: file.fileName || file.name || '',
+        url: file.url || file.displayUrl || '',
+      }));
+      return JSON.stringify({
+        role: message.role || '',
+        content: message.content || '',
+        files,
+      });
+    },
+    // Skill 预览会话断线恢复：右侧预览只用 previewId 区分。
+    async checkAndResumePending(previewId) {
+      if (!previewId || this.currentThreadId !== previewId) return;
+
+      const streaming = this.streamingMap[previewId];
+      if (streaming && streaming.isStreaming) return;
+
+      let hasPending = false;
+      let pendingMessages = [];
+      try {
+        const res = await getGeneralAgentSkillConversationPending({
+          previewId,
+        });
+        hasPending =
+          res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
+      } catch (error) {
+        console.error(
+          'check skill preview pending conversation failed:',
+          error,
+        );
+        return;
+      }
+
+      if (!hasPending) return;
+
+      this.appendPendingInputMessages(previewId, pendingMessages);
+
+      const { abortController, assistantMessage } =
+        this.initStreamState(previewId);
+      this.addAssistantMessage(previewId, assistantMessage);
+      this.currentStage = 'understanding';
+      this.resetScrollState();
+
+      const parser = new SSEEventParser();
+      let isUserAborted = false;
+
+      try {
+        await connectGeneralAgentSkillConversation({
+          previewId,
+          onMessage: event => {
+            this.handleSSEEvent(event, assistantMessage, parser, previewId);
+          },
+          onError: error => {
+            console.error('Skill preview reconnect SSE Error:', error);
+            this.$message.error(
+              this.$t('generalAgent.error.chatRequestFailed'),
+            );
+            this.cleanupStreamState(previewId);
+            assistantMessage.isStreaming = false;
+            this.setFragmentsNotStreaming(assistantMessage.fragments);
+          },
+          signal: abortController.signal,
+        });
+      } catch (error) {
+        console.error('Skill preview reconnect stream error:', error);
+        isUserAborted = error.name === 'AbortError';
+        if (!isUserAborted) {
+          this.$message.error(
+            this.$t('generalAgent.error.sendMessageFailed') +
+              (error.message || error),
+          );
+        }
+      } finally {
+        this.finalizeStream(previewId, assistantMessage, isUserAborted);
+      }
+
+      return true;
     },
 
     handleKeyDown(e) {
@@ -377,7 +494,18 @@ export default {
     },
 
     handleStopClick() {
-      this.stopStreaming(this.currentThreadId);
+      this.stopPreviewConversation(this.currentThreadId);
+    },
+
+    async stopPreviewConversation(previewId) {
+      if (previewId) {
+        try {
+          await cancelGeneralAgentSkillConversation({ previewId });
+        } catch (error) {
+          console.error('cancel skill preview conversation failed:', error);
+        }
+      }
+      this.stopStreaming(previewId);
     },
 
     setupInputResizeObserver() {

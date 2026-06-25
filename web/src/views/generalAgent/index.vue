@@ -450,10 +450,12 @@ import ModelSelect from '@/components/modelSelect.vue';
 import GAFileUpload from './components/GAFileUpload.vue';
 import {
   cancelGeneralAgentConversation,
+  cancelGeneralAgentSkillConversation,
   chatGeneralAgentConversation,
   chatGeneralAgentSkillConversation,
   checkGeneralAgentConversationConfig,
   connectGeneralAgentConversation,
+  connectGeneralAgentSkillConversation,
   createGeneralAgentConversation,
   createGeneralAgentSkillConversation,
   deleteGeneralAgentConversation,
@@ -462,6 +464,7 @@ import {
   getGeneralAgentConversationDetail,
   getGeneralAgentConversationList,
   getGeneralAgentConversationPending,
+  getGeneralAgentSkillConversationPending,
   getGeneralAgentWorkspace,
   importGeneralAgentSkillConversation,
   previewGeneralAgentWorkspace,
@@ -474,7 +477,10 @@ import { avatarSrc, resDownloadFile } from '@/utils/util';
 import { mapActions, mapGetters } from 'vuex';
 import { SSEEventParser } from './utils/sse-parser';
 // 引入工具函数
-import { aggregateEventsToMessages } from './utils/message-aggregator';
+import {
+  aggregateEventsToMessages,
+  aggregateInputMessagesToUserMessages,
+} from './utils/message-aggregator';
 // 引入 Mixins
 import streamStateManager from './mixins/streamStateManager';
 import messageManager from './mixins/messageManager';
@@ -1345,6 +1351,8 @@ export default {
         // detail 加载完成后，检查是否有运行中的对话需要重连 connect
         if (!this.isSkillType) {
           await this.checkAndResumePending(this.currentThreadId);
+        } else {
+          await this.checkAndResumeSkillPending(this.currentThreadId);
         }
       } finally {
         this.isLoadingHistory = false;
@@ -1352,6 +1360,43 @@ export default {
     },
 
     // 检查会话是否有运行中的对话，有则走 connect 重连恢复实时流。
+    appendPendingInputMessages(threadId, inputMessages) {
+      const pendingMessages =
+        aggregateInputMessagesToUserMessages(inputMessages);
+      if (!pendingMessages.length) return;
+
+      const messages = this.ensureMessageList(threadId);
+      const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
+      const existingKeys = new Set(
+        messages.map(msg => this.getPendingMessageDedupKey(msg)),
+      );
+
+      pendingMessages.forEach(message => {
+        const key = this.getPendingMessageDedupKey(message);
+        if (
+          (message.id && existingIds.has(message.id)) ||
+          existingKeys.has(key)
+        ) {
+          return;
+        }
+        messages.push(message);
+        if (message.id) existingIds.add(message.id);
+        existingKeys.add(key);
+      });
+    },
+
+    getPendingMessageDedupKey(message) {
+      const files = (message.files || []).map(file => ({
+        fileName: file.fileName || file.name || '',
+        url: file.url || file.displayUrl || '',
+      }));
+      return JSON.stringify({
+        role: message.role || '',
+        content: message.content || '',
+        files,
+      });
+    },
+
     async checkAndResumePending(threadId) {
       if (!threadId) return;
 
@@ -1360,16 +1405,22 @@ export default {
       if (streaming && streaming.isStreaming) return;
 
       let hasPending = false;
+      let pendingMessages = [];
       try {
         const res = await getGeneralAgentConversationPending({ threadId });
         hasPending =
           res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
       } catch (error) {
         console.error('check pending conversation failed:', error);
         return;
       }
 
       if (!hasPending) return;
+
+      this.appendPendingInputMessages(threadId, pendingMessages);
 
       // 初始化流式状态，承载进行中那一轮的助手消息
       const { abortController, assistantMessage } =
@@ -1402,6 +1453,75 @@ export default {
         });
       } catch (error) {
         console.error('Reconnect stream error:', error);
+        isUserAborted = error.name === 'AbortError';
+        if (!isUserAborted && this.currentThreadId === threadId) {
+          this.$message.error(
+            this.$t('generalAgent.error.sendMessageFailed') +
+              (error.message || error),
+          );
+        }
+      } finally {
+        this.finalizeStream(threadId, assistantMessage, isUserAborted);
+      }
+
+      return true;
+    },
+
+    // Skill 主会话断线恢复：左侧/中间编辑会话只用 threadId 区分。
+    async checkAndResumeSkillPending(threadId) {
+      if (!threadId) return;
+
+      const streaming = this.streamingMap[threadId];
+      if (streaming && streaming.isStreaming) return;
+
+      let hasPending = false;
+      let pendingMessages = [];
+      try {
+        const res = await getGeneralAgentSkillConversationPending({ threadId });
+        hasPending =
+          res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
+      } catch (error) {
+        console.error('check skill pending conversation failed:', error);
+        return;
+      }
+
+      if (!hasPending) return;
+
+      this.appendPendingInputMessages(threadId, pendingMessages);
+
+      const { abortController, assistantMessage } =
+        this.initStreamState(threadId);
+      this.addAssistantMessage(threadId, assistantMessage);
+      this.currentStage = 'understanding';
+      this.resetScrollState();
+
+      const parser = new SSEEventParser();
+      let isUserAborted = false;
+
+      try {
+        await connectGeneralAgentSkillConversation({
+          threadId,
+          onMessage: event => {
+            this.handleSSEEvent(event, assistantMessage, parser, threadId);
+          },
+          onError: error => {
+            console.error('Skill reconnect SSE Error:', error);
+            if (this.currentThreadId === threadId) {
+              this.$message.error(
+                this.$t('generalAgent.error.chatRequestFailed'),
+              );
+            }
+            this.cleanupStreamState(threadId);
+            assistantMessage.isStreaming = false;
+            this.setFragmentsNotStreaming(assistantMessage.fragments);
+          },
+          signal: abortController.signal,
+        });
+      } catch (error) {
+        console.error('Skill reconnect stream error:', error);
         isUserAborted = error.name === 'AbortError';
         if (!isUserAborted && this.currentThreadId === threadId) {
           this.$message.error(
@@ -1862,7 +1982,11 @@ export default {
     async stopGeneralConversation(threadId) {
       if (threadId) {
         try {
-          await cancelGeneralAgentConversation({ threadId });
+          if (this.isSkillType) {
+            await cancelGeneralAgentSkillConversation({ threadId });
+          } else {
+            await cancelGeneralAgentConversation({ threadId });
+          }
         } catch (error) {
           // 取消失败不阻塞本地清理
           console.error('cancel conversation failed:', error);
