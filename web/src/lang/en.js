@@ -142,6 +142,9 @@ export default {
       typeFileTip1: '按照插件要求，支持',
       imgUploading: '图片上传中',
       clickUploadImg: '点击上传图片',
+      uploadLimit: '最多上传{limit}个文件',
+      uploadLimitTip: '最多上传{limit}个文件，支持图片、文档混合上传',
+      continueAddFile: '可继续添加文件',
     },
     datePicker: {
       placeholder: '选择日期时间',
@@ -1717,6 +1720,7 @@ export default {
       publishType: '私密发布为应用：仅自己可见',
       publishType1: '公开发布为应用：组织内可见',
       publishType2: '公开发布为应用：全局可见',
+      hideKnowledge: '隐藏知识库出处',
       systemPrompt: '系统提示词',
       submitToPrompt: '提交至提示词',
       promptTips:
