@@ -583,6 +583,7 @@ export function getFileType(fileName) {
 export function isImageFile(file) {
   const imageTypes = [
     'image/jpeg',
+    'image/jpg',
     'image/png',
     'image/gif',
     'image/webp',
@@ -590,12 +591,13 @@ export function isImageFile(file) {
   ];
   const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
 
-  if (file.type && imageTypes.includes(file.type)) {
+  if (file.type && imageTypes.includes(file.type.toLowerCase())) {
     return true;
   }
 
-  if (file.name) {
-    const ext = file.name.split('.').pop().toLowerCase();
+  const fileName = file.name || file.fileName || '';
+  if (fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
     return imageExts.includes(ext);
   }
 
