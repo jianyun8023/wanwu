@@ -1960,6 +1960,10 @@ export default {
   overflow: hidden;
   padding: 16px;
   box-sizing: border-box;
+
+  ::v-deep .model-select .el-input__inner {
+    border-radius: 12px;
+  }
 }
 
 .agent-main-content {
