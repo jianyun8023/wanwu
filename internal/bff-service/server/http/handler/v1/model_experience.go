@@ -44,7 +44,7 @@ func ModelExperienceLLMConnect(ctx *gin.Context) {
 		return
 	}
 	if err := service.ModelExperienceLLMConnect(ctx, userId, orgId, clientId, req); err != nil {
-		gin_util.Response(ctx, nil, err)
+		gin_util.Response(ctx, nil, nil)
 	}
 }
 

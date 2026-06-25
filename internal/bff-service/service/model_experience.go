@@ -8,6 +8,7 @@ import (
 	sse_connector "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector"
 	sse_model "github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/model"
 	"github.com/UnicomAI/wanwu/pkg/sse-util/sse-connector/store"
+	trace_util "github.com/UnicomAI/wanwu/pkg/trace-util"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -35,7 +36,7 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId, clientId string, req *r
 
 	// 创建 SSE Session 用于断点续传（仅当 clientId 存在时）
 	session := &sse_model.Session{ConversationID: req.SessionId, ClientID: clientId}
-	sseSessionManager := sse_connector.NewSSESession(ctx, session, store.NewMemoryStore())
+	sseSessionManager := sse_connector.NewSSESession(ctx.Request.Context(), session, store.NewMemoryStore())
 	bgCtx := sseSessionManager.GetBgContext()
 
 	// 敏感词检测 - 输入检测
@@ -282,9 +283,7 @@ func ModelExperienceLLM(ctx *gin.Context, userId, orgId, clientId string, req *r
 		if answer == "" && reasonContent == "" {
 			return
 		}
-		saveCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := model.SaveModelExperienceDialogRecord(saveCtx, &model_service.SaveModelExperienceDialogRecordReq{
+		if _, err := model.SaveModelExperienceDialogRecord(trace_util.DetachContext(bgCtx), &model_service.SaveModelExperienceDialogRecordReq{
 			UserId:            userId,
 			OrgId:             orgId,
 			ModelExperienceId: req.ModelExperienceId,
@@ -314,8 +313,7 @@ func ModelExperienceLLMConnect(ctx *gin.Context, userId, orgId, clientId string,
 	})
 	if err != nil {
 		log.Infof("ModelExperienceLLMConnect session not found, sessionId: %s, treat as empty: %v", req.SessionId, err)
-		//gin_util.Response(ctx, nil, nil)
-		return nil
+		return err
 	}
 	// 流式返回结果，模型体验的 SSE 数据已经是 data: {...}\n\n 格式，直接透传即可
 	_ = sse_util.NewSSEWriter(ctx, fmt.Sprintf("[ModelExperience] session %v user %v org %v recv", req.SessionId, userId, orgId), sse_util.DONE_MSG).
