@@ -3811,6 +3811,22 @@ definitions:
     - modelId
     - sessionId
     type: object
+  request.ModelExperienceLlmCancelRequest:
+    properties:
+      sessionId:
+        description: 会话 ID
+        type: string
+    required:
+    - sessionId
+    type: object
+  request.ModelExperienceLlmConnectRequest:
+    properties:
+      sessionId:
+        description: 会话 ID
+        type: string
+    required:
+    - sessionId
+    type: object
   request.ModelExperienceLlmRequest:
     properties:
       content:
@@ -17845,7 +17861,6 @@ paths:
       description: 获取模型体验对话记录列表
       parameters:
       - description: 模型体验对话ID
-        format: int32
         in: query
         name: modelExperienceId
         required: true
@@ -17921,6 +17936,54 @@ paths:
       security:
       - JWT: []
       summary: 模型体验
+      tags:
+      - model.experience
+  /model/experience/llm/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 模型体验流式问答手动停止
+      parameters:
+      - description: 模型体验流式问答手动停止参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.ModelExperienceLlmCancelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 模型体验流式问答手动停止
+      tags:
+      - model.experience
+  /model/experience/llm/connect:
+    post:
+      consumes:
+      - application/json
+      description: 模型体验流式问答断开后重连
+      parameters:
+      - description: 模型体验流式重连
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.ModelExperienceLlmConnectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 模型体验流式问答断开后重连
       tags:
       - model.experience
   /model/import/providers:

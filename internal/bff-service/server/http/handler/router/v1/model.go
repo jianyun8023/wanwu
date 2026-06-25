@@ -21,6 +21,8 @@ func registerModel(apiV1 *gin.RouterGroup) {
 	mid.Sub("model.model_management").Reg(apiV1, "/model/import/providers", http.MethodGet, v1.ListImportProviders, "模型导入-获取供应商列表")
 
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/llm", http.MethodPost, v1.ModelExperienceLLM, "LLM模型体验", middleware.AuthModelByModelId([]string{"modelId"}))
+	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/llm/connect", http.MethodPost, v1.ModelExperienceLLMConnect, "模型体验流式问答断开后重连")
+	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/llm/cancel", http.MethodPost, v1.ModelExperienceLLMCancel, "模型体验流式问答手动停止")
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialog", http.MethodPost, v1.ModelExperienceSaveDialog, "保存模型体验对话", middleware.AuthModelByModelId([]string{"modelId"}))
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialogs", http.MethodGet, v1.ModelExperienceListDialogs, "获取模型体验对话列表")
 	mid.Sub("model.model_management").Reg(apiV1, "/model/experience/dialog", http.MethodDelete, v1.ModelExperienceDeleteDialog, "删除模型体验对话")
