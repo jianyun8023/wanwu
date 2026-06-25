@@ -1367,36 +1367,13 @@ export default {
 
       const messages = this.ensureMessageList(threadId);
       const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
-      const existingKeys = new Set(
-        messages.map(msg => this.getPendingMessageDedupKey(msg)),
-      );
 
       pendingMessages.forEach(message => {
-        const key = this.getPendingMessageDedupKey(message);
-        if (
-          (message.id && existingIds.has(message.id)) ||
-          existingKeys.has(key)
-        ) {
-          return;
-        }
+        if (existingIds.has(message.id)) return;
         messages.push(message);
-        if (message.id) existingIds.add(message.id);
-        existingKeys.add(key);
+        existingIds.add(message.id);
       });
     },
-
-    getPendingMessageDedupKey(message) {
-      const files = (message.files || []).map(file => ({
-        fileName: file.fileName || file.name || '',
-        url: file.url || file.displayUrl || '',
-      }));
-      return JSON.stringify({
-        role: message.role || '',
-        content: message.content || '',
-        files,
-      });
-    },
-
     async checkAndResumePending(threadId) {
       if (!threadId) return;
 

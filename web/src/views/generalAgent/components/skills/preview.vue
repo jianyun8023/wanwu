@@ -273,36 +273,13 @@ export default {
 
       const messages = this.ensureMessageList(threadId);
       const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
-      const existingKeys = new Set(
-        messages.map(msg => this.getPendingMessageDedupKey(msg)),
-      );
 
       pendingMessages.forEach(message => {
-        const key = this.getPendingMessageDedupKey(message);
-        if (
-          (message.id && existingIds.has(message.id)) ||
-          existingKeys.has(key)
-        ) {
-          return;
-        }
+        if (existingIds.has(message.id)) return;
         messages.push(message);
-        if (message.id) existingIds.add(message.id);
-        existingKeys.add(key);
+        existingIds.add(message.id);
       });
     },
-    // 获取pending态预览会话的输入消息的去重key
-    getPendingMessageDedupKey(message) {
-      const files = (message.files || []).map(file => ({
-        fileName: file.fileName || file.name || '',
-        url: file.url || file.displayUrl || '',
-      }));
-      return JSON.stringify({
-        role: message.role || '',
-        content: message.content || '',
-        files,
-      });
-    },
-    // Skill 预览会话断线恢复：右侧预览只用 previewId 区分。
     async checkAndResumePending(previewId) {
       if (!previewId || this.currentThreadId !== previewId) return;
 
