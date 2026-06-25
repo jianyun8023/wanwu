@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/cloudwego/eino/adk"
@@ -125,4 +126,25 @@ func IsFinalStopMessage(m *schema.Message) bool {
 		return false
 	}
 	return m.ResponseMeta.FinishReason == FinishReasonStop
+}
+
+// ValidateToolCallArguments 校验 msg 中所有 tool_calls 的 arguments 是否为合法 JSON。
+// 空串视为不合法（部分模型在截断时输出空 arguments）。
+// 返回首个不合法的 tool_call 描述，全合法返回 nil。
+func ValidateToolCallArguments(msg *schema.Message) error {
+	for _, tc := range msg.ToolCalls {
+		arg := tc.Function.Arguments
+		if arg == "" || !json.Valid([]byte(arg)) {
+			name := tc.Function.Name
+			if name == "" {
+				name = "(unnamed)"
+			}
+			id := tc.ID
+			if id == "" {
+				id = "(no-id)"
+			}
+			return fmt.Errorf("tool call %s(%s) arguments invalid: %s", name, id, arg)
+		}
+	}
+	return nil
 }

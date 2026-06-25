@@ -150,6 +150,17 @@ func forwardMessageEvent(event *adk.AgentEvent, w SSEWriter, eventNum int) (isFi
 
 	NormalizeFinishReason(msg)
 
+	// 校验 tool_calls arguments 合法性：finish_reason == tool_calls 时，若 arguments 为空或非法 JSON，
+	// 说明模型输出被截断或协议偏差，直接走 writeFinal(err) 输出 error stop 帧，
+	// 避免下游 tools_node 尝试 unmarshal 损坏参数后报更难追踪的错误。
+	if msg.ResponseMeta != nil && msg.ResponseMeta.FinishReason == FinishReasonToolCalls && len(msg.ToolCalls) > 0 {
+		if validateErr := ValidateToolCallArguments(msg); validateErr != nil {
+			log.Printf("[Events] event #%d invalid tool_calls arguments: %v", eventNum, validateErr)
+			w.WriteAgentEvent(buildDiagnosticEvent(event, validateErr))
+			return false, validateErr
+		}
+	}
+
 	var finish string
 	if msg.ResponseMeta != nil {
 		finish = msg.ResponseMeta.FinishReason
