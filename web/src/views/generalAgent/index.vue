@@ -236,7 +236,7 @@
               <MentionInput
                 ref="mentionInput"
                 v-model="inputMessage"
-                :disabled="isStreaming || previewIsStreaming"
+                :disabled="isStreaming || currentPreviewIsStreaming"
                 :isDIP="selectedMode?.value === 'DIP Agent'"
                 :placeholder="inputPlaceholder"
                 :before-enter-submit="beforeEnterSubmit"
@@ -590,7 +590,10 @@ export default {
       const hasModel = !!this.selectedModel;
       // 检查当前会话或预览面板是否正在流式传输
       return (
-        hasContent && hasModel && !this.isStreaming && !this.previewIsStreaming
+        hasContent &&
+        hasModel &&
+        !this.isStreaming &&
+        !this.currentPreviewIsStreaming
       );
     },
     isEmptyConversation() {
@@ -624,6 +627,11 @@ export default {
         this.isSkillType &&
         this.selectedMode?.value === MAIN_CHAT_MODES.SKILL_MODE
       );
+    },
+    // 当前会话的skill预览是否正在流式传输
+    currentPreviewIsStreaming() {
+      if (!this.previewId) return false;
+      return this.previewStreamingIds.includes(this.previewId);
     },
     // 控制组件是否挂载：会话身份存在时才挂载，切换会话/previewId 时配合 key 卸载重建以重置 SSE。
     shouldMountSkillTabs() {
@@ -1535,7 +1543,7 @@ export default {
     async beforeEnterSubmit() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return false;
-      if (this.previewIsStreaming) return false;
+      if (this.currentPreviewIsStreaming) return false;
 
       const currentStreaming = this.streamingMap[this.currentThreadId];
       if (currentStreaming && currentStreaming.isStreaming) return false;
@@ -1565,7 +1573,7 @@ export default {
       const skipUnsavedCheck = options?.skipUnsavedCheck === true;
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
 
       // 检查当前会话是否正在流式传输
       const currentStreaming = this.streamingMap[this.currentThreadId];
@@ -1629,7 +1637,7 @@ export default {
         }
       }
 
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
       if (!skipUnsavedCheck) {
         const canSendAfterUnsavedCheck =
           await this.confirmSkillUnsavedBeforeSend();
@@ -1687,7 +1695,7 @@ export default {
     },
 
     async startStreaming(userMessage) {
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
 
       if (!this.currentThreadId) {
         this.$message.error(
@@ -1881,7 +1889,7 @@ export default {
 
     // 重新生成 - 找到上一条用户消息并重新发送
     handleRegenerate(message) {
-      if (this.isStreaming || this.previewIsStreaming) return;
+      if (this.isStreaming || this.currentPreviewIsStreaming) return;
 
       // 找到这条助手消息的索引
       const messageIndex = this.messageList.findIndex(m => m.id === message.id);

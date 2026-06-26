@@ -83,7 +83,7 @@
           type="textarea"
           :autosize="{ minRows: 4, maxRows: 6 }"
           :placeholder="inputPlaceholder"
-          :disabled="isStreaming || mainIsStreaming"
+          :disabled="isStreaming || currentMainIsStreaming"
           resize="none"
           class="chat-textarea"
           @keydown.enter.native="handleKeyDown"
@@ -198,10 +198,15 @@ export default {
       const hasContent =
         this.inputMessage.trim() || this.uploadedFiles.length > 0;
       // 检查当前会话或预览面板是否正在流式传输
-      return hasContent && !this.isStreaming && !this.mainIsStreaming;
+      return hasContent && !this.isStreaming && !this.currentMainIsStreaming;
     },
     inputPlaceholder() {
       return this.$t('generalAgent.skill.preview.placeholder');
+    },
+    currentMainIsStreaming() {
+      const { threadId } = this.skillPreviewParams || {};
+      if (!threadId) return false;
+      return this.mainStreamingThreadIds.includes(threadId);
     },
   },
   mounted() {
@@ -360,7 +365,7 @@ export default {
     async sendMessage() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
-      if (this.mainIsStreaming) return;
+      if (this.currentMainIsStreaming) return;
       if (this.isStreaming) return;
 
       if (!this.currentThreadId) {
@@ -386,7 +391,7 @@ export default {
     },
 
     async startStreaming(userMessage) {
-      if (this.mainIsStreaming) return;
+      if (this.currentMainIsStreaming) return;
 
       if (!this.currentThreadId) {
         this.$message.error(
@@ -451,7 +456,7 @@ export default {
     },
 
     handleRegenerate(message) {
-      if (this.isStreaming || this.mainIsStreaming) return;
+      if (this.isStreaming || this.currentMainIsStreaming) return;
 
       const messageIndex = this.messageList.findIndex(m => m.id === message.id);
       if (messageIndex <= 0) return;

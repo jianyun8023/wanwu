@@ -36,15 +36,18 @@ export default {
     streamingMap: {
       handler(newVal) {
         // 检查是否有任何会话在流式传输
-        const anyStreaming = Object.values(newVal).some(
-          state => state?.isStreaming === true,
-        );
+        const streamingIds = Object.entries(newVal)
+          .filter(([, state]) => state?.isStreaming === true)
+          .map(([id]) => id);
+        const anyStreaming = streamingIds.length > 0;
 
-        // 直接设置 previewIsStreaming 或 mainIsStreaming
+        // Sync aggregate flags and the concrete streaming ids.
         if (this.$options.name === 'GeneralAgent') {
           this.mainIsStreaming = anyStreaming;
+          this.mainStreamingThreadIds = streamingIds;
         } else if (this.$options.name === 'PreviewChat') {
           this.previewIsStreaming = anyStreaming;
+          this.previewStreamingIds = streamingIds;
         }
       },
       deep: true,
