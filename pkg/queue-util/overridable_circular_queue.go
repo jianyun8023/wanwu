@@ -90,6 +90,13 @@ func (q *OverridableCircularQueue) AllValue() string {
 	return builder.String()
 }
 
+// Clear 清空队列
+func (q *OverridableCircularQueue) Clear() {
+	q.head = 0
+	q.tail = -1
+	q.size = 0
+}
+
 // Print 打印队列状态（调试用）
 func (q *OverridableCircularQueue) Print() {
 	fmt.Print("Queue [")

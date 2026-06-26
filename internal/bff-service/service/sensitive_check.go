@@ -2,10 +2,10 @@ package service
 
 import (
 	"fmt"
+	"github.com/UnicomAI/wanwu/pkg/queue-util"
 
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
 
-	queue_util "github.com/UnicomAI/wanwu/internal/bff-service/pkg/queue-util"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
