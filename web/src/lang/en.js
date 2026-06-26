@@ -142,6 +142,9 @@ export default {
       typeFileTip1: '按照插件要求，支持',
       imgUploading: '图片上传中',
       clickUploadImg: '点击上传图片',
+      uploadLimit: '最多上传{limit}个文件',
+      uploadLimitTip: '最多上传{limit}个文件，支持图片、文档混合上传',
+      continueAddFile: '可继续添加文件',
     },
     datePicker: {
       placeholder: '选择日期时间',
@@ -563,7 +566,7 @@ export default {
       imgUpload: '点击图标上传，可上传 .png、.jpg、.jpeg文件',
       bgSizeLimit: '背景图大小不能超过1MB',
       logoSizeLimit: '图标大小不能超过100KB',
-      labelIcon: '显示在浏览器标签页上的图标',
+      labelIcon: '显示在浏览器标签页及侧边导航栏收缩后的图标',
       logo: '显示在平台左上方的LOGO',
       oneColor: '单色',
       linearColor: '渐变',
@@ -640,6 +643,8 @@ export default {
       maxPicLimit: '最大图片限制',
       maxAudioLimit: '最大音频限制',
       think: '深度思考开关',
+      thinkTips:
+        'Whether the model supports disabling the deep thinking process',
     },
     supportFileType: {
       pic: '图片',
@@ -1715,6 +1720,7 @@ export default {
       publishType: '私密发布为应用：仅自己可见',
       publishType1: '公开发布为应用：组织内可见',
       publishType2: '公开发布为应用：全局可见',
+      hideKnowledge: '隐藏知识库出处',
       systemPrompt: '系统提示词',
       submitToPrompt: '提交至提示词',
       promptTips:

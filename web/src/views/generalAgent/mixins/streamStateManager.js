@@ -36,15 +36,18 @@ export default {
     streamingMap: {
       handler(newVal) {
         // 检查是否有任何会话在流式传输
-        const anyStreaming = Object.values(newVal).some(
-          state => state?.isStreaming === true,
-        );
+        const streamingIds = Object.entries(newVal)
+          .filter(([, state]) => state?.isStreaming === true)
+          .map(([id]) => id);
+        const anyStreaming = streamingIds.length > 0;
 
-        // 直接设置 previewIsStreaming 或 mainIsStreaming
+        // Sync aggregate flags and the concrete streaming ids.
         if (this.$options.name === 'GeneralAgent') {
           this.mainIsStreaming = anyStreaming;
+          this.mainStreamingThreadIds = streamingIds;
         } else if (this.$options.name === 'PreviewChat') {
           this.previewIsStreaming = anyStreaming;
+          this.previewStreamingIds = streamingIds;
         }
       },
       deep: true,
@@ -111,6 +114,30 @@ export default {
         this.cleanupStreamState(threadId);
       });
       this.streamingMap = {};
+    },
+
+    /**
+     * 流式结束后的统一清理（非用户主动中止时调用）
+     * @param {string} streamingThreadId - 发起流式时记录的 threadId
+     * @param {object} assistantMessage - 流式期间承载内容的助手消息对象
+     * @param {boolean} isUserAborted - 是否用户主动中止（中止时跳过清理，由 stopStreaming 处理）
+     */
+    finalizeStream(streamingThreadId, assistantMessage, isUserAborted) {
+      // 只有非用户主动中止时才清理状态（用户中止由 stopStreaming 处理）
+      if (isUserAborted) return;
+
+      // 使用 mixin 的方法来清理状态，确保全局状态也被更新
+      this.cleanupStreamState(streamingThreadId);
+      if (assistantMessage) {
+        assistantMessage.isStreaming = false;
+        // 清理所有 fragments 的 isStreaming 状态
+        this.setFragmentsNotStreaming(assistantMessage.fragments);
+      }
+      this.currentStage = '';
+      if (this.currentThreadId === streamingThreadId) {
+        this.resetScrollState();
+        this.$nextTick(() => this.scrollToBottom(true));
+      }
     },
 
     /**

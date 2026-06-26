@@ -184,7 +184,7 @@
                 :loading="modelLoading"
                 :options="modelList"
                 :placeholder="$t('common.model.select')"
-                class="model-select-inline"
+                :style="{ width: modelSelectWidth }"
                 @change="handleModelChange"
               />
             </div>
@@ -236,7 +236,7 @@
               <MentionInput
                 ref="mentionInput"
                 v-model="inputMessage"
-                :disabled="isStreaming || previewIsStreaming"
+                :disabled="isStreaming || currentPreviewIsStreaming"
                 :isDIP="selectedMode?.value === 'DIP Agent'"
                 :placeholder="inputPlaceholder"
                 :before-enter-submit="beforeEnterSubmit"
@@ -449,9 +449,13 @@ import SkillDialog from './components/skills/SkillDialog.vue';
 import ModelSelect from '@/components/modelSelect.vue';
 import GAFileUpload from './components/GAFileUpload.vue';
 import {
+  cancelGeneralAgentConversation,
+  cancelGeneralAgentSkillConversation,
   chatGeneralAgentConversation,
   chatGeneralAgentSkillConversation,
   checkGeneralAgentConversationConfig,
+  connectGeneralAgentConversation,
+  connectGeneralAgentSkillConversation,
   createGeneralAgentConversation,
   createGeneralAgentSkillConversation,
   deleteGeneralAgentConversation,
@@ -459,6 +463,8 @@ import {
   getGeneralAgentConversationConfig,
   getGeneralAgentConversationDetail,
   getGeneralAgentConversationList,
+  getGeneralAgentConversationPending,
+  getGeneralAgentSkillConversationPending,
   getGeneralAgentWorkspace,
   importGeneralAgentSkillConversation,
   previewGeneralAgentWorkspace,
@@ -471,7 +477,10 @@ import { avatarSrc, resDownloadFile } from '@/utils/util';
 import { mapActions, mapGetters } from 'vuex';
 import { SSEEventParser } from './utils/sse-parser';
 // 引入工具函数
-import { aggregateEventsToMessages } from './utils/message-aggregator';
+import {
+  aggregateEventsToMessages,
+  aggregateInputMessagesToUserMessages,
+} from './utils/message-aggregator';
 // 引入 Mixins
 import streamStateManager from './mixins/streamStateManager';
 import messageManager from './mixins/messageManager';
@@ -555,6 +564,18 @@ export default {
   computed: {
     ...mapGetters('user', ['commonInfo']),
 
+    modelSelectWidth() {
+      const selected = this.modelList.find(
+        m => m.modelId === this.selectedModel,
+      );
+      const text = selected?.displayName || this.$t('common.model.select');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = '14px sans-serif';
+      const textWidth = ctx.measureText(text).width;
+      return `${Math.ceil(textWidth) + 68}px`;
+    },
+
     assistantAvatar() {
       return avatarSrc(this.commonInfo?.data?.generalAgent?.logo?.path);
     },
@@ -581,7 +602,10 @@ export default {
       const hasModel = !!this.selectedModel;
       // 检查当前会话或预览面板是否正在流式传输
       return (
-        hasContent && hasModel && !this.isStreaming && !this.previewIsStreaming
+        hasContent &&
+        hasModel &&
+        !this.isStreaming &&
+        !this.currentPreviewIsStreaming
       );
     },
     isEmptyConversation() {
@@ -615,6 +639,11 @@ export default {
         this.isSkillType &&
         this.selectedMode?.value === MAIN_CHAT_MODES.SKILL_MODE
       );
+    },
+    // 当前会话的skill预览是否正在流式传输
+    currentPreviewIsStreaming() {
+      if (!this.previewId) return false;
+      return this.previewStreamingIds.includes(this.previewId);
     },
     // 控制组件是否挂载：会话身份存在时才挂载，切换会话/previewId 时配合 key 卸载重建以重置 SSE。
     shouldMountSkillTabs() {
@@ -1338,9 +1367,170 @@ export default {
           this.isLoadingHistory = false;
         }
         this.loadConfig();
+
+        // detail 加载完成后，检查是否有运行中的对话需要重连 connect
+        if (!this.isSkillType) {
+          await this.checkAndResumePending(this.currentThreadId);
+        } else {
+          await this.checkAndResumeSkillPending(this.currentThreadId);
+        }
       } finally {
         this.isLoadingHistory = false;
       }
+    },
+
+    // 检查会话是否有运行中的对话，有则走 connect 重连恢复实时流。
+    appendPendingInputMessages(threadId, inputMessages) {
+      const pendingMessages =
+        aggregateInputMessagesToUserMessages(inputMessages);
+      if (!pendingMessages.length) return;
+
+      const messages = this.ensureMessageList(threadId);
+      const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
+
+      pendingMessages.forEach(message => {
+        if (existingIds.has(message.id)) return;
+        messages.push(message);
+        existingIds.add(message.id);
+      });
+    },
+    async checkAndResumePending(threadId) {
+      if (!threadId) return;
+
+      // 已在流式中则不再重连
+      const streaming = this.streamingMap[threadId];
+      if (streaming && streaming.isStreaming) return;
+
+      let hasPending = false;
+      let pendingMessages = [];
+      try {
+        const res = await getGeneralAgentConversationPending({ threadId });
+        hasPending =
+          res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
+      } catch (error) {
+        console.error('check pending conversation failed:', error);
+        return;
+      }
+
+      if (!hasPending) return;
+
+      this.appendPendingInputMessages(threadId, pendingMessages);
+
+      // 初始化流式状态，承载进行中那一轮的助手消息
+      const { abortController, assistantMessage } =
+        this.initStreamState(threadId);
+      this.addAssistantMessage(threadId, assistantMessage);
+      this.currentStage = 'understanding';
+      this.resetScrollState();
+
+      const parser = new SSEEventParser();
+      let isUserAborted = false;
+
+      try {
+        await connectGeneralAgentConversation({
+          threadId,
+          onMessage: event => {
+            this.handleSSEEvent(event, assistantMessage, parser, threadId);
+          },
+          onError: error => {
+            console.error('Reconnect SSE Error:', error);
+            if (this.currentThreadId === threadId) {
+              this.$message.error(
+                this.$t('generalAgent.error.chatRequestFailed'),
+              );
+            }
+            this.cleanupStreamState(threadId);
+            assistantMessage.isStreaming = false;
+            this.setFragmentsNotStreaming(assistantMessage.fragments);
+          },
+          signal: abortController.signal,
+        });
+      } catch (error) {
+        console.error('Reconnect stream error:', error);
+        isUserAborted = error.name === 'AbortError';
+        if (!isUserAborted && this.currentThreadId === threadId) {
+          this.$message.error(
+            this.$t('generalAgent.error.sendMessageFailed') +
+              (error.message || error),
+          );
+        }
+      } finally {
+        this.finalizeStream(threadId, assistantMessage, isUserAborted);
+      }
+
+      return true;
+    },
+
+    // Skill 主会话断线恢复：左侧/中间编辑会话只用 threadId 区分。
+    async checkAndResumeSkillPending(threadId) {
+      if (!threadId) return;
+
+      const streaming = this.streamingMap[threadId];
+      if (streaming && streaming.isStreaming) return;
+
+      let hasPending = false;
+      let pendingMessages = [];
+      try {
+        const res = await getGeneralAgentSkillConversationPending({ threadId });
+        hasPending =
+          res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
+      } catch (error) {
+        console.error('check skill pending conversation failed:', error);
+        return;
+      }
+
+      if (!hasPending) return;
+
+      this.appendPendingInputMessages(threadId, pendingMessages);
+
+      const { abortController, assistantMessage } =
+        this.initStreamState(threadId);
+      this.addAssistantMessage(threadId, assistantMessage);
+      this.currentStage = 'understanding';
+      this.resetScrollState();
+
+      const parser = new SSEEventParser();
+      let isUserAborted = false;
+
+      try {
+        await connectGeneralAgentSkillConversation({
+          threadId,
+          onMessage: event => {
+            this.handleSSEEvent(event, assistantMessage, parser, threadId);
+          },
+          onError: error => {
+            console.error('Skill reconnect SSE Error:', error);
+            if (this.currentThreadId === threadId) {
+              this.$message.error(
+                this.$t('generalAgent.error.chatRequestFailed'),
+              );
+            }
+            this.cleanupStreamState(threadId);
+            assistantMessage.isStreaming = false;
+            this.setFragmentsNotStreaming(assistantMessage.fragments);
+          },
+          signal: abortController.signal,
+        });
+      } catch (error) {
+        console.error('Skill reconnect stream error:', error);
+        isUserAborted = error.name === 'AbortError';
+        if (!isUserAborted && this.currentThreadId === threadId) {
+          this.$message.error(
+            this.$t('generalAgent.error.sendMessageFailed') +
+              (error.message || error),
+          );
+        }
+      } finally {
+        this.finalizeStream(threadId, assistantMessage, isUserAborted);
+      }
+
+      return true;
     },
 
     async loadConfig() {
@@ -1365,7 +1555,7 @@ export default {
     async beforeEnterSubmit() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return false;
-      if (this.previewIsStreaming) return false;
+      if (this.currentPreviewIsStreaming) return false;
 
       const currentStreaming = this.streamingMap[this.currentThreadId];
       if (currentStreaming && currentStreaming.isStreaming) return false;
@@ -1395,7 +1585,7 @@ export default {
       const skipUnsavedCheck = options?.skipUnsavedCheck === true;
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
 
       // 检查当前会话是否正在流式传输
       const currentStreaming = this.streamingMap[this.currentThreadId];
@@ -1459,7 +1649,7 @@ export default {
         }
       }
 
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
       if (!skipUnsavedCheck) {
         const canSendAfterUnsavedCheck =
           await this.confirmSkillUnsavedBeforeSend();
@@ -1517,7 +1707,7 @@ export default {
     },
 
     async startStreaming(userMessage) {
-      if (this.previewIsStreaming) return;
+      if (this.currentPreviewIsStreaming) return;
 
       if (!this.currentThreadId) {
         this.$message.error(
@@ -1600,22 +1790,14 @@ export default {
         if (this.isSkillType) {
           this.skillChatMode = 'normal';
         }
-        // 只有非用户主动中止时才清理状态（用户中止由 stopStreaming 处理）
-        if (!isUserAborted) {
-          // 使用 mixin 的方法来清理状态，确保全局状态也被更新
-          this.cleanupStreamState(streamingThreadId);
-          assistantMessage.isStreaming = false;
-
-          // 清理所有 fragments 的 isStreaming 状态
-          this.setFragmentsNotStreaming(assistantMessage.fragments);
-          this.currentStage = '';
-          if (this.currentThreadId === streamingThreadId) {
-            this.resetScrollState();
-            this.$nextTick(() => this.scrollToBottom(true));
-          }
-          if (this.isSkillType && this.currentThreadId === streamingThreadId) {
-            this.requestSkillWorkspaceRefresh();
-          }
+        // 统一清理（非用户主动中止）；用户中止由 stopStreaming 处理
+        this.finalizeStream(streamingThreadId, assistantMessage, isUserAborted);
+        if (
+          !isUserAborted &&
+          this.isSkillType &&
+          this.currentThreadId === streamingThreadId
+        ) {
+          this.requestSkillWorkspaceRefresh();
         }
       }
     },
@@ -1719,7 +1901,7 @@ export default {
 
     // 重新生成 - 找到上一条用户消息并重新发送
     handleRegenerate(message) {
-      if (this.isStreaming || this.previewIsStreaming) return;
+      if (this.isStreaming || this.currentPreviewIsStreaming) return;
 
       // 找到这条助手消息的索引
       const messageIndex = this.messageList.findIndex(m => m.id === message.id);
@@ -1790,7 +1972,24 @@ export default {
 
     // 处理停止按钮点击
     handleStopClick() {
-      this.stopStreaming(this.currentThreadId);
+      this.stopGeneralConversation(this.currentThreadId);
+    },
+
+    // 停止主对话：先通知服务端 cancel，再本地中断 SSE。
+    async stopGeneralConversation(threadId) {
+      if (threadId) {
+        try {
+          if (this.isSkillType) {
+            await cancelGeneralAgentSkillConversation({ threadId });
+          } else {
+            await cancelGeneralAgentConversation({ threadId });
+          }
+        } catch (error) {
+          // 取消失败不阻塞本地清理
+          console.error('cancel conversation failed:', error);
+        }
+      }
+      this.stopStreaming(threadId);
     },
 
     // 打开skill导入弹框
@@ -1870,6 +2069,10 @@ export default {
   overflow: hidden;
   padding: 16px;
   box-sizing: border-box;
+
+  ::v-deep .model-select .el-input__inner {
+    border-radius: 12px;
+  }
 }
 
 .agent-main-content {
@@ -2473,22 +2676,6 @@ export default {
       display: flex;
       align-items: center;
       gap: 8px;
-
-      .model-select-inline {
-        min-width: 200px;
-
-        ::v-deep .el-input__inner {
-          background: transparent;
-          border: none;
-          padding-left: 32px;
-          font-size: 13px;
-          color: $wga-text;
-        }
-
-        ::v-deep .el-input__prefix {
-          left: 8px;
-        }
-      }
     }
 
     .toolbar-right {
