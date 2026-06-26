@@ -3,8 +3,6 @@ package agent_chat_builder
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -129,6 +127,10 @@ func buildCommonSingleAgentContent(req *request.AgentChatContext, respContext *r
 			respContext.ContentOutput = true
 			respContext.IncreaseOrder()
 			respContext.ReplaceContent.Reset()
+		}
+		// 正文内容：缓存到队列，用于提取 markdown 下载文件
+		if len(chatMessage.Content) > 0 {
+			respContext.DownloadContext.AddContent(chatMessage.Content)
 		}
 		return buildNoToolContent(chatMessage, respContext)
 	}
@@ -515,7 +517,7 @@ func extractFileInfoFromMap(m map[string]interface{}) *response.DownloadFileInfo
 	// 提取URL
 	for _, key := range urlKeys {
 		if val, ok := m[key]; ok {
-			if str, ok := val.(string); ok && isValidFileURL(str) {
+			if str, ok := val.(string); ok && util.IsValidFileURL(str) {
 				fileURL = str
 				break
 			}
@@ -525,7 +527,7 @@ func extractFileInfoFromMap(m map[string]interface{}) *response.DownloadFileInfo
 	// 如果没找到URL，尝试查找看起来像URL的字符串值
 	if fileURL == "" {
 		for _, val := range m {
-			if str, ok := val.(string); ok && isValidFileURL(str) && !isLikelyNameField(str) {
+			if str, ok := val.(string); ok && util.IsValidFileURL(str) && !isLikelyNameField(str) {
 				fileURL = str
 				break
 			}
@@ -558,29 +560,6 @@ func extractFileInfoFromMap(m map[string]interface{}) *response.DownloadFileInfo
 	}
 
 	return nil
-}
-
-// isValidFileURL 检查字符串是否是有效的文件URL
-func isValidFileURL(s string) bool {
-	if len(s) < 5 {
-		return false
-	}
-	// 检查是否是HTTP/HTTPS URL
-	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
-		// 尝试解析URL
-		parsedURL, err := url.Parse(s)
-		if err != nil {
-			return false
-		}
-		// 检查是否有路径部分（包含文件名）
-		path := parsedURL.Path
-		if path != "" && path != "/" {
-			// 检查路径是否包含文件扩展名
-			ext := filepath.Ext(path)
-			return ext != ""
-		}
-	}
-	return false
 }
 
 // isLikelyNameField 检查字符串是否可能是名称字段值（而非URL）

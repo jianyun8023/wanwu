@@ -17,6 +17,9 @@ const (
 	agentFailCode    = 1
 	finish           = 1
 	notFinish        = 0
+	// 两种实现方案1：堆积所有总结到内存，最后统一正则识别url（空间换时间），2.每个流式事件校验一下，正则识别url（时间换空间）
+	//目前采用第二种实现,这个值越大内存消耗越多，cpu消耗越少，反之亦然
+	defaultContentQueueSize = 1000
 )
 
 type AgentInfo struct {
@@ -55,6 +58,7 @@ func (c *AgentChatRespContext) ResetTool() {
 
 func (c *AgentChatRespContext) IncreaseOrder() {
 	c.Order = c.Order + 1
+	c.DownloadContext.ClearContent()
 }
 
 func NewAgentChatRespContext(multiAgent bool, order int, reqParams *request.AgentChatParams) *AgentChatRespContext {
