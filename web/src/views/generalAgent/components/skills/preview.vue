@@ -83,7 +83,7 @@
           type="textarea"
           :autosize="{ minRows: 4, maxRows: 6 }"
           :placeholder="inputPlaceholder"
-          :disabled="isStreaming || mainIsStreaming"
+          :disabled="isStreaming || currentMainIsStreaming"
           resize="none"
           class="chat-textarea"
           @keydown.enter.native="handleKeyDown"
@@ -145,7 +145,10 @@ import MessageItem from '../MessageItem.vue';
 
 import GAFileUpload from '../GAFileUpload.vue';
 import {
+  cancelGeneralAgentSkillConversation,
   chatGeneralAgentSkillConversation,
+  connectGeneralAgentSkillConversation,
+  getGeneralAgentSkillConversationPending,
   getGeneralAgentSkillPreviewConversationDetail,
 } from '@/api/generalAgent';
 
@@ -155,7 +158,10 @@ import messageManager from '../../mixins/messageManager';
 import fileManager from '../../mixins/fileManager';
 import scrollController from '../../mixins/scrollController';
 import skillManager from '../../mixins/skillManager';
-import { aggregateEventsToMessages } from '../../utils/message-aggregator';
+import {
+  aggregateEventsToMessages,
+  aggregateInputMessagesToUserMessages,
+} from '../../utils/message-aggregator';
 
 export default {
   name: 'PreviewChat',
@@ -192,10 +198,15 @@ export default {
       const hasContent =
         this.inputMessage.trim() || this.uploadedFiles.length > 0;
       // 检查当前会话或预览面板是否正在流式传输
-      return hasContent && !this.isStreaming && !this.mainIsStreaming;
+      return hasContent && !this.isStreaming && !this.currentMainIsStreaming;
     },
     inputPlaceholder() {
       return this.$t('generalAgent.skill.preview.placeholder');
+    },
+    currentMainIsStreaming() {
+      const { threadId } = this.skillPreviewParams || {};
+      if (!threadId) return false;
+      return this.mainStreamingThreadIds.includes(threadId);
     },
   },
   mounted() {
@@ -255,6 +266,94 @@ export default {
       } finally {
         this.isLoadingHistory = false;
       }
+
+      await this.checkAndResumePending(previewId);
+    },
+
+    // 添加pending态预览会话的输入消息
+    appendPendingInputMessages(threadId, inputMessages) {
+      const pendingMessages =
+        aggregateInputMessagesToUserMessages(inputMessages);
+      if (!pendingMessages.length) return;
+
+      const messages = this.ensureMessageList(threadId);
+      const existingIds = new Set(messages.map(msg => msg.id).filter(Boolean));
+
+      pendingMessages.forEach(message => {
+        if (existingIds.has(message.id)) return;
+        messages.push(message);
+        existingIds.add(message.id);
+      });
+    },
+    async checkAndResumePending(previewId) {
+      if (!previewId || this.currentThreadId !== previewId) return;
+
+      const streaming = this.streamingMap[previewId];
+      if (streaming && streaming.isStreaming) return;
+
+      let hasPending = false;
+      let pendingMessages = [];
+      try {
+        const res = await getGeneralAgentSkillConversationPending({
+          previewId,
+        });
+        hasPending =
+          res.code === 0 && res.data?.hasPendingConversation === true;
+        pendingMessages = Array.isArray(res.data?.messages)
+          ? res.data.messages
+          : [];
+      } catch (error) {
+        console.error(
+          'check skill preview pending conversation failed:',
+          error,
+        );
+        return;
+      }
+
+      if (!hasPending) return;
+
+      this.appendPendingInputMessages(previewId, pendingMessages);
+
+      const { abortController, assistantMessage } =
+        this.initStreamState(previewId);
+      this.addAssistantMessage(previewId, assistantMessage);
+      this.currentStage = 'understanding';
+      this.resetScrollState();
+
+      const parser = new SSEEventParser();
+      let isUserAborted = false;
+
+      try {
+        await connectGeneralAgentSkillConversation({
+          previewId,
+          onMessage: event => {
+            this.handleSSEEvent(event, assistantMessage, parser, previewId);
+          },
+          onError: error => {
+            console.error('Skill preview reconnect SSE Error:', error);
+            this.$message.error(
+              this.$t('generalAgent.error.chatRequestFailed'),
+            );
+            this.cleanupStreamState(previewId);
+            assistantMessage.isStreaming = false;
+            this.setFragmentsNotStreaming(assistantMessage.fragments);
+          },
+          signal: abortController.signal,
+        });
+      } catch (error) {
+        console.error('Skill preview reconnect stream error:', error);
+        isUserAborted = error.name === 'AbortError';
+        if (!isUserAborted) {
+          this.$message.error(
+            this.$t('generalAgent.error.sendMessageFailed') +
+              (error.message || error),
+          );
+        }
+      } finally {
+        this.finalizeStream(previewId, assistantMessage, isUserAborted);
+      }
+
+      return true;
     },
 
     handleKeyDown(e) {
@@ -266,7 +365,7 @@ export default {
     async sendMessage() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
-      if (this.mainIsStreaming) return;
+      if (this.currentMainIsStreaming) return;
       if (this.isStreaming) return;
 
       if (!this.currentThreadId) {
@@ -292,7 +391,7 @@ export default {
     },
 
     async startStreaming(userMessage) {
-      if (this.mainIsStreaming) return;
+      if (this.currentMainIsStreaming) return;
 
       if (!this.currentThreadId) {
         this.$message.error(
@@ -357,7 +456,7 @@ export default {
     },
 
     handleRegenerate(message) {
-      if (this.isStreaming || this.mainIsStreaming) return;
+      if (this.isStreaming || this.currentMainIsStreaming) return;
 
       const messageIndex = this.messageList.findIndex(m => m.id === message.id);
       if (messageIndex <= 0) return;
@@ -377,7 +476,18 @@ export default {
     },
 
     handleStopClick() {
-      this.stopStreaming(this.currentThreadId);
+      this.stopPreviewConversation(this.currentThreadId);
+    },
+
+    async stopPreviewConversation(previewId) {
+      if (previewId) {
+        try {
+          await cancelGeneralAgentSkillConversation({ previewId });
+        } catch (error) {
+          console.error('cancel skill preview conversation failed:', error);
+        }
+      }
+      this.stopStreaming(previewId);
     },
 
     setupInputResizeObserver() {

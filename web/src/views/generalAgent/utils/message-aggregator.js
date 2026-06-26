@@ -35,21 +35,12 @@ export function aggregateEventsToMessages(events) {
     switch (event.type) {
       case 'RUN_STARTED': {
         if (event.input?.messages && Array.isArray(event.input.messages)) {
-          event.input.messages.forEach(msg => {
-            if (msg.role === 'user') {
-              messages.push({
-                id: msg.id || generateId(),
-                role: 'user',
-                content: formatContent(msg.content),
-                files: extractFilesFromContent(msg.content),
-                toolCalls: null,
-                toolResults: null,
-                toolCallId: null,
-                reasoning: '',
-                timestamp: eventTimestamp,
-              });
-            }
-          });
+          messages.push(
+            ...aggregateInputMessagesToUserMessages(
+              event.input.messages,
+              eventTimestamp,
+            ),
+          );
         }
         break;
       }
@@ -392,7 +383,31 @@ export function mergeToFragments(messages) {
 }
 
 /**
- * 格式化消息内容
+ * Convert AG-UI input.messages into frontend user messages.
+ */
+export function aggregateInputMessagesToUserMessages(
+  inputMessages,
+  timestamp = Date.now(),
+) {
+  if (!Array.isArray(inputMessages)) return [];
+
+  return inputMessages
+    .filter(msg => msg?.role === 'user')
+    .map(msg => ({
+      id: msg.id || generateId(),
+      role: 'user',
+      content: formatContent(msg.content),
+      files: extractFilesFromContent(msg.content),
+      toolCalls: null,
+      toolResults: null,
+      toolCallId: null,
+      reasoning: '',
+      timestamp,
+    }));
+}
+
+/**
+ * Format a raw message into the frontend message shape.
  */
 export function formatMessage(msg) {
   if (!msg) return null;
